@@ -2,9 +2,11 @@ name: Django Tests
 
 on:
   push:
-    branches: [ staging, CI/CD ]
+    branches: 
+      - **
   pull_request:
-    branches: [ staging, CI/CD ]
+    branches: 
+      - **
 
 jobs:
   test:
@@ -26,6 +28,11 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           cache: pip
+
+      - name: Install MySQL dev libs
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libmysqlclient-dev pkg-config
 
       - name: Install dependencies
         run: |
