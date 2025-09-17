@@ -1,0 +1,41 @@
+name: Django Tests
+
+on:
+  push:
+    branches: [ staging, CI/CD ]
+  pull_request:
+    branches: [ staging, CI/CD ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.12", "3.13"]
+    env:
+      DJANGO_SETTINGS_MODULE: AutomaticRAB.settings
+      SECRET_KEY: ${{ secrets.SECRET_KEY || 'insecure-test-key' }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+
+      - name: Run migrations (optional for sqlite)
+        run: |
+          python manage.py migrate --noinput
+
+      - name: Run tests
+        run: |
+          python manage.py test --verbosity 2
