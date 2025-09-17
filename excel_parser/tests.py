@@ -224,24 +224,24 @@ class HeaderMapperTests(TestCase):
     def test_maps_clean_headers(self):
         headers = ["No", "Uraian Pekerjaan", "Volume", "Satuan"]
         mapping, missing, originals = map_headers(headers)
-        self.assertIn("number", mapping)
-        self.assertIn("description", mapping)
+        self.assertIn("no", mapping)
+        self.assertIn("uraian", mapping)
         self.assertIn("volume", mapping)
-        self.assertIn("unit", mapping)
+        self.assertIn("satuan", mapping)
         self.assertEqual(missing, [])
-        self.assertEqual(originals["description"], "Uraian Pekerjaan")
+        self.assertEqual(originals["uraian"], "Uraian Pekerjaan")
 
     def test_maps_with_punctuation_and_case(self):
         headers = ["No.", "URAIAN", "VOL.", "satuan "]
         mapping, missing, _ = map_headers(headers)
-        self.assertTrue(set(["number", "description", "volume", "unit"]).issubset(mapping.keys()))
+        self.assertTrue(set(["no", "uraian", "volume", "satuan"]).issubset(mapping.keys()))
         self.assertEqual(missing, [])
 
     def test_reports_missing_required(self):
         headers = ["No", "Deskripsi"]  # missing volume & satuan
         _, missing, _ = map_headers(headers)
         self.assertIn("volume", missing)
-        self.assertIn("unit", missing)
+        self.assertIn("satuan", missing)
 
     def test_find_header_row_skips_title_block(self):
         rows = [
