@@ -3,7 +3,7 @@ from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
 from openpyxl import load_workbook
 
-from .header_mapper import map_headers, find_header_row
+from .services.header_mapper import map_headers, find_header_row
 
 
 @api_view(['POST'])

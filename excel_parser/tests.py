@@ -4,10 +4,11 @@ import tempfile
 from django.test import TestCase
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.exceptions import ValidationError
-from excel_parser.header_mapper import map_headers, find_header_row
-from excel_parser.validators import validate_excel_file
-from excel_parser.services import ExcelSniffer, create_rab_parser
-from excel_parser.reader import ExcelImporter, UnsupportedFileError
+from excel_parser.services.header_mapper import map_headers, find_header_row
+from excel_parser.services.validators import validate_excel_file
+from excel_parser.services.services import ExcelSniffer
+from excel_parser.services import create_rab_parser
+from excel_parser.services.reader import ExcelImporter, UnsupportedFileError
 from excel_parser.models import Project, RabEntry
 from datetime import date
 
