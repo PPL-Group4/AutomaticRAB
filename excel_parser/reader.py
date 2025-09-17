@@ -6,16 +6,14 @@ from typing import List, Dict, Iterable, Tuple
 
 from django.core.files.uploadedfile import UploadedFile
 
-from excelread.models import RABItem
+from excel_parser.models import RABItem
 
-# ---- Errors ------------------------------------------------------
 class UnsupportedFileError(Exception):
     pass
 
 class ParseError(Exception):
     pass
 
-# ---- Header mapping ----------------------------------------------
 HEADER_ALIASES = {
     "number": {"no", "no.", "nomor", "number", "kode"},
     "description": {"uraian pekerjaan", "uraian", "deskripsi", "pekerjaan", "job description"},
@@ -36,7 +34,6 @@ def _match_header(cell: str) -> Tuple[str | None, str]:
             break
     return key, cell
 
-# ---- Number parsing (supports "1,000.50" and "1.000,50") ---------
 _THOUSAND_DOT_DECIMAL_COMMA = re.compile(r"^\d{1,3}(\.\d{3})+,\d+$")
 _THOUSAND_COMMA_DECIMAL_DOT = re.compile(r"^\d{1,3}(,\d{3})+\.\d+$")
 
@@ -69,7 +66,6 @@ def parse_decimal(val) -> Decimal:
     except InvalidOperation:
         raise ParseError(f"Cannot parse decimal from '{val}'")
 
-# ---- Low-level readers -------------------------------------------
 class _BaseReader:
     def iter_rows(self, file: UploadedFile) -> Iterable[List]:
         raise NotImplementedError
@@ -96,7 +92,6 @@ class _XLSReader(_BaseReader):
             yield [sh.cell_value(r, c) for c in range(sh.ncols)]
         file.seek(pos)
 
-# ---- Router / Facade ---------------------------------------------
 def _ext_of(file: UploadedFile) -> str:
     name = (file.name or "").lower()
     if name.endswith(".xlsx"):
@@ -113,7 +108,6 @@ def make_reader(file: UploadedFile) -> _BaseReader:
         return _XLSReader()
     raise UnsupportedFileError("Only .xls and .xlsx are supported")
 
-# ---- Header detection & parsing ----------------------------------
 @dataclass
 class ParsedRow:
     number: str
@@ -161,7 +155,6 @@ def _parse_rows(cache: List[List], colmap: Dict[str, int]) -> List[ParsedRow]:
         out.append(ParsedRow(number=number, description=str(desc), volume=volume, unit=unit))
     return out
 
-# ---- Importer (writes to DB) -------------------------------------
 class ExcelImporter:
     """
     High-level façade used by views/tasks/tests.
