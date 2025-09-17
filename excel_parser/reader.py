@@ -5,8 +5,7 @@ import re
 from typing import List, Dict, Iterable, Tuple
 
 from django.core.files.uploadedfile import UploadedFile
-
-from excel_parser.models import RABItem
+from excel_parser.models import Project, RabEntry
 
 class UnsupportedFileError(Exception):
     pass
@@ -158,7 +157,7 @@ def _parse_rows(cache: List[List], colmap: Dict[str, int]) -> List[ParsedRow]:
 class ExcelImporter:
     """
     High-level façade used by views/tasks/tests.
-    SRP: import an uploaded excel into RABItem rows
+    SRP: import an uploaded excel into RabEntry rows
     OCP: new readers can be added without modifying this class
     """
     def import_file(self, file: UploadedFile) -> int:
@@ -168,15 +167,25 @@ class ExcelImporter:
         colmap, header_row = _find_header_map(cache)
         colmap["_header_row"] = header_row  # keep header position
 
+        project, created = Project.objects.get_or_create(
+            program="Default Program",
+            kegiatan="Default Activity",
+            pekerjaan="Imported from Excel",
+            lokasi="Not Specified",
+            tahun_anggaran=2025, # Or get this from the file/user
+            defaults={'source_filename': file.name}
+        )
+
         parsed = _parse_rows(cache, colmap)
         count = 0
         for idx, p in enumerate(parsed, start=1):
-            RABItem.objects.create(
-                number=p.number,
+            RabEntry.objects.create(
+                project=project,
+                entry_type=RabEntry.EntryType.ITEM, # Defaulting to ITEM for now
+                item_number=p.number,
                 description=p.description,
                 volume=p.volume,
                 unit=p.unit,
-                source_filename=file.name,
                 row_index=idx,
             )
             count += 1
