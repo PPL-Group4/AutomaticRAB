@@ -2,9 +2,9 @@ name: Django Tests
 
 on:
   push:
-    branches: [ staging, CI/CD ]
+    branches: [ staging, CI/CD, PBI-2-automatic_matching_of_job_description_with_the_database ]
   pull_request:
-    branches: [ staging, CI/CD ]
+    branches: [ staging, CI/CD, PBI-2-automatic_matching_of_job_description_with_the_database ]
 
 jobs:
   test:
