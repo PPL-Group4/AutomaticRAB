@@ -6,14 +6,15 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.exceptions import ValidationError
 from excel_parser.header_mapper import map_headers, find_header_row
 from excel_parser.validators import validate_excel_file
-from excel_parser.services import ExcelSniffer
+from excel_parser.services import ExcelSniffer, create_rab_parser
 from excel_parser.reader import ExcelImporter, UnsupportedFileError
-from excel_parser.models import RABItem
+from excel_parser.models import Project, RabEntry
+from datetime import date
 
 from openpyxl import Workbook
 
 try:
-    import xlrd  
+    import xlrd
     from xlwt import Workbook as XlsWorkbook
 except ImportError:
     xlrd = None
@@ -175,15 +176,15 @@ class ExcelReaderTests(TestCase):
         f = self._xlsx_file()
         count = ExcelImporter().import_file(f)
         self.assertEqual(count, 2)
-        self.assertEqual(RABItem.objects.count(), 2)
+        self.assertEqual(RabEntry.objects.count(), 2)
 
-        first = RABItem.objects.order_by("row_index").first()
+        first = RabEntry.objects.order_by("row_index").first()
         self.assertEqual(first.description, "Pondasi")
         self.assertEqual(first.unit, "m3")
         self.assertEqual(first.volume, Decimal("10.5"))
 
         # Indonesian-style number parsed
-        second = RABItem.objects.order_by("row_index")[1]
+        second = RabEntry.objects.order_by("row_index")[1]
         self.assertEqual(second.volume, Decimal("1000.5"))
 
     def test_read_xls_into_db(self):
@@ -191,7 +192,7 @@ class ExcelReaderTests(TestCase):
         # test skipped above if xlwt not installed
         count = ExcelImporter().import_file(f)
         self.assertEqual(count, 2)
-        self.assertEqual(RABItem.objects.count(), 2)
+        self.assertEqual(RabEntry.objects.count(), 2)
 
     def test_header_variants(self):
         # Accept e.g. "Uraian", "Deskripsi", "Qty" for robustness
@@ -208,8 +209,8 @@ class ExcelReaderTests(TestCase):
         )
         count = ExcelImporter().import_file(f)
         self.assertEqual(count, 1)
-        item = RABItem.objects.get()
-        self.assertEqual(item.number, "A")
+        item = RabEntry.objects.get()
+        self.assertEqual(item.item_number, "A")
         self.assertEqual(item.unit, "m2")
         self.assertEqual(item.volume, Decimal("12"))
 
@@ -222,24 +223,24 @@ class HeaderMapperTests(TestCase):
     def test_maps_clean_headers(self):
         headers = ["No", "Uraian Pekerjaan", "Volume", "Satuan"]
         mapping, missing, originals = map_headers(headers)
-        self.assertIn("no", mapping)
-        self.assertIn("uraian", mapping)
+        self.assertIn("number", mapping)
+        self.assertIn("description", mapping)
         self.assertIn("volume", mapping)
-        self.assertIn("satuan", mapping)
+        self.assertIn("unit", mapping)
         self.assertEqual(missing, [])
-        self.assertEqual(originals["uraian"], "Uraian Pekerjaan")
+        self.assertEqual(originals["description"], "Uraian Pekerjaan")
 
     def test_maps_with_punctuation_and_case(self):
         headers = ["No.", "URAIAN", "VOL.", "satuan "]
         mapping, missing, _ = map_headers(headers)
-        self.assertTrue(set(["no", "uraian", "volume", "satuan"]).issubset(mapping.keys()))
+        self.assertTrue(set(["number", "description", "volume", "unit"]).issubset(mapping.keys()))
         self.assertEqual(missing, [])
 
     def test_reports_missing_required(self):
         headers = ["No", "Deskripsi"]  # missing volume & satuan
         _, missing, _ = map_headers(headers)
         self.assertIn("volume", missing)
-        self.assertIn("satuan", missing)
+        self.assertIn("unit", missing)
 
     def test_find_header_row_skips_title_block(self):
         rows = [
@@ -250,3 +251,89 @@ class HeaderMapperTests(TestCase):
         ]
         idx = find_header_row(rows, scan_first=10)
         self.assertEqual(idx, 2)  # 0-based index
+
+class RabParserTests(TestCase):
+    def setUp(self):
+        """Set up test dependencies and sample project"""
+        self.parser = create_rab_parser()
+        self.project = Project.objects.create(
+            program="TEST PROGRAM",
+            kegiatan="TEST ACTIVITY",
+            pekerjaan="TEST JOB",
+            lokasi="TEST LOCATION",
+            tahun_anggaran=2025
+        )
+
+    def test_cell_with_non_breaking_space_is_parsed_as_none(self):
+        self.assertIsNone(self.parser.clean_cell("\u00A0"))
+        self.assertIsNone(self.parser.clean_cell(" \u00A0 "))
+
+    def test_converts_currency_string_with_rp_to_decimal(self):
+        self.assertEqual(self.parser.to_decimal("Rp 5.000"), Decimal("5000"))
+
+    def test_converts_number_with_indonesian_format_to_decimal(self):
+        self.assertEqual(self.parser.to_decimal("1.234.567,89"), Decimal("1234567.89"))
+
+    def test_converts_us_format_with_commas_to_decimal(self):
+        self.assertEqual(self.parser.to_decimal("1,234,567.89"), Decimal("1234567.89"))
+
+    def test_converts_percentage_format_to_decimal(self):
+        result = self.parser.to_percentage("75%")
+        self.assertEqual(result, Decimal("0.75"))
+
+    def test_converts_boolean_strings_true(self):
+        self.assertTrue(self.parser.to_boolean("TRUE"))
+        self.assertTrue(self.parser.to_boolean("true"))
+        self.assertTrue(self.parser.to_boolean("True"))
+
+    def test_converts_boolean_strings_false(self):
+        self.assertFalse(self.parser.to_boolean("FALSE"))
+        self.assertFalse(self.parser.to_boolean("false"))
+        self.assertFalse(self.parser.to_boolean("False"))
+
+    def test_converts_date_string(self):
+        result = self.parser.to_date("2024-12-31")
+        self.assertEqual(result, date(2024, 12, 31))
+
+    def test_converts_indonesian_date_format(self):
+        result = self.parser.to_date("31/12/2024")
+        self.assertEqual(result, date(2024, 12, 31))
+
+    def test_handles_scientific_notation_string(self):
+        self.assertEqual(self.parser.to_decimal("1.23E+5"), Decimal("123000"))
+
+    def test_row_with_mixed_data_types_parsed_correctly(self):
+        raw_row = {
+            'No.': '5', 'URAIAN PEKERJAAN': 'Mixed Data Item',
+            'VOL.': '2.50', 'HARGA SATUAN (Rp.)': '1.000.000,50'
+        }
+        entry = self.parser.parse_row(raw_row, project=self.project)
+        self.assertEqual(entry.item_number, '5')
+        self.assertEqual(entry.volume, Decimal('2.50'))
+        self.assertEqual(entry.unit_price, Decimal('1000000.50'))
+
+    def test_validates_required_fields(self):
+        raw_row = {'No.': '6', 'URAIAN PEKERJAAN': '', 'VOL.': '1.00'}
+        result = self.parser.parse_row(raw_row, project=self.project)
+        self.assertIsNone(result)
+
+    def test_processes_all_cells_for_data_type_conversion(self):
+        raw_row = {
+            'No.': ' 1 ', 'URAIAN PEKERJAAN': '  Test\nItem  ', 'SATUAN': ' Ls ',
+            'KODE ANALISA': '  AT.19-1  ', 'VOL.': ' 2,50 ',
+            'HARGA SATUAN (Rp.)': ' Rp 1.000.000 ', 'JUMLAH HARGA (Rp.)': ' 2.500.000,00 '
+        }
+        entry = self.parser.parse_row(raw_row, project=self.project)
+        self.assertEqual(entry.item_number, '1')
+        self.assertEqual(entry.description, 'Test Item')
+        self.assertEqual(entry.unit, 'Ls')
+        self.assertEqual(entry.analysis_code, 'AT.19-1')
+        self.assertEqual(entry.volume, Decimal('2.50'))
+        self.assertEqual(entry.unit_price, Decimal('1000000'))
+        self.assertEqual(entry.total_price, Decimal('2500000.00'))
+
+    def test_parses_row_with_total_in_words(self):
+        raw_row = {'URAIAN PEKERJAAN': 'Terbilang : Seratus Juta Rupiah'}
+        entry = self.parser.parse_row(raw_row, project=self.project)
+        self.assertEqual(entry.entry_type, RabEntry.EntryType.GRAND_TOTAL)
+        self.assertEqual(entry.total_price_in_words, "Seratus Juta Rupiah")
