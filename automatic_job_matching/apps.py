@@ -3,4 +3,4 @@ from django.apps import AppConfig
 
 class AutomaticjobmatchingConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
-    name = 'automaticjobmatching'
+    name = 'automatic_job_matching'

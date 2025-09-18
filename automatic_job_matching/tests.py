@@ -3,7 +3,7 @@ from django.test import TestCase
 
 class TextNormalizationTestCase(TestCase):
 	def setUp(self):
-		from automaticjobmatching.utils.text_normalizer import normalize_text
+		from automatic_job_matching.utils.text_normalizer import normalize_text
 
 		self.normalize_text = normalize_text
 
