@@ -511,6 +511,12 @@ class ReaderPrivateHelpersTests(TestCase):
         with self.assertRaises(NotImplementedError):
             list(base.iter_rows(SimpleUploadedFile("x.xlsx", b"")))
 
+    def test_parse_decimal_last_separator_fallback_irregular_grouping(self):
+        self.assertEqual(reader_mod.parse_decimal("12.34,56"), Decimal("1234.56"))
+        self.assertEqual(reader_mod.parse_decimal("1.2.3,4"),   Decimal("123.4"))
+
+        self.assertEqual(reader_mod.parse_decimal("12,34.56"), Decimal("1234.56"))
+        self.assertEqual(reader_mod.parse_decimal("1,2,3.4"),  Decimal("123.4"))
 
 class ReaderHeaderAndRowParsingTests(TestCase):
     def test__find_header_map_success_with_preface(self):
