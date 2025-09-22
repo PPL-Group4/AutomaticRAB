@@ -16,9 +16,15 @@ class ParseError(Exception):
 HEADER_ALIASES = {
     "number": {"no", "no.", "nomor", "number", "kode"},
     "description": {"uraian pekerjaan", "uraian", "deskripsi", "pekerjaan", "job description"},
-    "volume": {"volume", "qty", "jumlah", "kuantitas"},
+    "volume": {"volume", "vol", "vol.", "qty", "jumlah", "kuantitas"},
     "unit": {"satuan", "unit"},
+    "analysis_code": {"kode analisa", "kode", "analysis code"},
+    "price": {"harga satuan", "harga_satuan", "price", "harga"},
+    "total_price": {"jumlah harga", "total harga", "total", "total_price"}
 }
+
+
+
 
 def _norm(s) -> str:
     return str(s or "").strip().lower()
@@ -43,27 +49,35 @@ def parse_decimal(val) -> Decimal:
         return Decimal(str(val))
 
     s = str(val).strip()
-    # 1.000,50 -> 1000.50
+
+    # If the string has no digits at all, treat as 0
+    if not any(ch.isdigit() for ch in s):
+        return Decimal("0")
+
+    # 🚩 New rule: if string looks like a formula ("7 = 5 x 6"), skip it
+    if "=" in s or "x" in s.lower():
+        return Decimal("0")
+
+    # Handle common formats
     if _THOUSAND_DOT_DECIMAL_COMMA.match(s):
         s = s.replace(".", "").replace(",", ".")
-    # 1,000.50 -> 1000.50
     elif _THOUSAND_COMMA_DECIMAL_DOT.match(s):
         s = s.replace(",", "")
     else:
-        # if it ends with ",xx" assume comma-decimal
         if "," in s and "." not in s:
-            s = s.replace(".", "").replace(",", ".")
-        # if it has both, guess last separator is decimal
+            s = s.replace(",", ".")
         elif "," in s and "." in s:
             if s.rfind(",") > s.rfind("."):
                 s = s.replace(".", "").replace(",", ".")
             else:
                 s = s.replace(",", "")
 
+    s = re.sub(r"[^\d.-]", "", s)
+
     try:
         return Decimal(s)
     except InvalidOperation:
-        raise ParseError(f"Cannot parse decimal from '{val}'")
+        return Decimal("0")
 
 class _BaseReader:
     def iter_rows(self, file: UploadedFile) -> Iterable[List]:
@@ -113,14 +127,18 @@ class ParsedRow:
     description: str
     volume: Decimal
     unit: str
+    analysis_code: str
+    price: Decimal
+    total_price: Decimal
 
 def _find_header_map(rows: Iterable[List]) -> Tuple[Dict[str, int], int]:
     """
-    Scan up to first 10 rows to detect header line and map columns.
+    Scan up to first 50 rows to detect header line and map columns.
     Returns (mapping, header_row_index)
     """
     cache = list(rows)
-    limit = min(len(cache), 10)
+    limit = min(len(cache), 50)  # scan deeper, not just 10 rows
+
     for i in range(limit):
         row = cache[i]
         seen = {}
@@ -128,8 +146,12 @@ def _find_header_map(rows: Iterable[List]) -> Tuple[Dict[str, int], int]:
             canon, _ = _match_header(cell)
             if canon and canon not in seen:
                 seen[canon] = idx
-        if {"number", "description", "volume", "unit"} <= set(seen.keys()):
+
+        # require at least number + description + unit
+        if {"number", "description", "unit"} <= set(seen.keys()):
+            # optional: add volume/price/total_price if present
             return seen, i
+
     raise ParseError("Required headers not found (No, Uraian Pekerjaan, Volume, Satuan)")
 
 def _rows_after(cache: List[List], start_idx: int) -> Iterable[List]:
@@ -138,20 +160,26 @@ def _rows_after(cache: List[List], start_idx: int) -> Iterable[List]:
 
 def _parse_rows(cache: List[List], colmap: Dict[str, int]) -> List[ParsedRow]:
     out: List[ParsedRow] = []
+
     for idx, row in enumerate(_rows_after(cache, start_idx=colmap["_header_row"])):  # type: ignore
         def cell(col):
-            i = colmap[col]
-            return row[i] if i < len(row) else None
+            i = colmap.get(col)
+            return row[i] if i is not None and i < len(row) else None
 
         desc = (cell("description") or "").strip() if isinstance(cell("description"), str) else cell("description")
-        if not desc:   # stop on empty rows
+        if not desc:
             continue
 
-        number = str(cell("number") or "").strip()
-        unit = str(cell("unit") or "").strip()
-        volume = parse_decimal(cell("volume"))
+        out.append(ParsedRow(
+            number=str(cell("number") or "").strip(),
+            description=str(desc),
+            volume=parse_decimal(cell("volume")),
+            unit=str(cell("unit") or "").strip(),
+            analysis_code=str(cell("analysis_code") or "").strip(),
+            price=parse_decimal(cell("price")),
+            total_price=parse_decimal(cell("total_price")),
+        ))
 
-        out.append(ParsedRow(number=number, description=str(desc), volume=volume, unit=unit))
     return out
 
 class ExcelImporter:
@@ -190,3 +218,23 @@ class ExcelImporter:
             )
             count += 1
         return count
+
+def preview_file(file: UploadedFile):
+    reader = make_reader(file)
+    cache = list(reader.iter_rows(file))
+    colmap, header_row = _find_header_map(cache)
+    colmap["_header_row"] = header_row
+
+    parsed = _parse_rows(cache, colmap)
+    return [
+        {
+            "number": row.number,
+            "description": row.description,
+            "volume": float(row.volume),
+            "unit": row.unit,
+            "analysis_code": row.analysis_code,
+            "price": float(row.price),
+            "total_price": float(row.total_price),
+        }
+        for row in parsed
+    ]

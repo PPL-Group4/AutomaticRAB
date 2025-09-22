@@ -31,3 +31,25 @@ def detect_headers(request):
         "originals": originals,
         "missing": missing
     })
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from .services.reader import preview_file   # make sure this points to the right place
+
+@csrf_exempt
+def preview_rows(request):
+    """
+    POST /excel_parser/preview_rows
+    body: multipart form-data with 'file'
+    """
+    if request.method == "POST":
+        file = request.FILES.get("file")
+        if not file:
+            return JsonResponse({"detail": "file is required"}, status=400)
+
+        try:
+            rows = preview_file(file)
+            return JsonResponse({"rows": rows}, safe=False)
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=500)
+
+    return JsonResponse({"detail": "Method not allowed"}, status=405)
