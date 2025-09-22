@@ -6,6 +6,8 @@ from django.urls import reverse
 from django.test import Client
 import json
 
+from django.test import TestCase
+
 class TextNormalizationTestCase(TestCase):
 	def setUp(self):
 		from automatic_job_matching.utils.text_normalizer import normalize_text
@@ -97,6 +99,41 @@ class TextNormalizationTestCase(TestCase):
 			self.normalize_text(text, remove_stopwords=True, stopwords=None),
 			"satu dua tiga",
 		)
+
+	def test_preserve_dotted_codes(self):
+		self.assertEqual(
+			self.normalize_text("T.14.d | 1 m³ Pemadatan pasir sebagai bahan pengisi"),
+			"T.14.d 1 m3 pemadatan pasir sebagai bahan pengisi",
+		)
+
+	def test_preserve_dotted_codes1(self):
+		self.assertEqual(
+			self.normalize_text("T.14.d"),
+			"T.14.d",
+		)
+
+	def test_convert_spaced_AT_code(self):
+		self.assertEqual(self.normalize_text("AT 19 1"), "AT.19-1")
+		self.assertEqual(self.normalize_text("AT 20"), "AT.20")
+
+	def test_convert_spaced_generic_codes(self):
+		self.assertEqual(self.normalize_text("A 4 1 1 4"), "A.4.1.1.4")
+		self.assertEqual(self.normalize_text("T 14 d"), "T.14.d")
+
+
+	def test_no_conversion_without_digits_in_generic(self):
+		self.assertEqual(self.normalize_text("A B C"), "a b c")
+		self.assertEqual(self.normalize_text("AB CD"), "ab cd")
+
+	def test_preserve_existing_dotted_at_code(self):
+		self.assertEqual(self.normalize_text("AT.19-1"), "AT.19-1")
+		self.assertEqual(self.normalize_text("AT.02-1"), "AT.02-1")
+
+	def test_preserve_existing_generic_dotted_code(self):
+		self.assertEqual(self.normalize_text("A.4.1.1.4"), "A.4.1.1.4")
+
+	def test_no_conversion_when_only_prefix_present(self):
+		self.assertEqual(self.normalize_text("AT"), "at")
 
 class DbAhsRepositoryTests(SimpleTestCase):
     def setUp(self):
