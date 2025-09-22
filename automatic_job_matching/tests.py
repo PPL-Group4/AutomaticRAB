@@ -1,7 +1,10 @@
 from django.test import TestCase, SimpleTestCase
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 from automatic_job_matching.repository.ahs_repo import DbAhsRepository
 from automatic_job_matching.service.exact_matcher import (AhsRow, ExactMatcher, _norm_code, _norm_name)
+from django.urls import reverse
+from django.test import Client
+import json
 
 class TextNormalizationTestCase(TestCase):
 	def setUp(self):
@@ -189,3 +192,69 @@ class ExactMatcherTests(SimpleTestCase):
     def test_norm_code_and_norm_name_helpers(self):
         self.assertEqual(_norm_code("t.15-a/1"), "T15A1")
         self.assertEqual(_norm_name("Pemadatan Pasir!"), "pemadatan pasir")
+
+class MatchExactViewTests(TestCase):
+    def setUp(self):
+        self.client = Client()
+
+        self._repo_patcher = patch(
+            "automatic_job_matching.views.DbAhsRepository",
+        )
+        FakeRepo = type(
+            "FakeRepo",
+            (),
+            {
+                "by_code_like": lambda self, c: [AhsRow(id=1, code="X.01", name="Dummy")],
+                "by_name_candidates": lambda self, h: [],
+            },
+        )
+        self.mock_repo_cls = self._repo_patcher.start()
+        self.mock_repo_cls.return_value = FakeRepo()
+
+    def tearDown(self):
+        self._repo_patcher.stop()
+
+    def test_valid_request_returns_match(self):
+        url = reverse("match-exact")
+        payload = {"description": "X.01"}
+        response = self.client.post(
+            url,
+            json.dumps(payload),
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertIn("match", data)
+        self.assertEqual(data["match"]["code"], "X.01")
+
+    def test_valid_request_no_match(self):
+        self.mock_repo_cls.return_value.by_code_like = lambda c: []
+        url = reverse("match-exact")
+        payload = {"description": "NoMatch"}
+        response = self.client.post(
+            url,
+            json.dumps(payload),
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIsNone(response.json()["match"])
+
+    def test_missing_description_defaults_to_empty(self):
+        url = reverse("match-exact")
+        response = self.client.post(
+            url,
+            json.dumps({}), 
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIsNone(response.json()["match"])
+
+    def test_invalid_json_returns_400(self):
+        url = reverse("match-exact")
+        response = self.client.post(
+            url,
+            "not-json",
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("error", response.json())
