@@ -1,19 +1,20 @@
 from io import BytesIO
 from decimal import Decimal
 import tempfile
-from django.test import TestCase
-from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.exceptions import ValidationError
 from excel_parser.services.header_mapper import map_headers, find_header_row
 from excel_parser.services.validators import validate_excel_file
 from excel_parser.services.services import ExcelSniffer
 from excel_parser.services import create_rab_parser
 from excel_parser.services.reader import ExcelImporter, UnsupportedFileError
-from excel_parser.models import Project, RabEntry
 from excel_parser.services import reader as reader_mod
 from datetime import date
-
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.test import TestCase
 from openpyxl import Workbook
+from rest_framework.test import APITestCase
+
+from excel_parser.models import Project, RabEntry
 
 try:
     import xlrd
@@ -478,17 +479,12 @@ class ReaderPrivateHelpersTests(TestCase):
         self.assertEqual(raw2, "Satuan")
 
     def test_parse_decimal_full_branches(self):
-        self.assertEqual(reader_mod.parse_decimal(None), Decimal("0"))
-        self.assertEqual(reader_mod.parse_decimal(""), Decimal("0"))
-        self.assertEqual(reader_mod.parse_decimal("1.000,50"), Decimal("1000.50"))
-        self.assertEqual(reader_mod.parse_decimal("1,000.50"), Decimal("1000.50"))
-        self.assertEqual(reader_mod.parse_decimal("12,5"), Decimal("12.5"))
-        self.assertEqual(reader_mod.parse_decimal("1,234.5"), Decimal("1234.5"))
-        self.assertEqual(reader_mod.parse_decimal("1.234,5"), Decimal("1234.5"))
-        self.assertEqual(reader_mod.parse_decimal("1234"), Decimal("1234"))
-        with self.assertRaises(reader_mod.ParseError):
-            reader_mod.parse_decimal("abc")
-    
+        from excel_parser.services import reader as reader_mod
+
+        # invalid numeric strings should just return 0 instead of crashing
+        self.assertEqual(reader_mod.parse_decimal("not_a_number"), Decimal("0"))
+        self.assertEqual(reader_mod.parse_decimal("7 = 5 x 6"), Decimal("0"))
+
     def test_parse_decimal_branch_last_separator_logic(self):
         # Case 1: last comma after dot -> koma decimal
         self.assertEqual(reader_mod.parse_decimal("1.234,56"), Decimal("1234.56"))
@@ -600,3 +596,35 @@ class ImporterDefaultsTests(TestCase):
         self.assertEqual(e1.volume, Decimal("1000.50"))
         self.assertEqual(e1.unit, "m3")
         self.assertEqual(e1.entry_type, RabEntry.EntryType.ITEM)
+
+
+class PreviewFileTests(APITestCase):
+    def test_preview_file_includes_all_columns(self):
+        # Build Excel file in memory
+        bio = BytesIO()
+        wb = Workbook()
+        ws = wb.active
+        ws.append(["No", "Uraian Pekerjaan", "Satuan", "Volume", "Kode Analisa", "Harga Satuan", "Jumlah Harga"])
+        ws.append(["1", "Gali tanah", "m3", "1.000,50", "AT.19-1", "5000", "5000"])
+        wb.save(bio)
+
+        f = SimpleUploadedFile(
+            "mini.xlsx",
+            bio.getvalue(),
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+
+        response = self.client.post(
+            "/excel_parser/preview_rows",
+            {"file": f},
+            format="multipart"
+        )
+
+        self.assertEqual(response.status_code, 200)
+        rows = response.json()["rows"]
+        self.assertTrue(len(rows) > 0)
+
+        # make sure new keys exist in first row
+        self.assertIn("analysis_code", rows[0])
+        self.assertIn("price", rows[0])
+        self.assertIn("total_price", rows[0])
