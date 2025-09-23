@@ -53,3 +53,15 @@ def preview_rows(request):
             return JsonResponse({"error": str(e)}, status=500)
 
     return JsonResponse({"detail": "Method not allowed"}, status=405)
+
+from django.shortcuts import render
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from .services.reader import preview_file 
+
+def rab_converted(request):
+    """
+    Display converted rows in a table with ability to edit.
+    This will hit the preview_rows endpoint via AJAX/fetch.
+    """
+    return render(request, "rab_converted.html")

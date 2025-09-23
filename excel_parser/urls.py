@@ -8,4 +8,5 @@ from . import views
 urlpatterns = [
     path("detect_headers", views.detect_headers, name="detect_headers"),
     path("preview_rows", views.preview_rows, name="preview_rows"),
+    path("rab_converted/", views.rab_converted, name="rab_converted"),
 ]
