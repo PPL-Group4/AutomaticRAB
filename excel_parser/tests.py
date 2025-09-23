@@ -761,3 +761,12 @@ class ImporterIntegrationTests(TransactionTestCase):
         self.assertEqual(item.name, "Mobilisasi")
         self.assertEqual(item.volume, 1.0)
         self.assertEqual(item.price, 1000.0)
+
+class RABConvertedViewTests(TestCase):
+    def setUp(self):
+        self.client = Client()
+
+    def test_rab_converted_page_loads(self):
+        response = self.client.get("/excel_parser/rab_converted/")
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "rab_converted.html")
