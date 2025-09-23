@@ -42,43 +42,60 @@ def _match_header(cell: str) -> Tuple[str | None, str]:
 _THOUSAND_DOT_DECIMAL_COMMA = re.compile(r"^\d{1,3}(\.\d{3})+,\d+$")
 _THOUSAND_COMMA_DECIMAL_DOT = re.compile(r"^\d{1,3}(,\d{3})+\.\d+$")
 
+
 def parse_decimal(val) -> Decimal:
+    print(f"=== parse_decimal called with: {val!r} (type: {type(val)})")
+
     if val is None or str(val).strip() == "":
+        print("→ Returning 0 (None or empty)")
         return Decimal("0")
     if isinstance(val, (int, float, Decimal)):
-        return Decimal(str(val))
+        result = Decimal(str(val))
+        print(f"→ Returning {result} (numeric type)")
+        return result
 
     s = str(val).strip()
+    print(f"→ Normalized string: {s!r}")
 
     # If the string has no digits at all, treat as 0
     if not any(ch.isdigit() for ch in s):
+        print("→ Returning 0 (no digits)")
         return Decimal("0")
 
-    # 🚩 New rule: if string looks like a formula ("7 = 5 x 6"), skip it
-    if "=" in s or "x" in s.lower():
+    # Skip if it looks like a formula, e.g. "7 = 5 x 6"
+    if "=" in s or re.search(r"\d+\s*[xX]\s*\d+", s):
+        print("→ Returning 0 (looks like formula)")
         return Decimal("0")
 
     # Handle common formats
     if _THOUSAND_DOT_DECIMAL_COMMA.match(s):
         s = s.replace(".", "").replace(",", ".")
+        print(f"→ After dot-comma format: {s}")
     elif _THOUSAND_COMMA_DECIMAL_DOT.match(s):
         s = s.replace(",", "")
+        print(f"→ After comma-dot format: {s}")
     else:
         if "," in s and "." not in s:
             s = s.replace(",", ".")
+            print(f"→ After comma->dot: {s}")
         elif "," in s and "." in s:
             if s.rfind(",") > s.rfind("."):
                 s = s.replace(".", "").replace(",", ".")
+                print(f"→ After mixed format (comma last): {s}")
             else:
                 s = s.replace(",", "")
+                print(f"→ After mixed format (dot last): {s}")
 
     s = re.sub(r"[^\d.-]", "", s)
+    print(f"→ After regex cleanup: {s!r}")
 
     try:
-        return Decimal(s)
-    except InvalidOperation:
+        result = Decimal(s)
+        print(f"→ Successfully parsed to: {result}")
+        return result
+    except InvalidOperation as e:
+        print(f"→ InvalidOperation: {e}, returning 0")
         return Decimal("0")
-
 class _BaseReader:
     def iter_rows(self, file: UploadedFile) -> Iterable[List]:
         raise NotImplementedError
@@ -122,6 +139,7 @@ def make_reader(file: UploadedFile) -> _BaseReader:
     raise UnsupportedFileError("Only .xls and .xlsx are supported")
 
 @dataclass
+
 class ParsedRow:
     number: str
     description: str
@@ -130,55 +148,112 @@ class ParsedRow:
     analysis_code: str
     price: Decimal
     total_price: Decimal
+    is_section: bool = False
 
 def _find_header_map(rows: Iterable[List]) -> Tuple[Dict[str, int], int]:
     """
     Scan up to first 50 rows to detect header line and map columns.
-    Returns (mapping, header_row_index)
+    Returns (mapping, header_row_index).
     """
     cache = list(rows)
-    limit = min(len(cache), 50)  # scan deeper, not just 10 rows
+    limit = min(len(cache), 50)
 
     for i in range(limit):
         row = cache[i]
         seen = {}
         for idx, cell in enumerate(row):
-            canon, _ = _match_header(cell)
+            if cell is None:
+                continue
+            normed = _norm(cell)  # normalize (strip + lower)
+            canon = None
+            for key, aliases in HEADER_ALIASES.items():
+                if normed in {a.lower().strip() for a in aliases}:
+                    canon = key
+                    break
             if canon and canon not in seen:
                 seen[canon] = idx
 
         # require at least number + description + unit
         if {"number", "description", "unit"} <= set(seen.keys()):
-            # optional: add volume/price/total_price if present
             return seen, i
+        print("Detected colmap:", seen)
 
-    raise ParseError("Required headers not found (No, Uraian Pekerjaan, Volume, Satuan)")
+    raise ParseError(
+        "Required headers not found (need at least No, Uraian Pekerjaan, and Satuan)"
+    )
+
 
 def _rows_after(cache: List[List], start_idx: int) -> Iterable[List]:
     for r in range(start_idx + 1, len(cache)):
         yield cache[r]
 
+def _is_section_row(number: str, desc: str) -> bool:
+    """
+    Detect if a row is a section header.
+    """
+    if not number:
+        return False
+
+    # Roman numerals with a dot (I., II., III., IV., etc.)
+    if re.fullmatch(r"[IVXLCDM]+\.", number):
+        return True
+
+    # Single letters with a dot (A., B., C., etc.)
+    if re.fullmatch(r"[A-Z]\.", number):
+        return True
+
+    # Pure digits (1, 2, 3) are items, not sections
+    # Mixed like 1.1 or 1.2.3 are items, not sections
+    if re.match(r"^\d", number):
+        return False
+
+    return False
+
+
 def _parse_rows(cache: List[List], colmap: Dict[str, int]) -> List[ParsedRow]:
     out: List[ParsedRow] = []
 
-    for idx, row in enumerate(_rows_after(cache, start_idx=colmap["_header_row"])):  # type: ignore
+    for idx, row in enumerate(_rows_after(cache, start_idx=colmap["_header_row"])):
         def cell(col):
             i = colmap.get(col)
             return row[i] if i is not None and i < len(row) else None
 
+        number = str(cell("number") or "").strip()
         desc = (cell("description") or "").strip() if isinstance(cell("description"), str) else cell("description")
         if not desc:
             continue
 
-        out.append(ParsedRow(
-            number=str(cell("number") or "").strip(),
+        unit_val = str(cell("unit") or "").strip()
+        vol_cell = cell("volume")
+        print("row:", row)
+        print("colmap:", colmap)
+        print("unit cell:", unit_val)
+        print("volume cell:", vol_cell)
+
+        is_section = _is_section_row(number, str(desc))
+        print(f"is_section: {is_section}")
+
+        if is_section:
+            volume_result = Decimal("0")
+            print(f"Section row - setting volume to 0")
+        else:
+            print(f"About to call parse_decimal with: {vol_cell!r}")
+            volume_result = parse_decimal(vol_cell)
+            print(f"parse_decimal returned: {volume_result}")
+
+        parsed_row = ParsedRow(
+            number=number,
             description=str(desc),
-            volume=parse_decimal(cell("volume")),
-            unit=str(cell("unit") or "").strip(),
+            volume=volume_result,
+            unit=unit_val,
             analysis_code=str(cell("analysis_code") or "").strip(),
             price=parse_decimal(cell("price")),
             total_price=parse_decimal(cell("total_price")),
-        ))
+            is_section=is_section
+        )
+
+        print(f"Created ParsedRow with volume: {parsed_row.volume}")
+        out.append(parsed_row)
 
     return out
 
@@ -209,16 +284,19 @@ class ExcelImporter:
         for idx, p in enumerate(parsed, start=1):
             RabEntry.objects.create(
                 project=project,
-                entry_type=RabEntry.EntryType.ITEM, # Defaulting to ITEM for now
+                entry_type=RabEntry.EntryType.SECTION if p.is_section else RabEntry.EntryType.ITEM,
                 item_number=p.number,
                 description=p.description,
                 volume=p.volume,
                 unit=p.unit,
+                analysis_code=p.analysis_code,
+                unit_price=p.price,
+                total_price=p.total_price,
                 row_index=idx,
             )
+
             count += 1
         return count
-
 def preview_file(file: UploadedFile):
     reader = make_reader(file)
     cache = list(reader.iter_rows(file))
@@ -235,6 +313,7 @@ def preview_file(file: UploadedFile):
             "analysis_code": row.analysis_code,
             "price": float(row.price),
             "total_price": float(row.total_price),
+            "is_section": row.is_section,  # 🚩 expose to API
         }
         for row in parsed
     ]
