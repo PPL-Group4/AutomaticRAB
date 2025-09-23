@@ -10,11 +10,15 @@ from excel_parser.services.reader import ExcelImporter, UnsupportedFileError
 from excel_parser.services import reader as reader_mod
 from datetime import date
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import TestCase
+from django.test import TestCase,Client
 from openpyxl import Workbook
 from rest_framework.test import APITestCase
+from excel_parser.services.reader import preview_file
 
 from excel_parser.models import Project, RabEntry
+
+from excel_parser.services.reader import ExcelImporter
+from rencanakan_core.models import RabItem, Rab
 
 try:
     import xlrd
@@ -261,7 +265,7 @@ class RabParserTests(TestCase):
         self.parser = create_rab_parser()  # Uses factory with proper DI
         self.project = Project.objects.create(
             program="TEST PROGRAM",
-            kegiatan="TEST ACTIVITY", 
+            kegiatan="TEST ACTIVITY",
             pekerjaan="TEST JOB",
             lokasi="TEST LOCATION",
             tahun_anggaran=2025
@@ -353,7 +357,7 @@ class RabParserTests(TestCase):
             project=self.project, entry_type=RabEntry.EntryType.SECTION, description="Parent"
         )
         entry = self.parser.parse_row(raw_row, project=self.project, parent=parent_section)
-        
+
         self.assertEqual(entry.entry_type, RabEntry.EntryType.ITEM)
         self.assertEqual(entry.item_number, '1')
         self.assertEqual(entry.description, 'Mobilisasi/demobilisasi')
@@ -384,7 +388,7 @@ class RabParserTests(TestCase):
 
     def test_row_with_mixed_data_types_parsed_correctly(self):
         raw_row = {
-            'No.': '5', 'URAIAN PEKERJAAN': 'Mixed Data Item', 
+            'No.': '5', 'URAIAN PEKERJAAN': 'Mixed Data Item',
             'VOL.': '2.50', 'HARGA SATUAN (Rp.)': '1.000.000,50'
         }
         entry = self.parser.parse_row(raw_row, project=self.project)
@@ -407,11 +411,11 @@ class RabParserTests(TestCase):
     def test_processes_all_cells_for_data_type_conversion(self):
         raw_row = {
             'No.': ' 1 ', 'URAIAN PEKERJAAN': '  Test\nItem  ', 'SATUAN': ' Ls ',
-            'KODE ANALISA': '  AT.19-1  ', 'VOL.': ' 2,50 ', 
+            'KODE ANALISA': '  AT.19-1  ', 'VOL.': ' 2,50 ',
             'HARGA SATUAN (Rp.)': ' Rp 1.000.000 ', 'JUMLAH HARGA (Rp.)': ' 2.500.000,00 '
         }
         entry = self.parser.parse_row(raw_row, project=self.project)
-        
+
         self.assertEqual(entry.item_number, '1')  # Trimmed
         self.assertEqual(entry.description, 'Test Item')  # Newline replaced, trimmed
         self.assertEqual(entry.unit, 'Ls')  # Trimmed
@@ -467,7 +471,7 @@ class RabParserTests(TestCase):
         entry = self.parser.parse_row(raw_row, project=self.project)
         self.assertEqual(entry.entry_type, RabEntry.EntryType.ITEM)
         self.assertIsNone(entry.volume)
-    
+
 class ReaderPrivateHelpersTests(TestCase):
     def test__norm_and__match_header(self):
         self.assertEqual(reader_mod._norm("  No.  "), "no.")
@@ -530,7 +534,7 @@ class ReaderHeaderAndRowParsingTests(TestCase):
     def test__find_header_map_missing_raises(self):
         rows = [
             ["Random", "Header"],
-            ["Kode", "Deskripsi"],  
+            ["Kode", "Deskripsi"],
             ["1", "A"],
         ]
         with self.assertRaises(reader_mod.ParseError):
@@ -597,6 +601,8 @@ class ImporterDefaultsTests(TestCase):
         self.assertEqual(e1.unit, "m3")
         self.assertEqual(e1.entry_type, RabEntry.EntryType.ITEM)
 
+from django.apps import apps
+from django.db import connection,models
 
 class PreviewFileTests(APITestCase):
     def test_preview_file_includes_all_columns(self):
@@ -628,3 +634,130 @@ class PreviewFileTests(APITestCase):
         self.assertIn("analysis_code", rows[0])
         self.assertIn("price", rows[0])
         self.assertIn("total_price", rows[0])
+
+    def test_preview_file_detects_section_rows(self):
+                # Build an in-memory Excel file
+                bio = BytesIO()
+                wb = Workbook()
+                ws = wb.active
+                ws.append(["No", "Uraian Pekerjaan", "Volume", "Satuan", "Harga Satuan", "Jumlah Harga"])
+                ws.append(["I.", "PEKERJAAN PERSIAPAN", "", ""])  # should be a section
+                ws.append(["1", "Mobilisasi", "1", "Ls", "1000", "1000"])  # should be an item
+                wb.save(bio)
+
+                f = SimpleUploadedFile(
+                    "mini.xlsx",
+                    bio.getvalue(),
+                    content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                )
+
+                rows = preview_file(f)
+                # Check first row is section
+                self.assertTrue(rows[0]["is_section"])
+                self.assertEqual(rows[0]["description"], "PEKERJAAN PERSIAPAN")
+
+                # Check second row is normal item
+                self.assertFalse(rows[1]["is_section"])
+                self.assertEqual(rows[1]["description"], "Mobilisasi")
+                self.assertEqual(rows[1]["volume"], 1.0)
+                self.assertEqual(rows[1]["price"], 1000.0)
+                self.assertEqual(rows[1]["total_price"], 1000.0)
+
+
+
+class TestProject(models.Model):
+    name = models.CharField(max_length=255)
+
+    class Meta:
+        db_table = "test_projects"
+        managed = True
+
+
+class TestRab(models.Model):
+    name = models.CharField(max_length=255)
+    project = models.ForeignKey(TestProject, on_delete=models.CASCADE)
+
+    class Meta:
+        db_table = "test_rabs"
+        managed = True
+from django.db import connection
+class TestRabItemHeader(models.Model):
+    rab = models.ForeignKey(TestRab, on_delete=models.CASCADE)
+    name = models.CharField(max_length=255)
+
+    class Meta:
+        db_table = "test_rab_item_headers"
+        managed = True
+
+
+class TestRabItem(models.Model):
+    rab = models.ForeignKey(TestRab, on_delete=models.CASCADE, null=True)
+    rab_item_header = models.ForeignKey(TestRabItemHeader, on_delete=models.CASCADE, null=True)
+    name = models.CharField(max_length=500, null=True)
+    volume = models.FloatField(null=True)
+    price = models.FloatField(null=True)
+    unit = models.CharField(max_length=50, null=True)
+
+    class Meta:
+        db_table = "test_rab_items"
+        managed = True
+
+from django.test import TransactionTestCase
+from django.db import connection
+
+class ImporterIntegrationTests(TransactionTestCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        # manually create test tables
+        with connection.schema_editor() as schema:
+            schema.create_model(TestProject)
+            schema.create_model(TestRab)
+            schema.create_model(TestRabItemHeader)
+            schema.create_model(TestRabItem)
+
+    @classmethod
+    def tearDownClass(cls):
+        # clean up tables
+        with connection.schema_editor() as schema:
+            schema.delete_model(TestRabItem)
+            schema.delete_model(TestRabItemHeader)
+            schema.delete_model(TestRab)
+            schema.delete_model(TestProject)
+        super().tearDownClass()
+
+    def test_importer_inserts_into_rab_items(self):
+        project = TestProject.objects.create(name="Test Project")
+        rab = TestRab.objects.create(name="Test RAB", project=project)
+
+        # build a tiny Excel file
+        bio = BytesIO()
+        wb = Workbook()
+        ws = wb.active
+        ws.append(["No", "Uraian Pekerjaan", "Volume", "Satuan", "Harga Satuan", "Jumlah Harga"])
+        ws.append(["1", "Mobilisasi", "1", "Ls", "1000", "1000"])
+        wb.save(bio)
+
+        f = SimpleUploadedFile(
+            "mini.xlsx", bio.getvalue(),
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+
+        from excel_parser.services.reader import preview_file
+        rows = preview_file(f)
+
+        # simulate writing into TestRabItem
+        for row in rows:
+            TestRabItem.objects.create(
+                rab=rab,
+                name=row["description"],
+                volume=row["volume"],
+                price=row["price"],
+                unit=row["unit"]
+            )
+
+        self.assertEqual(TestRabItem.objects.count(), 1)
+        item = TestRabItem.objects.first()
+        self.assertEqual(item.name, "Mobilisasi")
+        self.assertEqual(item.volume, 1.0)
+        self.assertEqual(item.price, 1000.0)
