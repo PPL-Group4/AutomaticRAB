@@ -1,7 +1,12 @@
 from django.test import TestCase, SimpleTestCase
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 from automatic_job_matching.repository.ahs_repo import DbAhsRepository
 from automatic_job_matching.service.exact_matcher import (AhsRow, ExactMatcher, _norm_code, _norm_name)
+from django.urls import reverse
+from django.test import Client
+import json
+
+from django.test import TestCase
 
 class TextNormalizationTestCase(TestCase):
 	def setUp(self):
@@ -94,6 +99,41 @@ class TextNormalizationTestCase(TestCase):
 			self.normalize_text(text, remove_stopwords=True, stopwords=None),
 			"satu dua tiga",
 		)
+
+	def test_preserve_dotted_codes(self):
+		self.assertEqual(
+			self.normalize_text("T.14.d | 1 m³ Pemadatan pasir sebagai bahan pengisi"),
+			"T.14.d 1 m3 pemadatan pasir sebagai bahan pengisi",
+		)
+
+	def test_preserve_dotted_codes1(self):
+		self.assertEqual(
+			self.normalize_text("T.14.d"),
+			"T.14.d",
+		)
+
+	def test_convert_spaced_AT_code(self):
+		self.assertEqual(self.normalize_text("AT 19 1"), "AT.19-1")
+		self.assertEqual(self.normalize_text("AT 20"), "AT.20")
+
+	def test_convert_spaced_generic_codes(self):
+		self.assertEqual(self.normalize_text("A 4 1 1 4"), "A.4.1.1.4")
+		self.assertEqual(self.normalize_text("T 14 d"), "T.14.d")
+
+
+	def test_no_conversion_without_digits_in_generic(self):
+		self.assertEqual(self.normalize_text("A B C"), "a b c")
+		self.assertEqual(self.normalize_text("AB CD"), "ab cd")
+
+	def test_preserve_existing_dotted_at_code(self):
+		self.assertEqual(self.normalize_text("AT.19-1"), "AT.19-1")
+		self.assertEqual(self.normalize_text("AT.02-1"), "AT.02-1")
+
+	def test_preserve_existing_generic_dotted_code(self):
+		self.assertEqual(self.normalize_text("A.4.1.1.4"), "A.4.1.1.4")
+
+	def test_no_conversion_when_only_prefix_present(self):
+		self.assertEqual(self.normalize_text("AT"), "at")
 
 class DbAhsRepositoryTests(SimpleTestCase):
     def setUp(self):
@@ -189,3 +229,69 @@ class ExactMatcherTests(SimpleTestCase):
     def test_norm_code_and_norm_name_helpers(self):
         self.assertEqual(_norm_code("t.15-a/1"), "T15A1")
         self.assertEqual(_norm_name("Pemadatan Pasir!"), "pemadatan pasir")
+
+class MatchExactViewTests(TestCase):
+    def setUp(self):
+        self.client = Client()
+
+        self._repo_patcher = patch(
+            "automatic_job_matching.views.DbAhsRepository",
+        )
+        FakeRepo = type(
+            "FakeRepo",
+            (),
+            {
+                "by_code_like": lambda self, c: [AhsRow(id=1, code="X.01", name="Dummy")],
+                "by_name_candidates": lambda self, h: [],
+            },
+        )
+        self.mock_repo_cls = self._repo_patcher.start()
+        self.mock_repo_cls.return_value = FakeRepo()
+
+    def tearDown(self):
+        self._repo_patcher.stop()
+
+    def test_valid_request_returns_match(self):
+        url = reverse("match-exact")
+        payload = {"description": "X.01"}
+        response = self.client.post(
+            url,
+            json.dumps(payload),
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertIn("match", data)
+        self.assertEqual(data["match"]["code"], "X.01")
+
+    def test_valid_request_no_match(self):
+        self.mock_repo_cls.return_value.by_code_like = lambda c: []
+        url = reverse("match-exact")
+        payload = {"description": "NoMatch"}
+        response = self.client.post(
+            url,
+            json.dumps(payload),
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIsNone(response.json()["match"])
+
+    def test_missing_description_defaults_to_empty(self):
+        url = reverse("match-exact")
+        response = self.client.post(
+            url,
+            json.dumps({}), 
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIsNone(response.json()["match"])
+
+    def test_invalid_json_returns_400(self):
+        url = reverse("match-exact")
+        response = self.client.post(
+            url,
+            "not-json",
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("error", response.json())
