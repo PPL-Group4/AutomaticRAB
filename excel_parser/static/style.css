@@ -1,0 +1,41 @@
+.container {
+    width: 90%;
+    margin: auto;
+    font-family: Arial, sans-serif;
+  }
+  
+  form {
+    margin-bottom: 1em;
+  }
+  
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 1em;
+  }
+  
+  th, td {
+    border: 1px solid #ccc;
+    padding: 8px;
+    text-align: left;
+  }
+  
+  input {
+    width: 100%;
+    border: none;
+    background: transparent;
+  }
+  
+  .total-box {
+    margin-top: 1em;
+    font-weight: bold;
+    text-align: right;
+    font-size: 1.2em;
+  }
+  
+  button {
+    margin-top: 0.5em;
+    padding: 5px 10px;
+    cursor: pointer;
+  }
+  
