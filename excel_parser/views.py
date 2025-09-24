@@ -15,7 +15,7 @@ from .services.validators import validate_excel_file
 
 
 def validate_pdf_file(file):
-    """Validator khusus untuk PDF."""
+    """Special validator for PDF files."""
     if file.content_type != "application/pdf":
         raise ValidationError("Only .pdf files are allowed.")
 
@@ -25,7 +25,7 @@ def validate_pdf_file(file):
 def detect_headers(request):
     """
     POST /excel_parser/detect_headers
-    body: multipart form-data dengan 'file'
+    body: multipart form-data with 'file'
     """
     f = request.FILES.get('file')
     if not f:
@@ -60,14 +60,17 @@ def detect_headers(request):
 def preview_rows(request):
     """
     POST /excel_parser/preview_rows
-    body: multipart form-data dengan optional field:
-      - excel_standard
-      - excel_apendo
-      - pdf_file
+    Accepts either:
+      - file (legacy, for frontend JS)
+      - excel_standard / excel_apendo / pdf_file (extended, from git)
     """
     if request.method != "POST":
         return JsonResponse({"detail": "Method not allowed"}, status=405)
 
+    # legacy (frontend expects 'file')
+    legacy_file = request.FILES.get("file")
+
+    # extended (multiple file support)
     excel_standard = request.FILES.get("excel_standard")
     excel_apendo = request.FILES.get("excel_apendo")
     pdf_file = request.FILES.get("pdf_file")
@@ -75,6 +78,12 @@ def preview_rows(request):
     try:
         results = {}
 
+        # === Legacy path ===
+        if legacy_file:
+            validate_excel_file(legacy_file)
+            results["rows"] = preview_file(legacy_file)
+
+        # === Extended path ===
         if excel_standard:
             validate_excel_file(excel_standard)
             results["excel_standard"] = preview_file(excel_standard)
@@ -90,7 +99,7 @@ def preview_rows(request):
         if not results:
             return JsonResponse({"detail": "No file uploaded"}, status=400)
 
-        return JsonResponse(results)
+        return JsonResponse(results, safe=False)
 
     except ValidationError as ve:
         return JsonResponse({"error": str(ve)}, status=400)
@@ -100,7 +109,7 @@ def preview_rows(request):
 
 def upload_view(request):
     """
-    Render halaman upload untuk Excel & PDF dengan validasi format.
+    Render upload page for Excel & PDF with format validation.
     """
     if request.method == 'POST':
         excel_standard = request.FILES.get("excel_standard")
@@ -111,23 +120,23 @@ def upload_view(request):
             if excel_standard:
                 validate_excel_file(excel_standard)
                 return render(request, 'excel_upload.html', {
-                    'success': 'Excel standar berhasil diupload'
+                    'success': 'Standard Excel uploaded successfully'
                 })
 
             if excel_apendo:
                 validate_excel_file(excel_apendo)
                 return render(request, 'excel_upload.html', {
-                    'success': 'Excel APENDO berhasil diupload'
+                    'success': 'APENDO Excel uploaded successfully'
                 })
 
             if pdf_file:
                 validate_pdf_file(pdf_file)
                 return render(request, 'excel_upload.html', {
-                    'success': 'PDF berhasil diupload'
+                    'success': 'PDF uploaded successfully'
                 })
 
             return render(request, 'excel_upload.html', {
-                'error': 'File belum dipilih'
+                'error': 'No file selected'
             }, status=400)
 
         except ValidationError as ve:
