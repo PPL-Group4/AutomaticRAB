@@ -12,8 +12,10 @@ WORKDIR /app
 COPY requirements.txt /app/
 
 # Install dependencies
-RUN apt-get update && \
-    apt-get install -y gcc libpq-dev && \
+RUN apt-get update && apt-get install -y \
+    gcc \
+    libpq-dev \
+    default-libmysqlclient-dev && \
     pip install --upgrade pip && \
     pip install -r requirements.txt && \
     apt-get remove -y gcc && \
@@ -26,5 +28,5 @@ COPY . /app/
 # Expose the port the app runs on
 EXPOSE 8000
 
-# Run the Django development server
-CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+# Run the Gunicorn server
+CMD ["sh", "-c", "gunicorn --bind 0.0.0.0:${PORT:-8000} AutomaticRAB.wsgi:application"]
