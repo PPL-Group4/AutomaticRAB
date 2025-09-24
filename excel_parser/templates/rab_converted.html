@@ -1,0 +1,125 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+<head>
+  <title>RAB Editor</title>
+  <link rel="stylesheet" href="{% static 'style.css' %}">
+</head>
+<body>
+  <div class="container">
+    <h2>A. PEKERJAAN PERSIAPAN</h2>
+
+    <!-- Upload form -->
+    <form id="uploadForm" enctype="multipart/form-data">
+      <input type="file" name="file" id="fileInput" accept=".xls,.xlsx">
+      <button type="submit">Upload & Preview</button>
+    </form>
+
+    <!-- Table -->
+    <table id="rabTable">
+      <thead>
+        <tr>
+          <th>No.</th>
+          <th>Uraian Pekerjaan</th>
+          <th>Kode</th>
+          <th>Volume</th>
+          <th>SAT</th>
+          <th>Harga Sat (Rp.)</th>
+          <th>Jumlah (Rp.)</th>
+          <th>Aksi</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+
+    <button type="button" id="addRowBtn">+ Tambah baris</button>
+
+    <div class="total-box">
+      TOTAL: <span id="totalValue">Rp. 0</span>
+    </div>
+
+    <a href="#" class="action-btn">+ Tambah Kategori Pekerjaan/Pilih Referensi RAB</a>
+  </div>
+
+  <script>
+    function updateRowNumbers() {
+      const rows = document.querySelectorAll("#rabTable tbody tr");
+      rows.forEach((tr, idx) => {
+        tr.querySelector("td").innerText = idx + 1; 
+      });
+    }
+
+    // handling upload file
+    document.getElementById("uploadForm").addEventListener("submit", async function(e) {
+      e.preventDefault();
+      const fileInput = document.getElementById("fileInput");
+      if (!fileInput.files.length) {
+        alert("Pilih file Excel dulu");
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append("file", fileInput.files[0]);
+
+      try {
+        const resp = await fetch("/excel_parser/preview_rows", {
+          method: "POST",
+          body: formData
+        });
+        const data = await resp.json();
+        if (data.rows) {
+          renderTable(data.rows);
+        } else {
+          alert("Gagal parsing file: " + (data.error || "Unknown error"));
+        }
+      } catch (err) {
+        alert("Error: " + err.message);
+      }
+    });
+
+    // render table function
+    function renderTable(rows) {
+      const tbody = document.querySelector("#rabTable tbody");
+      tbody.innerHTML = "";
+      let total = 0;
+
+      rows.forEach((row, index) => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${index + 1}</td>
+          <td><input type="text" value="${row.description || ""}"></td>
+          <td><input type="text" value="${row.analysis_code || ""}"></td>
+          <td><input type="number" value="${row.volume || 0}"></td>
+          <td><input type="text" value="${row.unit || ""}"></td>
+          <td><input type="number" value="${row.price || 0}"></td>
+          <td class="jumlah">Rp. ${(row.total_price || 0).toLocaleString()}</td>
+          <td><button type="button" onclick="this.closest('tr').remove(); updateRowNumbers();">❌</button></td>
+        `;
+        tbody.appendChild(tr);
+        total += row.total_price || 0;
+      });
+
+      document.getElementById("totalValue").innerText =
+        "Rp. " + total.toLocaleString();
+    }
+
+    // add row manually 
+    document.getElementById("addRowBtn").addEventListener("click", () => {
+      const tbody = document.querySelector("#rabTable tbody");
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td></td>
+        <td><input type="text" value=""></td>
+        <td><input type="text" value=""></td>
+        <td><input type="number" value="0"></td>
+        <td><input type="text" value=""></td>
+        <td><input type="number" value="0"></td>
+        <td class="jumlah">Rp. 0</td>
+        <td><button type="button" onclick="this.closest('tr').remove(); updateRowNumbers();">❌</button></td>
+      `;
+      tbody.appendChild(tr);
+      updateRowNumbers();
+    });
+  </script>
+</body>
+</html>
