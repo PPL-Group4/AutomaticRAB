@@ -57,12 +57,12 @@
     <!-- final total box -->
     <div class="grand-total-box" id="grandTotalBox" style="display:none;">
       <div><span class="label">Total</span> <span id="grandTotal">Rp. 0</span></div>
-      <div><span class="label">VAT (10%)</span> <span id="ppn">Rp. 0</span></div>
-      <div><span class="label">Total (Including VAT)</span> <span id="totalWithPpn">Rp. 0</span></div>
-      <div><span class="label">In Words</span> <span id="terbilang">ZERO RUPIAH</span></div>
+      <div><span class="label">PPN (10%)</span> <span id="ppn">Rp. 0</span></div>
+      <div><span class="label">Total (Termasuk PPN)</span> <span id="totalWithPpn">Rp. 0</span></div>
+      <div><span class="label">Terbilang</span> <span id="terbilang">NOL RUPIAH</span></div>
     </div>
 
-    <a href="#" class="action-btn">+ Add Job Category/Choose RAB Reference</a>
+    <a href="#" class="action-btn">+ Tambah Kategori Pekerjaan/Pilih Referensi RAB</a>
   </div>
 
   <script>
@@ -70,7 +70,7 @@
       e.preventDefault();
       const fileInput = document.getElementById("fileInput");
       if (!fileInput.files.length) {
-        alert("Please select an Excel file first");
+        alert("Pilih file Excel dulu");
         return;
       }
       const formData = new FormData();
@@ -84,7 +84,7 @@
         if (data.rows) {
           renderTables(data.rows);
         } else {
-          alert("Failed to parse file: " + (data.error || "Unknown error"));
+          alert("Gagal parsing file: " + (data.error || "Unknown error"));
         }
       } catch (err) {
         alert("Error: " + err.message);
@@ -100,13 +100,13 @@
       let bujakCounter = 0;
 
       rows.forEach(row => {
-        // skip calculation rows that should not appear in tables 
+        // Skip calculation rows that should not appear in the table
         const skipKeywords = ["PAJAK", "JUMLAH SETELAH PAJAK", "DIBULATKAN", "TERBILANG"];
         if (row.description && skipKeywords.some(k => row.description.toUpperCase().includes(k))) {
           return;
         }
 
-        // === Detect a new BUJAK section ===
+        // Detect new BUJAK section
         if (row.is_section && row.section_type === "CATEGORY" && row.number === "A") {
           bujakCounter++;
           const header = document.createElement("div");
@@ -123,13 +123,13 @@
             <thead>
               <tr>
                 <th>No.</th>
-                <th>Job Description</th>
-                <th>Code</th>
+                <th>Uraian Pekerjaan</th>
+                <th>Kode</th>
                 <th>Volume</th>
-                <th>Unit</th>
-                <th>Unit Price (Rp.)</th>
-                <th>Total (Rp.)</th>
-                <th>Action</th>
+                <th>SAT</th>
+                <th>Harga Sat (Rp.)</th>
+                <th>Jumlah (Rp.)</th>
+                <th>Aksi</th>
               </tr>
             </thead>
             <tbody></tbody>
@@ -184,16 +184,16 @@
         }
       });
 
-      // update grand total box
+      // Update grand total box
       document.getElementById("grandTotalBox").style.display = "block";
       document.getElementById("grandTotal").innerText = "Rp. " + total.toLocaleString();
-      const vat = total * 0.1;
-      document.getElementById("ppn").innerText = "Rp. " + vat.toLocaleString();
-      document.getElementById("totalWithPpn").innerText = "Rp. " + (total + vat).toLocaleString();
-      document.getElementById("terbilang").innerText = total === 0 ? "ZERO RUPIAH" : numberToWords(total + vat).toUpperCase();
+      const ppn = total * 0.1;
+      document.getElementById("ppn").innerText = "Rp. " + ppn.toLocaleString();
+      document.getElementById("totalWithPpn").innerText = "Rp. " + (total + ppn).toLocaleString();
+      document.getElementById("terbilang").innerText = total === 0 ? "NOL RUPIAH" : numberToWords(total + ppn).toUpperCase();
     }
 
-    // simple function to convert number into words (basic placeholder)
+    // Simple function to convert number into words (basic placeholder)
     function numberToWords(number) {
       return number.toLocaleString("id-ID") + " rupiah";
     }
