@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 from pathlib import Path
 import os
+import sys
 from dotenv import load_dotenv
 # Load environment variables from .env file
 load_dotenv()
@@ -142,10 +143,22 @@ STATICFILES_DIRS = [
     BASE_DIR / "excel_parser" / "static",
 ]
 
-# Use WhiteNoise compressed manifest storage for long-term caching and hashed filenames
-# Django 5+ preferred STORAGES setting
-STORAGES = {
-    "staticfiles": {
-        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
-    },
-}
+# Use a simpler storage during tests to avoid Manifest errors, and
+# enable hashed filenames (manifest) only in production builds.
+RUNNING_TESTS = any(arg in sys.argv for arg in ["test", "pytest", "py.test"])  # Django test runner sets 'test'
+
+if RUNNING_TESTS:
+    # During tests, Django doesn't run collectstatic; Manifest storage would raise
+    # 'Missing staticfiles manifest entry'. Use the basic storage instead.
+    STORAGES = {
+        "staticfiles": {
+            "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+        },
+    }
+else:
+    # In dev/prod (non-test), serve compressed, hashed static files via WhiteNoise.
+    STORAGES = {
+        "staticfiles": {
+            "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+        },
+    }
