@@ -24,5 +24,5 @@ COPY . /app/
 
 EXPOSE 8000
 
-# Koyeb provides $PORT
-CMD ["sh", "-c", "gunicorn --bind 0.0.0.0:${PORT:-8000} AutomaticRAB.wsgi:application"]
+# Koyeb provides $PORT. Collect static files at startup, then run Gunicorn
+CMD ["sh", "-c", "python manage.py collectstatic --noinput && gunicorn --bind 0.0.0.0:${PORT:-8000} AutomaticRAB.wsgi:application"]
