@@ -158,6 +158,16 @@ def _find_header_map(rows: Iterable[List]) -> Tuple[Dict[str, int], int]:
 def _rows_after(cache: List[List], start_idx: int) -> Iterable[List]:
     for r in range(start_idx + 1, len(cache)):
         yield cache[r]
+def _match_header(cell: str) -> Tuple[str | None, str]:
+    """Return (canonical_key, raw) or (None, raw)."""
+    key = None
+    n = _norm(cell)
+    for canon, aliases in HEADER_ALIASES.items():
+        if n in {a.lower().strip() for a in aliases}:
+            key = canon
+            break
+    return key, cell
+
 
 def _is_section_row(number: str, desc: str) -> bool:
     if number:
