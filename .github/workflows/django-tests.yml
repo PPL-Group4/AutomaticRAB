@@ -14,6 +14,11 @@ jobs:
     env:
       DJANGO_SETTINGS_MODULE: AutomaticRAB.settings
       SECRET_KEY: ${{ secrets.SECRET_KEY || 'insecure-test-key' }}
+      MYSQL_NAME: ${{ secrets.MYSQL_NAME }}
+      MYSQL_USER: ${{ secrets.MYSQL_USER }}
+      MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
+      MYSQL_HOST: ${{ secrets.MYSQL_HOST }}
+      MYSQL_PORT: ${{ secrets.MYSQL_PORT }}
 
     steps:
       - name: Checkout repository
