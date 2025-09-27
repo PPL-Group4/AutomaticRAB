@@ -2,12 +2,14 @@ import tempfile
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
+import os
+import pytest
+from pdf_parser.services.pdfreader import PdfReader,TextFragment
 
 from pdf_parser.services.validators import validate_pdf_file
 from pdf_parser.services.pdf_sniffer import PdfSniffer
-
-
 class FileValidatorTests(TestCase):
+
     """Tests for extension and mimetype validation only"""
 
     def test_accepts_pdf_file(self):
@@ -206,3 +208,68 @@ class PdfSnifferTests(TestCase):
         sniffer = PdfSniffer()
         with self.assertRaises(ValidationError):
             sniffer.is_valid(file_path)
+
+# --- Positive Tests ---
+import pathlib
+
+BASE_DIR = pathlib.Path(__file__).resolve().parent
+SAMPLE_PDF = BASE_DIR / "data" / "PDFsample.pdf"
+def test_extract_fragments_from_valid_pdf():
+    """Reader should extract fragments with coordinates from a real PDF"""
+    reader = PdfReader()
+    fragments = reader.extract(str(SAMPLE_PDF))
+
+    assert isinstance(fragments, list)
+    assert len(fragments) > 0
+
+    first = fragments[0]
+    assert isinstance(first, TextFragment)
+    assert isinstance(first.page, int)
+    assert isinstance(first.x, (int, float))
+    assert isinstance(first.y, (int, float))
+    assert isinstance(first.text, str)
+
+
+def test_extract_contains_expected_keywords():
+    """Fragments should contain at least one known header keyword like 'uraian'/'deskripsi' and 'volume' (even if on later pages)."""
+    reader = PdfReader()
+    fragments = reader.extract(str(SAMPLE_PDF))
+
+    texts = [f.text.lower().replace("\xa0", " ") for f in fragments]
+
+    description_headers = ["uraian", "uraian pekerjaan", "deskripsi", "pekerjaan"]
+
+    found_desc = any(any(h in t for h in description_headers) for t in texts)
+    found_vol = any("volume" in t for t in texts)
+
+    assert found_desc, "No description-like header ('uraian', 'pekerjaan', etc.) found in PDF text"
+    assert found_vol, "No 'volume' header found in PDF text"
+
+
+# --- Negative Tests ---
+
+def test_extract_from_nonexistent_file_raises():
+    """Should raise FileNotFoundError if path is invalid"""
+    reader = PdfReader()
+    with pytest.raises(FileNotFoundError):
+        reader.extract("nonexistent.pdf")
+
+
+def test_extract_from_invalid_file_type_raises(tmp_path):
+    """Should raise Exception if trying to read a non-PDF file"""
+    fake_txt = tmp_path / "fake.txt"
+    fake_txt.write_text("this is not a pdf")
+
+    reader = PdfReader()
+    with pytest.raises(Exception):
+        reader.extract(str(fake_txt))
+
+
+def test_extract_from_corrupted_pdf_raises(tmp_path):
+    """Should raise Exception if PDF is corrupted"""
+    bad_pdf = tmp_path / "bad.pdf"
+    bad_pdf.write_bytes(b"%PDF-1.4\nthis is junk data without EOF marker")
+
+    reader = PdfReader()
+    with pytest.raises(Exception):
+        reader.extract(str(bad_pdf))
