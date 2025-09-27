@@ -138,3 +138,40 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 STATICFILES_DIRS = [
     BASE_DIR / "excel_parser" / "static",
 ]
+
+# Logging configuration
+LOG_DIR = BASE_DIR / "logs"
+os.makedirs(LOG_DIR, exist_ok=True)
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+
+    "formatters": {
+        "simple": {
+            "format": "%(asctime)s [%(levelname)s] %(name)s %(message)s"
+        },
+    },
+
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "simple",
+        },
+        "file": {
+            "class": "logging.handlers.RotatingFileHandler",
+            "filename": LOG_DIR / "excel_parser.log",
+            "maxBytes": 5 * 1024 * 1024,  # 5 MB per log file
+            "backupCount": 3,
+            "formatter": "simple",
+        },
+    },
+
+    "loggers": {
+        "excel_parser": {
+            "handlers": ["console", "file"],
+            "level": "INFO",   
+            "propagate": False,
+        },
+    },
+}
