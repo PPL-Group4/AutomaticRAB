@@ -851,3 +851,47 @@ class RABConvertedViewTests(TestCase):
         response = self.client.get("/excel_parser/rab_converted/")
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "rab_converted.html")
+
+class LoggingTests(TestCase):
+    def _make_excel_file(self, filename="logtest.xlsx"):
+        bio = BytesIO()
+        wb = Workbook()
+        ws = wb.active
+        ws.append(["No", "Uraian Pekerjaan", "Volume", "Satuan"])
+        ws.append([1, "Test pekerjaan", 10, "m2"])
+        wb.save(bio)
+        return SimpleUploadedFile(
+            filename, bio.getvalue(),
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+
+    def test_import_file_logs(self):
+        f = self._make_excel_file()
+        importer = ExcelImporter()
+
+        with self.assertLogs("excel_parser", level="INFO") as cm:
+            importer.import_file(f)
+
+        logs = "\n".join(cm.output)
+        self.assertIn("Starting import", logs)
+        self.assertIn("Import finished", logs)
+
+    def test_preview_file_logs(self):
+        f = self._make_excel_file()
+
+        with self.assertLogs("excel_parser", level="INFO") as cm:
+            preview_file(f)
+
+        logs = "\n".join(cm.output)
+        self.assertIn("Previewing file", logs)
+        self.assertIn("Preview parsed", logs)
+
+    def test_validator_logs_warning(self):
+        bad_file = SimpleUploadedFile("bad.txt", b"not excel", content_type="text/plain")
+
+        with self.assertLogs("excel_parser", level="WARNING") as cm:
+            with self.assertRaises(ValidationError):
+                validate_excel_file(bad_file)
+
+        logs = "\n".join(cm.output)
+        self.assertIn("Rejected file", logs)
