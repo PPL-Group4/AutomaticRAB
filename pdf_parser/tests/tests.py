@@ -277,7 +277,7 @@ def test_extract_from_corrupted_pdf_raises(tmp_path):
     with pytest.raises(Exception):
         reader.extract(str(bad_pdf))
 
-class PdfHeaderMapperEdgeCasesTests(TestCase):
+class PdfHeaderMapperTests(TestCase):
     def setUp(self):
         self.mapper = PdfHeaderMapper()
 
