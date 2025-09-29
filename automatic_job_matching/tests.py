@@ -4,6 +4,7 @@ from unittest.mock import patch
 from automatic_job_matching.repository.ahs_repo import DbAhsRepository
 from automatic_job_matching.service.exact_matcher import (AhsRow, ExactMatcher, _norm_code, _norm_name)
 from automatic_job_matching.service.fuzzy_matcher import FuzzyMatcher
+from automatic_job_matching.views import MatchingService
 
 from django.urls import reverse
 from django.test import Client
@@ -592,7 +593,6 @@ class FuzzyMatcherViewTests(TestCase):
         response = self.client.post(url, None, content_type="application/json")
         self.assertEqual(response.status_code, 200)
 
-
 class FuzzyMatcherConfidenceTDTests(SimpleTestCase):
     """TDD: Confidence scoring tests (should fail before implementation)."""
 
@@ -698,3 +698,25 @@ class ConfidenceScorerStrategyTests(SimpleTestCase):
         within = self.fuzzy.score("abc", "abc d")
         self.assertGreaterEqual(within, 0.0)
         self.assertLessEqual(within, 1.0)
+
+class MatchingServiceFallbackTests(TestCase):
+    @patch("automatic_job_matching.views.FuzzyMatcher")
+    def test_fuzzy_match_fallback_to_match(self, mock_matcher_cls):
+        fake_matcher = mock_matcher_cls.return_value
+
+        del fake_matcher.match_with_confidence
+        fake_matcher.match.return_value = {"source": "ahs", "id": 1, "code": "X", "name": "Y"}
+        
+        result = MatchingService.perform_fuzzy_match("test")
+        self.assertEqual(result["source"], "ahs")
+        self.assertTrue(fake_matcher.match.called)
+
+    @patch("automatic_job_matching.views.FuzzyMatcher")
+    def test_multiple_match_fallback_to_find_multiple_matches(self, mock_matcher_cls):
+        fake_matcher = mock_matcher_cls.return_value
+        del fake_matcher.find_multiple_matches_with_confidence
+        fake_matcher.find_multiple_matches.return_value = [{"id": 1}]
+        
+        result = MatchingService.perform_multiple_match("test")
+        self.assertEqual(result[0]["id"], 1)
+        self.assertTrue(fake_matcher.find_multiple_matches.called)
