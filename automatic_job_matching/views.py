@@ -28,11 +28,18 @@ class MatchingService:
     @staticmethod
     def perform_fuzzy_match(description, min_similarity=0.6):
         matcher = FuzzyMatcher(DbAhsRepository(), min_similarity)
+        # Use confidence scoring by default
+        confidence_result = getattr(matcher, 'match_with_confidence', None)
+        if callable(confidence_result):
+            return confidence_result(description)
         return matcher.match(description)
     
     @staticmethod
     def perform_multiple_match(description, limit=5, min_similarity=0.6):
         matcher = FuzzyMatcher(DbAhsRepository(), min_similarity)
+        confidence_multi = getattr(matcher, 'find_multiple_matches_with_confidence', None)
+        if callable(confidence_multi):
+            return confidence_multi(description, limit)
         return matcher.find_multiple_matches(description, limit)
     
 
