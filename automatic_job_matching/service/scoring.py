@@ -76,7 +76,6 @@ class FuzzyConfidenceScorer(ConfidenceScorer):
 
         return self._clamp(score)
 
-    # ---- Helper methods (extracted to reduce cognitive complexity) ----
     @staticmethod
     def _check_trivial(a: str, b: str) -> float | None:
         if not a or not b:
@@ -152,7 +151,7 @@ class ExactConfidenceScorer(ConfidenceScorer):
 
 class NoOpScorer(ConfidenceScorer):
     """Always returns 0.0 (placeholder / disabling scorer)."""
-    def score(self, norm_query: str, norm_candidate: str) -> float:  # pragma: no cover - trivial
+    def score(self, norm_query: str, norm_candidate: str) -> float:
         return 0.0
 
 

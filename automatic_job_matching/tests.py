@@ -1,5 +1,5 @@
 from django.test import TestCase, SimpleTestCase
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock, Mock
 
 from automatic_job_matching.repository.ahs_repo import DbAhsRepository
 from automatic_job_matching.service.exact_matcher import (AhsRow, ExactMatcher, _norm_code, _norm_name)
@@ -9,6 +9,7 @@ from django.urls import reverse
 from django.test import Client
 import json
 
+from django.test import TestCase
 
 class TextNormalizationTestCase(TestCase):
 	def setUp(self):
@@ -177,6 +178,50 @@ class DbAhsRepositoryTests(SimpleTestCase):
         self.assertEqual(rows[0].name, "Pemadatan pasir")
         mock_filter.assert_called_once_with(name__istartswith="Pemadatan")
 
+    @patch("rencanakan_core.models.Ahs.objects.all")
+    def test_get_all_ahs_limited_slice(self, mock_all):
+        class FakeAhs:
+            def __init__(self, _id):
+                self.id = _id
+                self.code = f"C.{_id:02d}"
+                self.name = f"Name {_id}"
+        class FakeQS(list):
+            def __getitem__(self, item):
+                if isinstance(item, slice):
+                    return FakeQS(list(super().__getitem__(item)))
+                return super().__getitem__(item)
+        mock_all.return_value = FakeQS([FakeAhs(i) for i in range(1, 5)])
+        repo = DbAhsRepository()
+        rows = repo.get_all_ahs()
+        self.assertEqual(len(rows), 4)
+        self.assertTrue(all(r.code.startswith("C.") for r in rows))
+
+    @patch("rencanakan_core.models.Ahs.objects.none")
+    @patch("rencanakan_core.models.Ahs.objects.filter")
+    def test_by_code_like_multiple_variants_iteration(self, mock_filter, mock_none):
+        """Ensure loop iterates over more than one distinct object covering lines 23-24."""
+        class FakeAhs:
+            def __init__(self, _id, code):
+                self.id = _id
+                self.code = code
+                self.name = f"Name {_id}"
+        class FakeQS(list):
+            def union(self, other):
+                return FakeQS(self + list(other))
+        mock_none.return_value = FakeQS()
+        # Return distinct objects for each variant so iteration runs multiple times
+        mock_filter.side_effect = [
+            FakeQS([FakeAhs(1, "T.15.a.1")]),
+            FakeQS([FakeAhs(2, "T-15.a-1")]),
+            FakeQS([FakeAhs(3, "T.15.a-1")]),
+        ]
+        repo = DbAhsRepository()
+        rows = repo.by_code_like("T.15.a.1")
+        # Depending on set uniqueness, duplicates may be collapsed; ensure >=2 variants surfaced
+        self.assertGreaterEqual(len(rows), 2)
+        returned_ids = {r.id for r in rows}
+        self.assertTrue({1,2}.issubset(returned_ids))
+
 
 class ExactMatcherTests(SimpleTestCase):
     def setUp(self):
@@ -282,7 +327,7 @@ class MatchExactViewTests(TestCase):
         url = reverse("match-exact")
         response = self.client.post(
             url,
-            json.dumps({}),
+            json.dumps({}), 
             content_type="application/json",
         )
         self.assertEqual(response.status_code, 200)
@@ -297,7 +342,7 @@ class MatchExactViewTests(TestCase):
         )
         self.assertEqual(response.status_code, 400)
         self.assertIn("error", response.json())
-
+        
     def test_match_exact_view_with_empty_body_triggering_fallback(self):
         """Test exact view when request.body.decode() returns empty, triggering or '{}' fallback"""
         url = reverse("match-exact")
@@ -305,21 +350,21 @@ class MatchExactViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         data = response.json()
         self.assertIn("match", data)
-
+    
     def test_match_exact_view_description_extraction(self):
         """Test exact view description extraction from payload"""
         url = reverse("match-exact")
         payload = {"description": "test description"}
         response = self.client.post(url, json.dumps(payload), content_type="application/json")
         self.assertEqual(response.status_code, 200)
-
+    
     def test_match_exact_view_missing_description_defaults(self):
         """Test exact view when description is missing from payload"""
         url = reverse("match-exact")
         payload = {"other_field": "value"}  # No description field
         response = self.client.post(url, json.dumps(payload), content_type="application/json")
         self.assertEqual(response.status_code, 200)
-
+    
     def test_match_exact_view_json_response_structure(self):
         """Test exact view returns proper JSON structure"""
         url = reverse("match-exact")
@@ -343,11 +388,11 @@ class FuzzyMatcherTests(SimpleTestCase):
         class FakeRepo:
             def __init__(self, rows):
                 self.rows = rows
-            def by_code_like(self, code):
+            def by_code_like(self, code): 
                 return [r for r in self.rows if code.upper() in (r.code or "").upper()]
-            def by_name_candidates(self, head_token):
+            def by_name_candidates(self, head_token): 
                 return [r for r in self.rows if head_token.lower() in (r.name or "").lower()]
-            def get_all_ahs(self):
+            def get_all_ahs(self): 
                 return self.rows
 
         self.fake_repo = FakeRepo(self.sample_rows)
@@ -385,27 +430,28 @@ class FuzzyMatcherTests(SimpleTestCase):
     def test_custom_min_similarity(self):
         strict_matcher = FuzzyMatcher(self.fake_repo, min_similarity=0.9)
         lenient_matcher = FuzzyMatcher(self.fake_repo, min_similarity=0.3)
-
+        
         test_input = "galien tanah"
-
+        
         strict_result = strict_matcher.match(test_input)
         lenient_result = lenient_matcher.match(test_input)
-
+        
         if strict_result is None and lenient_result is not None:
             self.assertIsNotNone(lenient_result)
 
     def test_min_similarity_bounds(self):
         matcher_low = FuzzyMatcher(self.fake_repo, min_similarity=-1.0)
         matcher_high = FuzzyMatcher(self.fake_repo, min_similarity=2.0)
-
+        
         self.assertEqual(matcher_low.min_similarity, 0.0)
         self.assertEqual(matcher_high.min_similarity, 1.0)
 
     def test_find_multiple_matches(self):
         matches = self.matcher.find_multiple_matches_with_confidence("pekerjaan", limit=3)
+        
         self.assertIsInstance(matches, list)
         self.assertLessEqual(len(matches), 3)
-
+        
         for match in matches:
             self.assertIn("confidence", match)  
             self.assertNotIn("_internal_score", match)  
@@ -429,11 +475,11 @@ class FuzzyMatcherTests(SimpleTestCase):
     def test_calculate_partial_similarity_empty_split_results(self):
         similarity = self.matcher._calculate_partial_similarity("   \t\n  ", "hello world")
         self.assertEqual(similarity, 0.0)
-
+        
         # Test when both split to empty lists
         similarity = self.matcher._calculate_partial_similarity("   \t\n  ", "   \n\t  ")
         self.assertEqual(similarity, 0.0)
-
+        
         # Test when second parameter splits to empty
         similarity = self.matcher._calculate_partial_similarity("hello", "   \t\n  ")
         self.assertEqual(similarity, 0.0)
@@ -444,10 +490,10 @@ class FuzzyMatcherTests(SimpleTestCase):
             required_keys = ["source", "id", "code", "name", "matched_on"]
             for key in required_keys:
                 self.assertIn(key, result)
-
+            
             self.assertNotIn("confidence", result)
             self.assertNotIn("_internal_score", result)
-
+            
             self.assertEqual(result["source"], "ahs")
             self.assertIsInstance(result["id"], int)
             self.assertEqual(result["matched_on"], "name")
@@ -464,13 +510,13 @@ class FuzzyMatcherTests(SimpleTestCase):
     def test_calculate_partial_similarity_edge_cases(self):
         similarity = self.matcher._calculate_partial_similarity("", "hello world")
         self.assertEqual(similarity, 0.0)
-
+        
         similarity = self.matcher._calculate_partial_similarity("", "")
         self.assertEqual(similarity, 0.0)
-
+        
         similarity = self.matcher._calculate_partial_similarity("a b", "x y")
         self.assertEqual(similarity, 0.0)
-
+        
         similarity = self.matcher._calculate_partial_similarity("ab cd", "xy zw")
         self.assertGreaterEqual(similarity, 0.0)
 
@@ -478,14 +524,14 @@ class FuzzyMatcherTests(SimpleTestCase):
         class FakeRepoNoCandidates:
             def __init__(self, rows):
                 self.rows = rows
-            def by_name_candidates(self, head_token):
+            def by_name_candidates(self, head_token): 
                 return []
-            def get_all_ahs(self):
+            def get_all_ahs(self): 
                 return self.rows
 
         repo = FakeRepoNoCandidates(self.sample_rows)
         matcher = FuzzyMatcher(repo, min_similarity=0.6)
-
+        
         matches = matcher._get_multiple_name_matches("pekerjaan", 3)
         self.assertGreater(len(matches), 0)
 
@@ -496,7 +542,7 @@ class FuzzyMatcherTests(SimpleTestCase):
     def test_calculate_partial_similarity_with_empty_words(self):
         similarity = self.matcher._calculate_partial_similarity("   ", "hello")
         self.assertEqual(similarity, 0.0)
-
+        
         similarity = self.matcher._calculate_partial_similarity("   ", "   ")
         self.assertEqual(similarity, 0.0)
 
@@ -505,7 +551,7 @@ class FuzzyMatcherTests(SimpleTestCase):
         # This should hit line 138 where ndesc is empty after normalization
         matches = self.matcher._get_multiple_name_matches("!@#$%", 5)
         self.assertEqual(matches, [])
-
+        
         # Also test with whitespace-only input
         matches = self.matcher._get_multiple_name_matches("   ", 5)
         self.assertEqual(matches, [])
@@ -513,7 +559,7 @@ class FuzzyMatcherTests(SimpleTestCase):
 class FuzzyMatcherViewTests(TestCase):
     def setUp(self):
         self.client = Client()
-
+        
         self._repo_patcher = patch("automatic_job_matching.views.DbAhsRepository")
         FakeRepo = type("FakeRepo", (), {
             "by_code_like": lambda self, c: [AhsRow(id=1, code="AT.01", name="Test Item")],
@@ -591,6 +637,60 @@ class FuzzyMatcherViewTests(TestCase):
         url = reverse("match-multiple")
         response = self.client.post(url, None, content_type="application/json")
         self.assertEqual(response.status_code, 200)
+    
+    def test_fuzzy_match_view_min_similarity_parameter(self):
+        url = reverse("match-fuzzy")
+        payload = {"description": "Test Item", "min_similarity": 0.9}
+        response = self.client.post(url, json.dumps(payload), content_type="application/json")
+        self.assertEqual(response.status_code, 200)
+
+    def test_multiple_match_view_limit_and_min_similarity_params(self):
+        url = reverse("match-multiple")
+        payload = {"description": "test", "limit": 2, "min_similarity": 0.7}
+        response = self.client.post(url, json.dumps(payload), content_type="application/json")
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertIn("matches", data)
+
+class DebugAhsDataViewTests(TestCase):
+    def setUp(self):
+        self.client = Client()
+
+    @patch("rencanakan_core.models.Ahs.objects.filter")
+    @patch("rencanakan_core.models.Ahs.objects.all")
+    def test_debug_ahs_data_success(self, mock_all, mock_filter):
+        class Dummy:
+            def __init__(self, _id):
+                self.id = _id
+                self.code = f"C.{_id:02d}"
+                self.name = f"Name {_id}"
+        class QS(list):
+            def count(self):
+                return len(self)
+            def __getitem__(self, item):
+                if isinstance(item, slice):
+                    return QS(list(super().__getitem__(item)))
+                return super().__getitem__(item)
+        mock_filter.return_value = QS([Dummy(1), Dummy(2), Dummy(3)])
+        mock_all.return_value = QS([Dummy(4), Dummy(5), Dummy(6), Dummy(7)])
+        # Patch Ahs.objects.count separately via context manager inside test
+        with patch("rencanakan_core.models.Ahs.objects.count", return_value=10):
+            url = reverse("debug-ahs")
+            payload = {"search": "name", "limit": 2}
+            response = self.client.post(url, json.dumps(payload), content_type="application/json")
+            self.assertEqual(response.status_code, 200)
+            data = response.json()
+            self.assertIn("search_term", data)
+            self.assertEqual(data["requested_limit"], 2)
+            self.assertLessEqual(data["returned_count"], 2)
+
+    @patch("rencanakan_core.models.Ahs.objects.filter", side_effect=Exception("DB failure"))
+    def test_debug_ahs_data_exception_path(self, mock_filter):
+        url = reverse("debug-ahs")
+        response = self.client.post(url, json.dumps({}), content_type="application/json")
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertIn("error", data)
 
 
 class FuzzyMatcherConfidenceTDTests(SimpleTestCase):
