@@ -402,14 +402,16 @@ class FuzzyMatcherTests(SimpleTestCase):
         self.assertEqual(matcher_high.min_similarity, 1.0)
 
     def test_find_multiple_matches(self):
-        matches = self.matcher.find_multiple_matches("pekerjaan", limit=3)
-
+        matches = self.matcher.find_multiple_matches_with_confidence("pekerjaan", limit=3)
         self.assertIsInstance(matches, list)
         self.assertLessEqual(len(matches), 3)
 
         for match in matches:
-            self.assertNotIn("confidence", match)
-            self.assertNotIn("_internal_score", match)
+            self.assertIn("confidence", match)  
+            self.assertNotIn("_internal_score", match)  
+            self.assertIsInstance(match["confidence"], float)
+            self.assertGreaterEqual(match["confidence"], 0.0)
+            self.assertLessEqual(match["confidence"], 1.0)
 
     def test_find_multiple_matches_no_duplicates(self):
         matches = self.matcher.find_multiple_matches("pekerjaan", limit=10)
