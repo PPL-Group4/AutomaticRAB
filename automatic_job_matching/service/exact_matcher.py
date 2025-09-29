@@ -1,8 +1,11 @@
 from __future__ import annotations
 from dataclasses import dataclass
 from typing import List, Protocol, Optional
+import logging
 
 from automatic_job_matching.utils.text_normalizer import normalize_text
+
+logger = logging.getLogger(__name__)
 
 @dataclass
 class AhsRow:
@@ -26,15 +29,21 @@ class ExactMatcher:
         self.repo = repo
 
     def match(self, description: str) -> Optional[dict]:
+        logger.debug("ExactMatcher.match called with description=%r", description)
         if not description:
+            logger.warning("Empty description received")
             return None
 
         raw = description.strip()
         ncode = _norm_code(raw)
         looks_like_code = any(ch.isalpha() for ch in raw) and any(ch.isdigit() for ch in raw) and len(ncode) >= 3
+        logger.debug("Normalized code=%s, looks_like_code=%s", ncode, looks_like_code)
+
         if looks_like_code:
             for cand in self.repo.by_code_like(raw):
+                logger.debug("Checking candidate code=%s", cand.code)
                 if _norm_code(cand.code) == ncode:
+                    logger.info("Exact code match found: id=%s", cand.id)
                     return {
                         "source": "ahs",
                         "id": cand.id,
@@ -46,11 +55,15 @@ class ExactMatcher:
 
         ndesc = _norm_name(description)
         if not ndesc:
+            logger.warning("Normalized description is empty")
             return None
 
         head = ndesc.split(" ", 1)[0]
+        logger.debug("Searching by name with head_token=%s", head)
         for cand in self.repo.by_name_candidates(head):
+            logger.debug("Comparing normalized name=%s", cand.name)
             if _norm_name(cand.name) == ndesc:
+                logger.info("Exact name match found: id=%s", cand.id)
                 return {
                     "source": "ahs",
                     "id": cand.id,
@@ -60,4 +73,5 @@ class ExactMatcher:
                     "matched_on": "name",
                 }
 
+        logger.info("No exact match found for description=%r", description)
         return None

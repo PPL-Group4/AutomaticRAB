@@ -13,8 +13,13 @@ logger = logging.getLogger(__name__)
 class MatchingService:
     @staticmethod
     def perform_exact_match(description):
+        logger.info("perform_exact_match called (len=%d)", len(description))
+
         matcher = ExactMatcher(DbAhsRepository())
-        return matcher.match(description)
+        result = matcher.match(description)
+
+        logger.debug("Exact match result: %s", result)
+        return result
 
     @staticmethod
     def perform_fuzzy_match(description, min_similarity=0.6):
@@ -52,7 +57,9 @@ class MatchingService:
 def match_exact_view(request):
     try:
         payload = json.loads(request.body.decode("utf-8") or "{}")
+        logger.debug("match_exact_view payload: %s", payload)
     except json.JSONDecodeError:
+        logger.warning("Invalid JSON received in match_exact_view")
         return JsonResponse({"error": "Invalid JSON"}, status=400)
 
     description = payload.get("description", "")
