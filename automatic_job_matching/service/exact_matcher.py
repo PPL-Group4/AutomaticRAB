@@ -1,7 +1,6 @@
 from __future__ import annotations
 from dataclasses import dataclass
 from typing import List, Protocol, Optional
-import re
 
 from automatic_job_matching.utils.text_normalizer import normalize_text
 
@@ -49,7 +48,7 @@ class ExactMatcher:
         if not ndesc:
             return None
 
-        head = ndesc.split(" ", 1)[0]  
+        head = ndesc.split(" ", 1)[0]
         for cand in self.repo.by_name_candidates(head):
             if _norm_name(cand.name) == ndesc:
                 return {
