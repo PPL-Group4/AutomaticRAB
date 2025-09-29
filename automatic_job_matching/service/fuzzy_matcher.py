@@ -4,6 +4,7 @@ from typing import List, Protocol, Optional
 import difflib
 
 from automatic_job_matching.utils.text_normalizer import normalize_text
+from automatic_job_matching.service.scoring import ConfidenceScorer, FuzzyConfidenceScorer
 
 @dataclass
 class AhsRow:
@@ -20,9 +21,28 @@ def _norm_name(s: str) -> str:
     return normalize_text(s or "")
 
 class FuzzyMatcher:
-    def __init__(self, repo: AhsRepository, min_similarity: float = 0.6):
+    def __init__(self, repo: AhsRepository, min_similarity: float = 0.6, scorer: ConfidenceScorer | None = None):
+        """Fuzzy matcher with pluggable confidence scoring strategy.
+
+        Parameters
+        ----------
+        repo : AhsRepository
+            Repository providing candidate AHS rows.
+        min_similarity : float, default 0.6
+            Minimum score threshold (applies to both legacy internal similarity and confidence scoring).
+        scorer : ConfidenceScorer | None
+            Strategy object. Defaults to `FuzzyConfidenceScorer` when not provided.
+
+        Notes
+        -----
+        The matcher now delegates confidence computation to `self.scorer` (Strategy Pattern)
+        enabling extension or replacement without touching this class. Legacy private method
+        `_calculate_confidence_score` is retained as a thin wrapper for backward compatibility
+        with existing tests or external code that may introspect it.
+        """
         self.repo = repo
         self.min_similarity = max(0.0, min(1.0, min_similarity))
+        self.scorer: ConfidenceScorer = scorer or FuzzyConfidenceScorer()
 
     def match(self, description: str) -> Optional[dict]:
         if not description:
@@ -119,63 +139,11 @@ class FuzzyMatcher:
 
     # --- Confidence Calculation ---
     def _calculate_confidence_score(self, norm_query: str, norm_candidate: str) -> float:
-        """Composite confidence score (0..1) using multiple similarity signals."""
-        if not norm_query or not norm_candidate:
-            return 0.0
+        """Backward-compatible delegate to injected scorer.
 
-        if norm_query == norm_candidate:
-            return 1.0
-
-        # Sequence similarity
-        seq = difflib.SequenceMatcher(None, norm_query, norm_candidate).ratio()
-
-        # Token sets
-        q_tokens = norm_query.split()
-        c_tokens = norm_candidate.split()
-        if not q_tokens or not c_tokens:
-            return 0.0
-        q_set, c_set = set(q_tokens), set(c_tokens)
-        inter = q_set & c_set
-        union = q_set | c_set
-        jaccard = len(inter) / len(union) if union else 0.0
-
-        # Coverage of each side
-        coverage = 0.5 * ((len(inter)/len(q_set)) + (len(inter)/len(c_set))) if q_set and c_set else 0.0
-
-        # Substring / near-word similarity
-        near_hits = 0.0
-        total_pairs = 0
-        for qt in q_tokens:
-            for ct in c_tokens:
-                if len(qt) < 3 or len(ct) < 3:
-                    continue
-                total_pairs += 1
-                if qt == ct:
-                    near_hits += 1.0
-                elif qt in ct or ct in qt:
-                    near_hits += 0.8
-                else:
-                    r = difflib.SequenceMatcher(None, qt, ct).ratio()
-                    if r >= 0.75:
-                        near_hits += 0.6 * r
-        near = near_hits / total_pairs if total_pairs else 0.0
-
-        # Length balance (number of tokens)
-        len_balance = min(len(q_tokens), len(c_tokens)) / max(len(q_tokens), len(c_tokens))
-
-        score = (
-            seq * 0.35 +
-            jaccard * 0.25 +
-            near * 0.15 +
-            coverage * 0.15 +
-            len_balance * 0.10
-        )
-
-        # Mild bonus for strong agreement between seq & jaccard
-        if seq >= 0.75 and jaccard >= 0.7:
-            score = min(1.0, score * 1.05)
-
-        return max(0.0, min(1.0, score))
+        Kept to avoid breaking existing internal/external uses & tests referencing this private method.
+        """
+        return self.scorer.score(norm_query, norm_candidate)
 
     # --- Confidence-enabled internal matching ---
     def _fuzzy_match_name_with_confidence(self, raw_input: str) -> Optional[dict]:

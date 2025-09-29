@@ -5,19 +5,7 @@ import json
 from automatic_job_matching.repository.ahs_repo import DbAhsRepository
 from automatic_job_matching.service.exact_matcher import ExactMatcher
 from automatic_job_matching.service.fuzzy_matcher import FuzzyMatcher
-
-@api_view(['POST'])
-def match_exact_view(request):
-    try:
-        payload = json.loads(request.body.decode("utf-8") or "{}")
-    except json.JSONDecodeError:
-        return JsonResponse({"error": "Invalid JSON"}, status=400)
-    
-    description = payload.get("description", "")
-    
-    result = MatchingService.perform_exact_match(description)
-
-    return JsonResponse({"match": result}, status=200)
+from automatic_job_matching.service.scoring import FuzzyConfidenceScorer
 
 class MatchingService:    
     @staticmethod
@@ -27,8 +15,7 @@ class MatchingService:
     
     @staticmethod
     def perform_fuzzy_match(description, min_similarity=0.6):
-        matcher = FuzzyMatcher(DbAhsRepository(), min_similarity)
-        # Use confidence scoring by default
+        matcher = FuzzyMatcher(DbAhsRepository(), min_similarity, scorer=FuzzyConfidenceScorer())
         confidence_result = getattr(matcher, 'match_with_confidence', None)
         if callable(confidence_result):
             return confidence_result(description)
@@ -36,7 +23,7 @@ class MatchingService:
     
     @staticmethod
     def perform_multiple_match(description, limit=5, min_similarity=0.6):
-        matcher = FuzzyMatcher(DbAhsRepository(), min_similarity)
+        matcher = FuzzyMatcher(DbAhsRepository(), min_similarity, scorer=FuzzyConfidenceScorer())
         confidence_multi = getattr(matcher, 'find_multiple_matches_with_confidence', None)
         if callable(confidence_multi):
             return confidence_multi(description, limit)
