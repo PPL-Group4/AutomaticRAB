@@ -2,9 +2,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import List, Protocol, Optional
 import difflib
+import logging
 
 from automatic_job_matching.utils.text_normalizer import normalize_text
 from automatic_job_matching.service.scoring import ConfidenceScorer, FuzzyConfidenceScorer
+
+logger = logging.getLogger(__name__)
 
 @dataclass
 class AhsRow:
@@ -24,7 +27,11 @@ def _norm_name(s: str) -> str:
 class SimilarityCalculator:
     @staticmethod
     def calculate_sequence_similarity(text1: str, text2: str) -> float:
-        return difflib.SequenceMatcher(None, text1, text2).ratio()
+        score = difflib.SequenceMatcher(None, text1, text2).ratio()
+
+        logger.debug("Seq similarity between %r and %r = %.4f", text1, text2, score)
+
+        return score
     
     @staticmethod
     def calculate_partial_similarity(text1: str, text2: str) -> float:
@@ -43,7 +50,11 @@ class SimilarityCalculator:
         # Calculate partial word matching score
         partial_score = SimilarityCalculator._calculate_partial_word_score(words1, words2)
         
-        return max(jaccard, partial_score * 0.8)
+        score = max(jaccard, partial_score * 0.8)
+
+        logger.debug("Partial similarity between %r and %r = %.4f", text1, text2, score)
+
+        return score
     
     @staticmethod
     def _calculate_jaccard_similarity(words1: set, words2: set) -> float:
@@ -75,6 +86,8 @@ class CandidateProvider:
         self._repository = repository
     
     def get_candidates_by_head_token(self, normalized_input: str) -> List[AhsRow]:
+        logger.debug("CandidateProvider: head_token search for input=%s", normalized_input)
+
         if not normalized_input:
             return self._repository.get_all_ahs()
         
@@ -82,8 +95,10 @@ class CandidateProvider:
         candidates = self._repository.by_name_candidates(head)
         
         if not candidates:
+            logger.debug("No candidates by head token, falling back to all AHS")
             candidates = self._repository.get_all_ahs()
         
+        logger.info("CandidateProvider returned %d candidates", len(candidates))
         return candidates
 
 # SOLID: Open/Closed Principle + Dependency Inversion Principle
@@ -99,6 +114,8 @@ class MatchingProcessor:
     
     def find_best_match(self, query: str) -> Optional[dict]:
         """Find the best matching AHS record."""
+        logger.debug("Finding best fuzzy match for query=%s", query)
+
         normalized_query = _norm_name(query)
         if not normalized_query:
             return None
@@ -128,10 +145,13 @@ class MatchingProcessor:
                     "matched_on": "name",
                 }
         
+        logger.info("Best fuzzy match score=%.4f", best_score)
         return best_match
     
     def find_multiple_matches(self, query: str, limit: int = 5) -> List[dict]:
         """Find multiple matching AHS records sorted by similarity."""
+        logger.debug("Finding up to %d fuzzy matches for query=%s", limit, query)
+
         if limit <= 0:
             return []
             
@@ -165,6 +185,7 @@ class MatchingProcessor:
         # Sort by similarity score (descending)
         matches.sort(key=lambda x: x[0], reverse=True)
         
+        logger.info("Multiple fuzzy matches found=%d", len(matches))
         return [match[1] for match in matches[:limit]]
 
 # SOLID: Dependency Inversion Principle - Main class depends on abstractions
@@ -186,6 +207,8 @@ class FuzzyMatcher:
 
     def match(self, description: str) -> Optional[dict]:
         """Main entry point for single match."""
+        logger.debug("FuzzyMatcher.match called with description=%r", description)
+
         if not description:
             return None
         
@@ -193,6 +216,8 @@ class FuzzyMatcher:
 
     def find_multiple_matches(self, description: str, limit: int = 5) -> List[dict]:
         """Main entry point for multiple matches."""
+        logger.debug("FuzzyMatcher.find_multiple_matches called with description=%r", description)
+
         if not description or limit <= 0:
             return []
         
@@ -201,6 +226,8 @@ class FuzzyMatcher:
     # Confidence scoring methods
     def match_with_confidence(self, description: str) -> Optional[dict]:
         """Return single best match including a confidence score."""
+        logger.debug("FuzzyMatcher.match_with_confidence called with description=%r", description)
+
         if not description:
             return None
         
@@ -217,11 +244,13 @@ class FuzzyMatcher:
             if not norm_cand:
                 continue
             conf = self.scorer.score(normalized_query, norm_cand)
+            logger.debug("Confidence score vs candidate %r = %.4f", cand.name, conf)
             if conf >= self.min_similarity and conf > best_conf:
                 best_conf = conf
                 best = cand
 
         if best:
+            logger.info("Best confidence match id=%s score=%.4f", best.id, best_conf)
             return {
                 "source": "ahs",
                 "id": best.id,
@@ -230,10 +259,13 @@ class FuzzyMatcher:
                 "matched_on": "name",
                 "confidence": round(best_conf, 4)
             }
+        logger.info("No confident match found for query=%r", description)
         return None
 
     def find_multiple_matches_with_confidence(self, description: str, limit: int = 5) -> List[dict]:
         """Return multiple matches each with confidence score, sorted desc."""
+        logger.debug("FuzzyMatcher.find_multiple_matches_with_confidence called (limit=%d) desc=%r", limit, description)
+        
         if not description or limit <= 0:
             return []
         
@@ -249,6 +281,7 @@ class FuzzyMatcher:
             if not norm_cand:
                 continue
             conf = self.scorer.score(normalized_query, norm_cand)
+            logger.debug("Confidence score vs candidate %r = %.4f", cand.name, conf)
             if conf >= self.min_similarity:
                 results.append((conf, {
                     "source": "ahs",
@@ -260,26 +293,36 @@ class FuzzyMatcher:
                 }))
         
         results.sort(key=lambda x: x[0], reverse=True)
+
+        logger.info("Found %d matches with confidence >= %.2f", len(results), self.min_similarity)
         return [result[1] for result in results[:limit]]
 
     # Backward compatibility methods
     def _calculate_partial_similarity(self, text1: str, text2: str) -> float:
         """Backward compatibility wrapper."""
+        logger.debug("Backward partial similarity between %r and %r", text1, text2)
         return self._similarity_calculator.calculate_partial_similarity(text1, text2)
 
     def _calculate_confidence_score(self, norm_query: str, norm_candidate: str) -> float:
         """Backward-compatible delegate to injected scorer."""
+        logger.debug("Backward confidence score between %r and %r", norm_query, norm_candidate)
         return self.scorer.score(norm_query, norm_candidate)
 
     # Legacy methods for backward compatibility
     def _fuzzy_match_name(self, raw_input: str) -> Optional[dict]:
+        logger.debug("Legacy _fuzzy_match_name called with input=%r", raw_input)
         return self.match(raw_input)
 
     def _get_multiple_name_matches(self, raw_input: str, limit: int) -> List[dict]:
+        logger.debug("Legacy _get_multiple_name_matches called with input=%r limit=%d",
+                     raw_input, limit)
         return self.find_multiple_matches(raw_input, limit)
 
     def _fuzzy_match_name_with_confidence(self, raw_input: str) -> Optional[dict]:
-        return self.match_with_confidence(raw_input)
+       logger.debug("Legacy _fuzzy_match_name_with_confidence called with input=%r", raw_input)
+       return self.match_with_confidence(raw_input)
 
     def _get_multiple_name_matches_with_confidence(self, raw_input: str, limit: int) -> List[dict]:
+        logger.debug("Legacy _get_multiple_name_matches_with_confidence called with input=%r limit=%d",
+                     raw_input, limit)
         return self.find_multiple_matches_with_confidence(raw_input, limit)

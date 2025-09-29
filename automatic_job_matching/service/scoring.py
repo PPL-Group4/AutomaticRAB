@@ -11,7 +11,6 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 import difflib
-from typing import Protocol
 
 
 class ConfidenceScorer(ABC):

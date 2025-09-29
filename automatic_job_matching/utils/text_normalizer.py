@@ -74,12 +74,12 @@ def _convert_generic_codes(text: str) -> str:
     def _create_dotted_code(match: re.Match[str]) -> str:
         prefix = match.group(1)
         parts = match.group(2).split()
-        
+
         # Require at least one digit among parts to avoid normal words
         has_digit = any(any(char.isdigit() for char in part) for part in parts)
         if not has_digit:
             return match.group(0)
-            
+
         return f"{prefix}.{'.'.join(parts)}"
 
     return _GENERIC_SPACED_CODE_PATTERN.sub(_create_dotted_code, text)
@@ -87,10 +87,10 @@ def _convert_generic_codes(text: str) -> str:
 
 def _protect_codes(text: str) -> tuple[str, dict[str, str]]:
     code_map: dict[str, str] = {}
-    
+
     def _create_placeholder(match: re.Match[str]) -> str:
         placeholder = f"codeplaceholder{len(code_map)}"
-        code_map[placeholder] = match.group(0)  
+        code_map[placeholder] = match.group(0)
         return f" {placeholder} "
 
     protected_text = _CODE_PATTERN.sub(_create_placeholder, text)
