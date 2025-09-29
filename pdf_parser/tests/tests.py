@@ -9,7 +9,7 @@ from pdf_parser.services.pdfreader import PdfReader,TextFragment
 from pdf_parser.services.validators import validate_pdf_file
 from pdf_parser.services.pdf_sniffer import PdfSniffer
 from pdf_parser.services.header_mapper import PdfHeaderMapper, TextFragment
-
+from pdf_parser.services.row_parser import PdfRowParser
 
 class FileValidatorTests(TestCase):
 
@@ -386,3 +386,108 @@ class PdfHeaderMapperTests(TestCase):
         self.assertListEqual(missing, ["no","uraian","volume","satuan"])
         self.assertDictEqual(mapping, {})
 
+class PdfRowParserTests(TestCase):
+    def setUp(self):
+        self.parser = PdfRowParser(y_tolerance=0.8, x_merge_gap=40.0)
+
+    def _hdr(self):
+        return [
+            TextFragment(page=1, x=10,  y=100.0, text="No"),
+            TextFragment(page=1, x=120, y=100.0, text="Uraian"),
+            TextFragment(page=1, x=260, y=100.0, text="Volume"),
+            TextFragment(page=1, x=360, y=100.0, text="Satuan"),
+        ]
+
+    def test_simple_two_rows(self):
+        frags = []
+        frags += self._hdr()
+        frags += [
+            TextFragment(page=1, x=12,  y=120.1, text="1"),
+            TextFragment(page=1, x=122, y=120.0, text="Pekerjaan"),
+            TextFragment(page=1, x=190, y=120.0, text="A"),
+            TextFragment(page=1, x=262, y=120.2, text="10"),
+            TextFragment(page=1, x=362, y=120.1, text="m2"),
+        ]
+        frags += [
+            TextFragment(page=1, x=12,  y=135.0, text="2"),
+            TextFragment(page=1, x=122, y=135.1, text="Pekerjaan B"),
+            TextFragment(page=1, x=262, y=135.1, text="5"),
+            TextFragment(page=1, x=362, y=135.1, text="m1"),
+        ]
+
+        rows, bounds = self.parser.parse(frags)
+        self.assertEqual(len(rows), 2)
+        self.assertEqual(rows[0].values["no"], "1")
+        self.assertEqual(rows[0].values["uraian"], "Pekerjaan A")
+        self.assertEqual(rows[0].values["volume"], "10")
+        self.assertEqual(rows[0].values["satuan"], "m2")
+
+        self.assertEqual(rows[1].values["no"], "2")
+        self.assertEqual(rows[1].values["uraian"], "Pekerjaan B")
+        self.assertEqual(rows[1].values["volume"], "5")
+        self.assertEqual(rows[1].values["satuan"], "m1")
+
+        for key in ["no", "uraian", "volume", "satuan"]:
+            self.assertIn(key, bounds)
+
+    def test_fragments_split_within_cell_are_merged(self):
+        frags = []
+        frags += self._hdr()
+        frags += [
+            TextFragment(page=1, x=12,  y=120.0, text="1"),
+            TextFragment(page=1, x=122, y=120.0, text="Pekerjaan"),
+            TextFragment(page=1, x=190, y=120.0, text="C"),     
+            TextFragment(page=1, x=200, y=120.0, text="(Lanjutan)"),
+            TextFragment(page=1, x=262, y=120.0, text="12"),
+            TextFragment(page=1, x=362, y=120.0, text="unit"),
+        ]
+        rows, _ = self.parser.parse(frags)
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0].values["uraian"], "Pekerjaan C (Lanjutan)")
+
+    def test_multi_page_with_repeated_headers(self):
+        frags = [
+            TextFragment(page=1, x=10,  y=100.0, text="No"),
+            TextFragment(page=1, x=120, y=100.0, text="Uraian Pekerjaan"),
+            TextFragment(page=1, x=260, y=100.0, text="Volume"),
+            TextFragment(page=1, x=360, y=100.0, text="Satuan"),
+            TextFragment(page=1, x=12,  y=120.0, text="1"),
+            TextFragment(page=1, x=122, y=120.0, text="Row1"),
+            TextFragment(page=1, x=262, y=120.0, text="3"),
+            TextFragment(page=1, x=362, y=120.0, text="m"),
+        ]
+        frags += [
+            TextFragment(page=2, x=10,  y=95.0,  text="No"),
+            TextFragment(page=2, x=120, y=95.0,  text="Uraian"),
+            TextFragment(page=2, x=260, y=95.0,  text="Volume"),
+            TextFragment(page=2, x=360, y=95.0,  text="Satuan"),
+            TextFragment(page=2, x=12,  y=115.0, text="2"),
+            TextFragment(page=2, x=122, y=115.0, text="Row2"),
+            TextFragment(page=2, x=262, y=115.0, text="7"),
+            TextFragment(page=2, x=362, y=115.0, text="m"),
+        ]
+        rows, _ = self.parser.parse(frags)
+        self.assertEqual(len(rows), 2)
+        self.assertEqual(rows[0].page, 1)
+        self.assertEqual(rows[1].page, 2)
+        self.assertEqual(rows[1].values["no"], "2")
+        self.assertEqual(rows[1].values["uraian"], "Row2")
+
+    def test_ignores_noise_before_header_and_very_close_to_header(self):
+        noise = [
+            TextFragment(page=1, x=50, y=60.0, text="Some Title"),
+            TextFragment(page=1, x=50, y=80.0, text="Misc"),
+        ]
+        hdr = self._hdr()  
+        near_header = [
+            TextFragment(page=1, x=12,  y=104.0, text="SHOULD_NOT_PARSE"),
+        ]
+        valid_row = [
+            TextFragment(page=1, x=12,  y=112.5, text="1"),
+            TextFragment(page=1, x=122, y=112.4, text="OK"),
+            TextFragment(page=1, x=262, y=112.6, text="9"),
+            TextFragment(page=1, x=362, y=112.7, text="m"),
+        ]
+        rows, _ = self.parser.parse(noise + hdr + near_header + valid_row)
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0].values["uraian"], "OK")
