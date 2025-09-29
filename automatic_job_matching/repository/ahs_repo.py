@@ -18,3 +18,7 @@ class DbAhsRepository:
     def by_name_candidates(self, head_token: str) -> List[AhsRow]:
         qs = Ahs.objects.filter(name__istartswith=head_token)[:200]
         return [AhsRow(id=a.id, code=(a.code or ""), name=(a.name or "")) for a in qs]
+    
+    def get_all_ahs(self) -> List[AhsRow]:
+        qs = Ahs.objects.all()[:1000]
+        return [AhsRow(id=a.id, code=(a.code or ""), name=(a.name or "")) for a in qs]
