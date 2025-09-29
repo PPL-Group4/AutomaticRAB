@@ -509,3 +509,84 @@ class FuzzyMatcherTests(SimpleTestCase):
         matches = self.matcher._get_multiple_name_matches("   ", 5)
         self.assertEqual(matches, [])
 
+class FuzzyMatcherViewTests(TestCase):
+    def setUp(self):
+        self.client = Client()
+        
+        self._repo_patcher = patch("automatic_job_matching.views.DbAhsRepository")
+        FakeRepo = type("FakeRepo", (), {
+            "by_code_like": lambda self, c: [AhsRow(id=1, code="AT.01", name="Test Item")],
+            "by_name_candidates": lambda self, h: [AhsRow(id=1, code="AT.01", name="Test Item")],
+            "get_all_ahs": lambda self: [AhsRow(id=1, code="AT.01", name="Test Item")],
+        })
+        self.mock_repo_cls = self._repo_patcher.start()
+        self.mock_repo_cls.return_value = FakeRepo()
+
+    def tearDown(self):
+        self._repo_patcher.stop()
+
+    def test_fuzzy_match_view_success(self):
+        url = reverse("match-fuzzy")
+        payload = {"description": "Test Item", "min_similarity": 0.6}
+        response = self.client.post(url, json.dumps(payload), content_type="application/json")
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertIn("match", data)
+
+    def test_fuzzy_match_view_default_similarity(self):
+        url = reverse("match-fuzzy")
+        payload = {"description": "Test Item"}
+        response = self.client.post(url, json.dumps(payload), content_type="application/json")
+        self.assertEqual(response.status_code, 200)
+
+    def test_multiple_match_view_success(self):
+        url = reverse("match-multiple")
+        payload = {"description": "test", "limit": 3, "min_similarity": 0.5}
+        response = self.client.post(url, json.dumps(payload), content_type="application/json")
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertIn("matches", data)
+        self.assertIsInstance(data["matches"], list)
+
+    def test_multiple_match_view_default_params(self):
+        url = reverse("match-multiple")
+        payload = {"description": "test"}
+        response = self.client.post(url, json.dumps(payload), content_type="application/json")
+        self.assertEqual(response.status_code, 200)
+
+    def test_fuzzy_match_view_invalid_json(self):
+        url = reverse("match-fuzzy")
+        response = self.client.post(url, "invalid-json", content_type="application/json")
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("error", response.json())
+
+    def test_multiple_match_view_invalid_json(self):
+        url = reverse("match-multiple")
+        response = self.client.post(url, "invalid-json", content_type="application/json")
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("error", response.json())
+
+    def test_fuzzy_match_view_empty_request_body(self):
+        url = reverse("match-fuzzy")
+        response = self.client.post(url, "", content_type="application/json")
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertIn("match", data)
+
+    def test_multiple_match_view_empty_request_body(self):
+        url = reverse("match-multiple")
+        response = self.client.post(url, "", content_type="application/json")
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertIn("matches", data)
+        self.assertIsInstance(data["matches"], list)
+
+    def test_fuzzy_match_view_with_none_body(self):
+        url = reverse("match-fuzzy")
+        response = self.client.post(url, None, content_type="application/json")
+        self.assertEqual(response.status_code, 200)
+
+    def test_multiple_match_view_with_none_body(self):
+        url = reverse("match-multiple")
+        response = self.client.post(url, None, content_type="application/json")
+        self.assertEqual(response.status_code, 200)
