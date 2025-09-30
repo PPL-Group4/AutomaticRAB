@@ -3,12 +3,12 @@ from django.http import JsonResponse
 from django.shortcuts import render
 from django.core.exceptions import ValidationError
 from django.views.decorators.csrf import csrf_exempt
-from .utils.pdf_sniffer import PdfSniffer
+from .services.pdf_sniffer import PdfSniffer
 
 
 def upload_pdf(request):
     """Render the PDF upload page (optional, can be merged with Excel upload)."""
-    return render(request, "pdf_parser/upload.html")
+    return render(request, "pdf_upload.html")
 
 
 @csrf_exempt

@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'excel_parser',
+    'pdf_parser',
     'rest_framework',
     'automatic_job_matching',
     'rencanakan_core',
