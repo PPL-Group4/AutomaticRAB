@@ -6,4 +6,6 @@ app_name = "pdf_parser"
 urlpatterns = [
     path("upload/", views.upload_pdf, name="upload_pdf"),
     path("preview/", views.preview_pdf, name="preview_pdf"),
+    path("rab_converted/", views.rab_converted_pdf, name="rab_converted_pdf"),
+
 ]
