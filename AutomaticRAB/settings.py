@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 from pathlib import Path
 import os
+import sys
 from dotenv import load_dotenv
 # Load environment variables from .env file
 load_dotenv()
@@ -29,7 +30,7 @@ SECRET_KEY = os.getenv('SECRET_KEY')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
+ALLOWED_HOSTS = ["localhost", "127.0.0.1","controversial-annmarie-izzydharma-9d67c1b0.koyeb.app"]
 
 
 # Application definition
@@ -49,6 +50,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -126,7 +128,11 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
-STATIC_URL = 'static/'
+# URL prefix for static files (ensure leading slash for production)
+STATIC_URL = '/static/'
+
+# Where collectstatic gathers files for production serving
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
@@ -137,6 +143,7 @@ STATICFILES_DIRS = [
     BASE_DIR / "excel_parser" / "static",
 ]
 
+
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
@@ -145,3 +152,24 @@ LOGGING = {
     },
     "root": {"handlers": ["console"], "level": "DEBUG"},
 }
+
+# Use a simpler storage during tests to avoid Manifest errors, and
+# enable hashed filenames (manifest) only in production builds.
+RUNNING_TESTS = any(arg in sys.argv for arg in ["test", "pytest", "py.test"])  # Django test runner sets 'test'
+
+if RUNNING_TESTS:
+    # During tests, Django doesn't run collectstatic; Manifest storage would raise
+    # 'Missing staticfiles manifest entry'. Use the basic storage instead.
+    STORAGES = {
+        "staticfiles": {
+            "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+        },
+    }
+else:
+    # In dev/prod (non-test), serve compressed, hashed static files via WhiteNoise.
+    STORAGES = {
+        "staticfiles": {
+            "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+        },
+    }
+

@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
 import re
 from typing import List, Dict, Iterable, Tuple
+import string
 
 from django.core.files.uploadedfile import UploadedFile
 from excel_parser.models import Project, RabEntry
@@ -23,79 +24,59 @@ HEADER_ALIASES = {
     "total_price": {"jumlah harga", "total harga", "total", "total_price"}
 }
 
-
-
-
 def _norm(s) -> str:
     return str(s or "").strip().lower()
-
-def _match_header(cell: str) -> Tuple[str | None, str]:
-    """Return (canonical_key, raw) or (None, raw)."""
-    key = None
-    n = _norm(cell)
-    for canon, aliases in HEADER_ALIASES.items():
-        if n in aliases:
-            key = canon
-            break
-    return key, cell
 
 _THOUSAND_DOT_DECIMAL_COMMA = re.compile(r"^\d{1,3}(\.\d{3})+,\d+$")
 _THOUSAND_COMMA_DECIMAL_DOT = re.compile(r"^\d{1,3}(,\d{3})+\.\d+$")
 
+def classify_index_token(token: str) -> str:
+    """Classify a No. cell into 'letter' | 'roman' | 'numeric' | 'none'."""
+    if token is None:
+        return "none"
+    t = str(token).strip()
+    if not t:
+        return "none"
+    t = t.rstrip(" .)")
+    up = t.upper()
+    if len(up) == 1 and up in string.ascii_uppercase:
+        return "letter"
+    if re.fullmatch(r"[IVXLCDM]+", up):
+        return "roman"
+    tn = up.replace(".", "").replace(",", "")
+    if tn.isdigit():
+        return "numeric"
+    return "none"
 
 def parse_decimal(val) -> Decimal:
-    print(f"=== parse_decimal called with: {val!r} (type: {type(val)})")
-
     if val is None or str(val).strip() == "":
-        print("→ Returning 0 (None or empty)")
         return Decimal("0")
     if isinstance(val, (int, float, Decimal)):
-        result = Decimal(str(val))
-        print(f"→ Returning {result} (numeric type)")
-        return result
+        return Decimal(str(val))
 
     s = str(val).strip()
-    print(f"→ Normalized string: {s!r}")
-
-    # If the string has no digits at all, treat as 0
     if not any(ch.isdigit() for ch in s):
-        print("→ Returning 0 (no digits)")
         return Decimal("0")
-
-    # Skip if it looks like a formula, e.g. "7 = 5 x 6"
     if "=" in s or re.search(r"\d+\s*[xX]\s*\d+", s):
-        print("→ Returning 0 (looks like formula)")
         return Decimal("0")
-
-    # Handle common formats
     if _THOUSAND_DOT_DECIMAL_COMMA.match(s):
         s = s.replace(".", "").replace(",", ".")
-        print(f"→ After dot-comma format: {s}")
     elif _THOUSAND_COMMA_DECIMAL_DOT.match(s):
         s = s.replace(",", "")
-        print(f"→ After comma-dot format: {s}")
     else:
         if "," in s and "." not in s:
             s = s.replace(",", ".")
-            print(f"→ After comma->dot: {s}")
         elif "," in s and "." in s:
             if s.rfind(",") > s.rfind("."):
                 s = s.replace(".", "").replace(",", ".")
-                print(f"→ After mixed format (comma last): {s}")
             else:
                 s = s.replace(",", "")
-                print(f"→ After mixed format (dot last): {s}")
-
     s = re.sub(r"[^\d.-]", "", s)
-    print(f"→ After regex cleanup: {s!r}")
-
     try:
-        result = Decimal(s)
-        print(f"→ Successfully parsed to: {result}")
-        return result
-    except InvalidOperation as e:
-        print(f"→ InvalidOperation: {e}, returning 0")
+        return Decimal(s)
+    except InvalidOperation:
         return Decimal("0")
+
 class _BaseReader:
     def iter_rows(self, file: UploadedFile) -> Iterable[List]:
         raise NotImplementedError
@@ -139,7 +120,6 @@ def make_reader(file: UploadedFile) -> _BaseReader:
     raise UnsupportedFileError("Only .xls and .xlsx are supported")
 
 @dataclass
-
 class ParsedRow:
     number: str
     description: str
@@ -149,22 +129,21 @@ class ParsedRow:
     price: Decimal
     total_price: Decimal
     is_section: bool = False
+    index_kind: str = "none"
+    section_letter: str | None = None
+    section_roman: str | None = None
+    section_type: str | None = None  # NEW
 
 def _find_header_map(rows: Iterable[List]) -> Tuple[Dict[str, int], int]:
-    """
-    Scan up to first 50 rows to detect header line and map columns.
-    Returns (mapping, header_row_index).
-    """
     cache = list(rows)
     limit = min(len(cache), 50)
-
     for i in range(limit):
         row = cache[i]
         seen = {}
         for idx, cell in enumerate(row):
             if cell is None:
                 continue
-            normed = _norm(cell)  # normalize (strip + lower)
+            normed = _norm(cell)
             canon = None
             for key, aliases in HEADER_ALIASES.items():
                 if normed in {a.lower().strip() for a in aliases}:
@@ -172,46 +151,39 @@ def _find_header_map(rows: Iterable[List]) -> Tuple[Dict[str, int], int]:
                     break
             if canon and canon not in seen:
                 seen[canon] = idx
-
-        # require at least number + description + unit
         if {"number", "description", "unit"} <= set(seen.keys()):
             return seen, i
-        print("Detected colmap:", seen)
-
-    raise ParseError(
-        "Required headers not found (need at least No, Uraian Pekerjaan, and Satuan)"
-    )
-
+    raise ParseError("Required headers not found (need at least No, Uraian Pekerjaan, and Satuan)")
 
 def _rows_after(cache: List[List], start_idx: int) -> Iterable[List]:
     for r in range(start_idx + 1, len(cache)):
         yield cache[r]
+def _match_header(cell: str) -> Tuple[str | None, str]:
+    """Return (canonical_key, raw) or (None, raw)."""
+    key = None
+    n = _norm(cell)
+    for canon, aliases in HEADER_ALIASES.items():
+        if n in {a.lower().strip() for a in aliases}:
+            key = canon
+            break
+    return key, cell
+
 
 def _is_section_row(number: str, desc: str) -> bool:
-    """
-    Detect if a row is a section header.
-    """
-    if not number:
-        return False
-
-    # Roman numerals with a dot (I., II., III., IV., etc.)
-    if re.fullmatch(r"[IVXLCDM]+\.", number):
+    if number:
+        kind = classify_index_token(number)
+        if kind in ("letter", "roman"):
+            return True
+        if kind == "numeric":
+            return False
+    if desc and isinstance(desc, str) and desc.strip() and desc.strip().isupper():
         return True
-
-    # Single letters with a dot (A., B., C., etc.)
-    if re.fullmatch(r"[A-Z]\.", number):
-        return True
-
-    # Pure digits (1, 2, 3) are items, not sections
-    # Mixed like 1.1 or 1.2.3 are items, not sections
-    if re.match(r"^\d", number):
-        return False
-
     return False
-
 
 def _parse_rows(cache: List[List], colmap: Dict[str, int]) -> List[ParsedRow]:
     out: List[ParsedRow] = []
+    current_letter: str | None = None
+    current_roman: str | None = None
 
     for idx, row in enumerate(_rows_after(cache, start_idx=colmap["_header_row"])):
         def cell(col):
@@ -225,21 +197,24 @@ def _parse_rows(cache: List[List], colmap: Dict[str, int]) -> List[ParsedRow]:
 
         unit_val = str(cell("unit") or "").strip()
         vol_cell = cell("volume")
-        print("row:", row)
-        print("colmap:", colmap)
-        print("unit cell:", unit_val)
-        print("volume cell:", vol_cell)
 
+        index_kind = classify_index_token(number)
         is_section = _is_section_row(number, str(desc))
-        print(f"is_section: {is_section}")
 
         if is_section:
-            volume_result = Decimal("0")
-            print(f"Section row - setting volume to 0")
+            if index_kind == "letter":
+                volume_result = parse_decimal(vol_cell)
+            else:
+                volume_result = Decimal("0")
         else:
-            print(f"About to call parse_decimal with: {vol_cell!r}")
             volume_result = parse_decimal(vol_cell)
-            print(f"parse_decimal returned: {volume_result}")
+
+        if is_section:
+            if index_kind == "letter":
+                current_letter = str(desc)
+                current_roman = None
+            elif index_kind == "roman":
+                current_roman = str(desc)
 
         parsed_row = ParsedRow(
             number=number,
@@ -249,36 +224,29 @@ def _parse_rows(cache: List[List], colmap: Dict[str, int]) -> List[ParsedRow]:
             analysis_code=str(cell("analysis_code") or "").strip(),
             price=parse_decimal(cell("price")),
             total_price=parse_decimal(cell("total_price")),
-            is_section=is_section
+            is_section=is_section,
+            index_kind=index_kind,
+            section_letter=current_letter,
+            section_roman=current_roman,
+            section_type="CATEGORY" if index_kind == "letter" else ("SECTION" if index_kind == "roman" else None)
         )
-
-        print(f"Created ParsedRow with volume: {parsed_row.volume}")
         out.append(parsed_row)
-
     return out
 
 class ExcelImporter:
-    """
-    High-level façade used by views/tasks/tests.
-    SRP: import an uploaded excel into RabEntry rows
-    OCP: new readers can be added without modifying this class
-    """
     def import_file(self, file: UploadedFile) -> int:
         reader = make_reader(file)
-        # materialize all rows to detect header first
         cache = list(reader.iter_rows(file))
         colmap, header_row = _find_header_map(cache)
-        colmap["_header_row"] = header_row  # keep header position
-
-        project, created = Project.objects.get_or_create(
+        colmap["_header_row"] = header_row
+        project, _ = Project.objects.get_or_create(
             program="Default Program",
             kegiatan="Default Activity",
             pekerjaan="Imported from Excel",
             lokasi="Not Specified",
-            tahun_anggaran=2025, # Or get this from the file/user
+            tahun_anggaran=2025,
             defaults={'source_filename': file.name}
         )
-
         parsed = _parse_rows(cache, colmap)
         count = 0
         for idx, p in enumerate(parsed, start=1):
@@ -294,15 +262,14 @@ class ExcelImporter:
                 total_price=p.total_price,
                 row_index=idx,
             )
-
             count += 1
         return count
+
 def preview_file(file: UploadedFile):
     reader = make_reader(file)
     cache = list(reader.iter_rows(file))
     colmap, header_row = _find_header_map(cache)
     colmap["_header_row"] = header_row
-
     parsed = _parse_rows(cache, colmap)
     return [
         {
@@ -313,7 +280,11 @@ def preview_file(file: UploadedFile):
             "analysis_code": row.analysis_code,
             "price": float(row.price),
             "total_price": float(row.total_price),
-            "is_section": row.is_section,  # 🚩 expose to API
+            "is_section": row.is_section,
+            "index_kind": row.index_kind,
+            "section_letter": row.section_letter,
+            "section_roman": row.section_roman,
+            "section_type": row.section_type,
         }
         for row in parsed
     ]

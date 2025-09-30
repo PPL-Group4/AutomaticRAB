@@ -4,52 +4,68 @@
 <head>
   <title>RAB Editor</title>
   <link rel="stylesheet" href="{% static 'style.css' %}">
+  <style>
+    .bujak-header {
+      margin-top: 20px;
+      margin-bottom: 10px;
+      padding: 6px 12px;
+      background-color: #ffedd5;
+      border-left: 6px solid #f97316;
+      font-weight: bold;
+      font-size: 16px;
+    }
+    .rab-category {
+      margin-bottom: 25px;
+      border-collapse: collapse;
+      width: 100%;
+    }
+    .rab-category th, .rab-category td {
+      border: 1px solid #ddd;
+      padding: 6px;
+    }
+    .rab-category th {
+      background-color: #f8f9fa;
+      font-weight: bold;
+    }
+    .grand-total-box {
+      margin-top: 30px;
+      padding: 16px;
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      width: 350px;
+    }
+    .grand-total-box div {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+    .grand-total-box .label {
+      font-weight: bold;
+    }
+  </style>
 </head>
 <body>
   <div class="container">
-    <h2>A. PEKERJAAN PERSIAPAN</h2>
-
-    <!-- Upload form -->
     <form id="uploadForm" enctype="multipart/form-data">
       <input type="file" name="file" id="fileInput" accept=".xls,.xlsx">
       <button type="submit">Upload & Preview</button>
     </form>
 
-    <!-- Table -->
-    <table id="rabTable">
-      <thead>
-        <tr>
-          <th>No.</th>
-          <th>Uraian Pekerjaan</th>
-          <th>Kode</th>
-          <th>Volume</th>
-          <th>SAT</th>
-          <th>Harga Sat (Rp.)</th>
-          <th>Jumlah (Rp.)</th>
-          <th>Aksi</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
+    <div id="rabTables"></div>
 
-    <button type="button" id="addRowBtn">+ Tambah baris</button>
-
-    <div class="total-box">
-      TOTAL: <span id="totalValue">Rp. 0</span>
+    <!-- final total box -->
+    <div class="grand-total-box" id="grandTotalBox" style="display:none;">
+      <div><span class="label">Total</span> <span id="grandTotal">Rp. 0</span></div>
+      <div><span class="label">PPN (10%)</span> <span id="ppn">Rp. 0</span></div>
+      <div><span class="label">Total (Termasuk PPN)</span> <span id="totalWithPpn">Rp. 0</span></div>
+      <div><span class="label">Terbilang</span> <span id="terbilang">NOL RUPIAH</span></div>
     </div>
 
     <a href="#" class="action-btn">+ Tambah Kategori Pekerjaan/Pilih Referensi RAB</a>
   </div>
 
   <script>
-    function updateRowNumbers() {
-      const rows = document.querySelectorAll("#rabTable tbody tr");
-      rows.forEach((tr, idx) => {
-        tr.querySelector("td").innerText = idx + 1; 
-      });
-    }
-
-    // handling upload file
     document.getElementById("uploadForm").addEventListener("submit", async function(e) {
       e.preventDefault();
       const fileInput = document.getElementById("fileInput");
@@ -57,10 +73,8 @@
         alert("Pilih file Excel dulu");
         return;
       }
-
       const formData = new FormData();
       formData.append("file", fileInput.files[0]);
-
       try {
         const resp = await fetch("/excel_parser/preview_rows", {
           method: "POST",
@@ -68,7 +82,7 @@
         });
         const data = await resp.json();
         if (data.rows) {
-          renderTable(data.rows);
+          renderTables(data.rows);
         } else {
           alert("Gagal parsing file: " + (data.error || "Unknown error"));
         }
@@ -77,49 +91,112 @@
       }
     });
 
-    // render table function
-    function renderTable(rows) {
-      const tbody = document.querySelector("#rabTable tbody");
-      tbody.innerHTML = "";
+    function renderTables(rows) {
+      const container = document.getElementById("rabTables");
+      container.innerHTML = "";
       let total = 0;
+      let currentTable = null;
+      let tbody = null;
+      let bujakCounter = 0;
 
-      rows.forEach((row, index) => {
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-          <td>${index + 1}</td>
-          <td><input type="text" value="${row.description || ""}"></td>
-          <td><input type="text" value="${row.analysis_code || ""}"></td>
-          <td><input type="number" value="${row.volume || 0}"></td>
-          <td><input type="text" value="${row.unit || ""}"></td>
-          <td><input type="number" value="${row.price || 0}"></td>
-          <td class="jumlah">Rp. ${(row.total_price || 0).toLocaleString()}</td>
-          <td><button type="button" onclick="this.closest('tr').remove(); updateRowNumbers();">❌</button></td>
-        `;
-        tbody.appendChild(tr);
-        total += row.total_price || 0;
+      rows.forEach(row => {
+        // Skip calculation rows that should not appear in the table
+        const skipKeywords = ["PAJAK", "JUMLAH SETELAH PAJAK", "DIBULATKAN", "TERBILANG"];
+        if (row.description && skipKeywords.some(k => row.description.toUpperCase().includes(k))) {
+          return;
+        }
+
+        // Detect new BUJAK section
+        if (row.is_section && row.section_type === "CATEGORY" && row.number === "A") {
+          bujakCounter++;
+          const header = document.createElement("div");
+          header.classList.add("bujak-header");
+          header.innerText = `BUJAK ${bujakCounter}`;
+          container.appendChild(header);
+          currentTable = null;
+        }
+
+        if (row.is_section && row.section_type === "CATEGORY") {
+          const table = document.createElement("table");
+          table.classList.add("rab-category");
+          table.innerHTML = `
+            <thead>
+              <tr>
+                <th>No.</th>
+                <th>Uraian Pekerjaan</th>
+                <th>Kode</th>
+                <th>Volume</th>
+                <th>SAT</th>
+                <th>Harga Sat (Rp.)</th>
+                <th>Jumlah (Rp.)</th>
+                <th>Aksi</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          `;
+          container.appendChild(table);
+          tbody = table.querySelector("tbody");
+          const tr = document.createElement("tr");
+          tr.dataset.role = "category";
+          tr.innerHTML = `
+            <td>${row.number}</td>
+            <td><strong>${row.description}</strong></td>
+            <td></td>
+            <td>${row.volume || ""}</td>
+            <td>${row.unit || ""}</td>
+            <td></td>
+            <td></td>
+            <td></td>
+          `;
+          tbody.appendChild(tr);
+          currentTable = table;
+        }
+
+        else if (row.is_section && row.section_type === "SECTION") {
+          if (!currentTable) return;
+          tbody = currentTable.querySelector("tbody");
+          const tr = document.createElement("tr");
+          tr.dataset.role = "section";
+          tr.innerHTML = `
+            <td>${row.number}</td>
+            <td><em>${row.description}</em></td>
+            <td></td><td></td><td></td><td></td><td></td><td></td>
+          `;
+          tbody.appendChild(tr);
+        }
+
+        else if (!row.is_section) {
+          if (!currentTable) return;
+          tbody = currentTable.querySelector("tbody");
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td></td>
+            <td><input type="text" value="${row.description || ""}"></td>
+            <td><input type="text" value="${row.analysis_code || ""}"></td>
+            <td><input type="number" value="${row.volume || 0}"></td>
+            <td><input type="text" value="${row.unit || ""}"></td>
+            <td><input type="number" value="${row.price || 0}"></td>
+            <td class="jumlah">Rp. ${(row.total_price || 0).toLocaleString()}</td>
+            <td><button type="button" onclick="this.closest('tr').remove();">❌</button></td>
+          `;
+          tbody.appendChild(tr);
+          total += row.total_price || 0;
+        }
       });
 
-      document.getElementById("totalValue").innerText =
-        "Rp. " + total.toLocaleString();
+      // Update grand total box
+      document.getElementById("grandTotalBox").style.display = "block";
+      document.getElementById("grandTotal").innerText = "Rp. " + total.toLocaleString();
+      const ppn = total * 0.1;
+      document.getElementById("ppn").innerText = "Rp. " + ppn.toLocaleString();
+      document.getElementById("totalWithPpn").innerText = "Rp. " + (total + ppn).toLocaleString();
+      document.getElementById("terbilang").innerText = total === 0 ? "NOL RUPIAH" : numberToWords(total + ppn).toUpperCase();
     }
 
-    // add row manually 
-    document.getElementById("addRowBtn").addEventListener("click", () => {
-      const tbody = document.querySelector("#rabTable tbody");
-      const tr = document.createElement("tr");
-      tr.innerHTML = `
-        <td></td>
-        <td><input type="text" value=""></td>
-        <td><input type="text" value=""></td>
-        <td><input type="number" value="0"></td>
-        <td><input type="text" value=""></td>
-        <td><input type="number" value="0"></td>
-        <td class="jumlah">Rp. 0</td>
-        <td><button type="button" onclick="this.closest('tr').remove(); updateRowNumbers();">❌</button></td>
-      `;
-      tbody.appendChild(tr);
-      updateRowNumbers();
-    });
+    // Simple function to convert number into words (basic placeholder)
+    function numberToWords(number) {
+      return number.toLocaleString("id-ID") + " rupiah";
+    }
   </script>
 </body>
 </html>
