@@ -143,6 +143,16 @@ STATICFILES_DIRS = [
     BASE_DIR / "excel_parser" / "static",
 ]
 
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {
+        "console": {"class": "logging.StreamHandler"},
+    },
+    "root": {"handlers": ["console"], "level": "DEBUG"},
+}
+
 # Use a simpler storage during tests to avoid Manifest errors, and
 # enable hashed filenames (manifest) only in production builds.
 RUNNING_TESTS = any(arg in sys.argv for arg in ["test", "pytest", "py.test"])  # Django test runner sets 'test'
@@ -162,3 +172,4 @@ else:
             "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
         },
     }
+
