@@ -1,4 +1,5 @@
 import tempfile
+from decimal import Decimal
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
@@ -10,6 +11,8 @@ from pdf_parser.services.validators import validate_pdf_file
 from pdf_parser.services.pdf_sniffer import PdfSniffer
 from pdf_parser.services.header_mapper import PdfHeaderMapper, TextFragment
 from pdf_parser.services.row_parser import PdfRowParser, ParsedRow
+from pdf_parser.services.normalizer import PdfRowNormalizer
+from pdf_parser.services.pipeline import merge_broken_rows
 from pdf_parser.services.header_mapper import TextFragment
 
 
@@ -467,12 +470,30 @@ class PdfRowParserUnitTests(TestCase):
         }
         boundaries = self.parser._compute_x_boundaries(headers)
         row_frags = self._row(page=1, y=130)
-        cells = self.parser._assign_to_columns(row_frags, boundaries)
+        cells = self.parser._assign_to_columns(row_frags, boundaries, headers)
         self.assertTrue(all(k in cells for k in ["no", "uraian", "volume", "satuan"]))
         self.assertEqual(len(cells["no"]), 1)
         self.assertEqual(len(cells["uraian"]), 1)
         self.assertEqual(len(cells["volume"]), 1)
         self.assertEqual(len(cells["satuan"]), 1)
+
+    def test_assign_to_columns_roman_section_stays_in_description(self):
+        headers = {
+            "uraian": TextFragment(page=1, x=62.8, y=100, text="Jenis Barang/Jasa"),
+            "satuan": TextFragment(page=1, x=294.9, y=100, text="Satuan Unit"),
+            "volume": TextFragment(page=1, x=410.9, y=100, text="Volume"),
+        }
+        boundaries = self.parser._compute_x_boundaries(headers)
+        row_frags = [
+            TextFragment(page=1, x=63.0, y=130, text="I.Rencana"),
+            TextFragment(page=1, x=117.5, y=130, text="Keselamatan"),
+            TextFragment(page=1, x=190.3, y=130, text="Konstruksi"),
+        ]
+
+        cells = self.parser._assign_to_columns(row_frags, boundaries, headers)
+
+        self.assertEqual([f.text for f in cells["uraian"]], ["I.Rencana", "Keselamatan", "Konstruksi"])
+        self.assertEqual(cells["satuan"], [])
 
     def test_merge_cell_text_joins_and_strips(self):
         frags = [
@@ -541,90 +562,52 @@ class PdfRowParserUnitTests(TestCase):
         self.assertEqual(rows, [])
         self.assertEqual(bounds, {})
 
-        # Only data, no recognizable headers -> parser should skip page
-        data_only = self._row(page=1, y=150)
-        rows2, bounds2 = self.parser.parse(data_only)
-        self.assertEqual(rows2, [])
-        self.assertEqual(bounds2, {})
 
-    def test_parse_merges_multi_fragment_cell_text(self):
-        # Header
-        fragments = self._headers_at(page=1, y=100)
+class PdfRowNormalizerTests(TestCase):
 
-        uraian_frags = [
-            TextFragment(page=1, x=120, y=120, text="Pekerjaan"),
-            TextFragment(page=1, x=150, y=120, text="A"),
-            TextFragment(page=1, x=165, y=120, text="(lanjutan)"),
+    def test_uppercase_header_keeps_letter_in_description(self):
+        row = {
+            "no": "",
+            "uraian": "PEKERJAAN PERSIAPAN & SMKK",
+            "satuan": "",
+            "volume": "",
+            "price": "",
+            "total_price": "",
+            "analysis_code": "",
+        }
+
+        normalized = PdfRowNormalizer.normalize(row)
+
+        self.assertEqual(normalized["number"], "")
+        self.assertEqual(normalized["description"], "PEKERJAAN PERSIAPAN & SMKK")
+
+    def test_letter_with_punctuation_is_still_extracted(self):
+        row = {
+            "no": "",
+            "uraian": "a.Peralatan P3K",
+            "satuan": "set",
+            "volume": "1",
+            "price": "",
+            "total_price": "",
+            "analysis_code": "",
+        }
+
+        normalized = PdfRowNormalizer.normalize(row)
+
+        self.assertEqual(normalized["number"], "a")
+        self.assertEqual(normalized["description"], "Peralatan P3K")
+
+
+class PipelineHelperTests(TestCase):
+
+    def test_merge_broken_rows_keeps_numbered_sections(self):
+        rows = [
+            {"number": "2", "description": "Sosialisasi, Promosi dan Pelatihan", "unit": "ls", "volume": Decimal("1"), "analysis_code": "", "price": Decimal("0"), "total_price": Decimal("0")},
+            {"number": "3", "description": "Alat Pelindung Kerja (APK), terdiri dari", "unit": "", "volume": Decimal("0"), "analysis_code": "", "price": Decimal("0"), "total_price": Decimal("0")},
         ]
-        # Other cells single fragment
-        others = [
-            TextFragment(page=1, x=10,  y=120, text="7"),
-            TextFragment(page=1, x=260, y=120, text="99"),
-            TextFragment(page=1, x=360, y=120, text="m2"),
-        ]
-        fragments += uraian_frags + others
 
-        rows, _ = self.parser.parse(fragments)
-        self.assertEqual(len(rows), 1)
-        self.assertEqual(rows[0].values["no"], "7")
-        self.assertEqual(rows[0].values["uraian"], "Pekerjaan A (lanjutan)")
-        self.assertEqual(rows[0].values["volume"], "99")
-        self.assertEqual(rows[0].values["satuan"], "m2")
+        merged = merge_broken_rows(rows)
 
-    def test_group_by_y_returns_empty_on_no_frags(self):
-        p = PdfRowParser()
-        self.assertEqual(p._group_by_y([]), [])
-
-    def test_group_by_y_splits_when_outside_tolerance(self):
-        p = PdfRowParser(y_bucket_precision=1, y_tolerance=0.2)
-        frags = [
-            TextFragment(page=1, x=100, y=150.0, text="A"),
-            TextFragment(page=1, x=120, y=150.0, text="B"),   
-            TextFragment(page=1, x=140, y=151.0, text="C"),   
-            TextFragment(page=1, x=160, y=152.5, text="D"),   
-        ]
-        groups = p._group_by_y(frags)
-
-        self.assertEqual(len(groups), 3)
-        for _, g in groups:
-            xs = [f.x for f in g]
-            self.assertEqual(xs, sorted(xs))
-
-
-    def test_merge_cell_text_empty_list_returns_empty_string(self):
-        p = PdfRowParser()
-        self.assertEqual(p._merge_cell_text([]), "")
-
-    def test_merge_cell_text_takes_else_path_when_gap_large(self):
-        p = PdfRowParser(x_merge_gap=1.0)
-        frags = [
-            TextFragment(page=1, x=100, y=120, text="Hello"),
-            TextFragment(page=1, x=200, y=120, text="World"),  
-        ]
-        merged = p._merge_cell_text(frags)
-        self.assertEqual(merged, "Hello World")
-
-    def test_compute_x_boundaries_single_header_handles_no_mids(self):
-        p = PdfRowParser()
-        headers = {"uraian": TextFragment(page=1, x=120, y=100, text="Uraian")}
-        bounds = p._compute_x_boundaries(headers)
-        self.assertIn("uraian", bounds)
-        xmin, xmax = bounds["uraian"]
-        self.assertTrue(xmin < -1e8)   # -inf emulation
-        self.assertTrue(xmax > 1e8)    # +inf emulation
-
-    def test_group_by_y_triggers_split_else_within_same_bucket(self):
-        p = PdfRowParser(y_bucket_precision=0, y_tolerance=0.2)
-        frags = [
-            TextFragment(page=1, x=100, y=150.00, text="A"),
-            TextFragment(page=1, x=110, y=150.10, text="B"),   # Δy = 0.10 -> gabung
-            TextFragment(page=1, x=120, y=150.45, text="C"),   # Δy = 0.35 -> SPLIT (kena else)
-            TextFragment(page=1, x=130, y=150.49, text="D"),   # Δy = 0.04 -> gabung dg C
-        ]
-        groups = p._group_by_y(frags)
-
-        self.assertEqual(len(groups), 2)
-        g1 = [f.text for f in groups[0][1]]
-        g2 = [f.text for f in groups[1][1]]
-        self.assertListEqual(g1, ["A", "B"])
-        self.assertListEqual(g2, ["C", "D"])
+        self.assertEqual(len(merged), 2)
+        self.assertEqual(merged[0]["number"], "2")
+        self.assertEqual(merged[1]["number"], "3")

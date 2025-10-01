@@ -14,66 +14,25 @@ def is_url_or_link(text: str) -> bool:
     # Check for common URL patterns
     url_patterns = [
         r'^https?://',  # starts with http:// or https://
-        r'^www\.',  # starts with www.
-        r'\.com',  # contains .com
-        r'\.id',  # contains .id
-        r'\.org',  # contains .org
-        r'\.net',  # contains .net
-        r'\.gov',  # contains .gov
+        r'^www\.',      # starts with www.
+        r'\.com',       # contains .com
+        r'\.id',        # contains .id
+        r'\.org',       # contains .org
+        r'\.net',       # contains .net
+        r'\.gov',       # contains .gov
     ]
     return any(re.search(pattern, text_lower) for pattern in url_patterns)
 
 
-def is_footer_content(text: str) -> bool:
-    """Check if text is footer content (page numbers, URLs, metadata)."""
-    if not text:
-        return False
-    text_lower = text.lower().strip()
-
-    # Check for URLs (footer often contains links)
-    if is_url_or_link(text):
-        return True
-
-    # Check for page number patterns like "1/3", "Page 2 of 5", "Halaman 1"
-    page_patterns = [
-        r'^\d+/\d+$',  # "1/3", "2/3"
-        r'^page\s+\d+',  # "Page 1", "Page 2 of 5"
-        r'^halaman\s+\d+',  # "Halaman 1" (Indonesian)
-        r'^\d+\s+of\s+\d+$',  # "1 of 3"
-        r'^\d+\s+dari\s+\d+$',  # "1 dari 3" (Indonesian)
-    ]
-
-    # Check for footer keywords
-    footer_keywords = [
-        'dokumen',
-        'spse',
-        'inaproc',
-        'halaman',
-        'printed on',
-        'generated on',
-        'copyright',
-        '©️',
-    ]
-
-    if any(re.search(pattern, text_lower) for pattern in page_patterns):
-        return True
-
-    if any(keyword in text_lower for keyword in footer_keywords):
-        # But allow "dokumen" if it's part of a longer description with actual content
-        if len(text.split()) > 5 and 'pembuatan' in text_lower:
-            return False
-        return True
-
-    return False
 
 
-def filter_url_and_footer_rows(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    """Remove rows that are URLs, links, or footer content."""
+def filter_url_rows(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Remove rows that are URLs or links."""
     filtered = []
     for row in rows:
         desc = row.get("description", "")
-        # Skip rows where description is a URL or footer content
-        if not is_url_or_link(desc) and not is_footer_content(desc):
+        # Skip rows where description is a URL
+        if not is_url_or_link(desc):
             filtered.append(row)
     return filtered
 
@@ -88,9 +47,9 @@ def merge_broken_rows(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     """
     merged = []
     for row in rows:
-        if merged and not row["unit"] and row["volume"] == 0:
+        if merged and not row["unit"] and row["volume"] == 0 and not row.get("number"):
             merged[-1]["description"] = (
-                    merged[-1]["description"] + " " + row["description"]
+                merged[-1]["description"] + " " + row["description"]
             ).strip()
         else:
             merged.append(row)
@@ -124,6 +83,6 @@ def parse_pdf_to_dtos(path: str) -> List[Dict[str, Any]]:
     normalized = merge_broken_rows(normalized)
 
     # 5. Filter out URL and footer rows
-    normalized = filter_url_and_footer_rows(normalized)
+    normalized = filter_url_rows(normalized)
 
     return normalized

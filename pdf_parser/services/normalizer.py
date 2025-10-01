@@ -14,7 +14,7 @@ _UNIT_TOKENS = {
 _ROMAN_RE = re.compile(r'^\s*([IVXLCDM]+)\.?\s*(.*)$', re.I)
 # handles "1Penyiapan", "2. Sosialisasi", "3-Something", "4) Another"
 _LEADING_DIGIT_RE = re.compile(r'^\s*(\d+)(?:[\.)-]?\s*)?(.*)$')
-_LEADING_ALPHA_RE = re.compile(r'^\s*([a-zA-Z])[\.)]?\s*(.*)$')
+_LEADING_ALPHA_RE = re.compile(r'^\s*([a-zA-Z])[\.)]\s*(.*)$')
 
 
 def _split_number_from_desc(desc: str) -> tuple[str, str]:

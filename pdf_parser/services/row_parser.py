@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from typing import Dict, List, Tuple, Optional
 from collections import defaultdict
+import re
 from pdf_parser.services.header_mapper import PdfHeaderMapper, TextFragment
 from pdf_parser.services.normalizer import _UNIT_TOKENS   # ✅ import tokens
 
@@ -74,7 +75,7 @@ class PdfRowParser:
 
             # 5. Assign fragments to columns & merge
             for y, row_frags in grouped_rows:
-                cells = self._assign_to_columns(row_frags, boundaries)
+                cells = self._assign_to_columns(row_frags, boundaries, mapping)
                 values = {k: self._merge_cell_text(v) for k, v in cells.items()}
 
                 # ✅ Section-row heuristic:
@@ -175,14 +176,27 @@ class PdfRowParser:
     def _assign_to_columns(
             self,
             row_frags: List[TextFragment],
-            boundaries: Dict[str, Tuple[float, float]]
+            boundaries: Dict[str, Tuple[float, float]],
+            header_map: Optional[Dict[str, TextFragment]] = None,
     ) -> Dict[str, List[TextFragment]]:
         cells: Dict[str, List[TextFragment]] = {k: [] for k in boundaries.keys()}
 
-        centers = {
-            k: (xmin + xmax) / 2 if xmax < float("inf") else xmin + 200
-            for k, (xmin, xmax) in boundaries.items()
-        }
+        header_map = header_map or {}
+        centers: Dict[str, float] = {}
+        for key, (xmin, xmax) in boundaries.items():
+            header_fragment = header_map.get(key)
+            if header_fragment:
+                centers[key] = header_fragment.x
+                continue
+
+            if xmin == float("-inf") and xmax == float("inf"):
+                centers[key] = 0.0
+            elif xmin == float("-inf"):
+                centers[key] = xmax - 50.0
+            elif xmax == float("inf"):
+                centers[key] = xmin + 50.0
+            else:
+                centers[key] = (xmin + xmax) / 2.0
 
         for f in row_frags:
             # pick nearest column center
@@ -193,6 +207,10 @@ class PdfRowParser:
                 # if text looks too long or has multiple words → it's probably a description
                 if len(f.text.split()) > 2 or len(f.text) > 15:
                     key = "uraian"
+                else:
+                    token = re.sub(r"[^a-z0-9]", "", (f.text or "").lower())
+                    if token and token not in _UNIT_TOKENS and cells.get("uraian"):
+                        key = "uraian"
 
             cells[key].append(f)
 
