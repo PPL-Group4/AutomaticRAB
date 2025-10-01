@@ -1,4 +1,5 @@
 from django.http import JsonResponse
+from django.shortcuts import render
 from rest_framework.decorators import api_view
 import json
 import logging
@@ -29,3 +30,6 @@ def match_best_view(request):
         status = "not found"
 
     return JsonResponse({"status": status, "match": result}, status=200)
+
+def job_matching_page(request):
+    return render(request, "job_matching.html")
