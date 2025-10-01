@@ -12,6 +12,7 @@ _UNIT_TOKENS = {
 }
 
 _ROMAN_RE = re.compile(r'^\s*([IVXLCDM]+)\.?\s*(.*)$', re.I)
+_PURE_ROMAN_RE = re.compile(r'^[IVXLCDM]+$', re.I)
 # handles "1Penyiapan", "2. Sosialisasi", "3-Something", "4) Another"
 _LEADING_DIGIT_RE = re.compile(r'^\s*(\d+)(?:[\.)-]?\s*)?(.*)$')
 _LEADING_ALPHA_RE = re.compile(r'^\s*([a-zA-Z])[\.)]\s*(.*)$')
@@ -20,7 +21,13 @@ _LEADING_ALPHA_RE = re.compile(r'^\s*([a-zA-Z])[\.)]\s*(.*)$')
 def _split_number_from_desc(desc: str) -> tuple[str, str]:
     m = _ROMAN_RE.match(desc)
     if m:
-        return (m.group(1), m.group(2))
+        numeral, rest = m.group(1), m.group(2)
+        following = desc[m.end(1):]
+        if following:
+            first = following[0]
+            if first.isalnum():
+                return ("", desc)
+        return (numeral, rest)
     m = _LEADING_DIGIT_RE.match(desc)
     if m:
         return (m.group(1), m.group(2))
@@ -153,8 +160,33 @@ class PdfRowNormalizer:
             if looks_like_header and token_lc not in _UNIT_TOKENS:
                 final_unit = ""
 
+        # 4c. If a short numeric prefix looks like a continuation fragment, keep it in description
+        vol_candidate = _decimal(row.get("volume"))
+        if (
+            num
+            and num.isdigit()
+            and desc
+            and len(desc.split()) <= 3
+            and len(desc) <= 25
+            and not (final_unit or "").strip()
+            and vol_candidate == Decimal("0")
+        ):
+            desc = f"{num} {desc}".strip()
+            num = ""
+
+        # 4d. If the number column accidentally captured a natural word (e.g. 'di', 'dan'),
+        # fold it back into the description to allow downstream merging logic to operate.
+        raw_num = num.strip()
+        alpha_only = re.sub(r"[^a-zA-Z]", "", raw_num)
+        if raw_num and alpha_only:
+            alpha_upper = alpha_only.upper()
+            looks_strict_roman = raw_num.isupper() and _PURE_ROMAN_RE.fullmatch(alpha_upper)
+            if len(alpha_only) > 1 and not looks_strict_roman:
+                desc = " ".join(part for part in [raw_num, desc] if part).strip()
+                num = ""
+
         # 5. Normalize numerics
-        vol = _decimal(row.get("volume"))
+        vol = vol_candidate
         price = _decimal(row.get("price"))
         total = _decimal(row.get("total_price"))
 
