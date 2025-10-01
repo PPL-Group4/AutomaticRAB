@@ -1,4 +1,4 @@
-{% extends "header.html" %}
+{% extends "base.html" %}
 
 {% block content %}
 <div class="section-box">
@@ -111,17 +111,17 @@
           statusCell.innerHTML = `<button class="btn btn-sm btn-success" disabled>Matched</button>`;
         } else if (data.status.startsWith("found") || data.status === "similar") {
           codeCell.textContent = "-";
-          statusCell.innerHTML = `<button class="btn btn-sm btn-warning">Needs Review</button>`;
+          statusCell.innerHTML = `<button class="btn btn-sm btn-warning">Butuh Review</button>`;
           statusCell.querySelector("button").onclick = () => openReviewModal(data.match, row);
         } else {
           codeCell.textContent = "-";
-          statusCell.innerHTML = `<button class="btn btn-sm btn-secondary">Not Found</button>`;
+          statusCell.innerHTML = `<button class="btn btn-sm btn-secondary">Tidak Ditemukan</button>`;
           statusCell.querySelector("button").onclick = () => openReviewModal([], row);
         }
       } catch (err) {
         console.error("Error:", err);
         codeCell.textContent = "-";
-        statusCell.innerHTML = `<button class="btn btn-sm btn-secondary">Not Found</button>`;
+        statusCell.innerHTML = `<button class="btn btn-sm btn-secondary">Tidak Ditemukan</button>`;
       }
     }
   });
