@@ -4,7 +4,7 @@ from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 import os
-import pytest
+# import pytest
 from pdf_parser.services.pdfreader import PdfReader,TextFragment
 
 from pdf_parser.services.validators import validate_pdf_file
@@ -611,3 +611,46 @@ class PipelineHelperTests(TestCase):
         self.assertEqual(len(merged), 2)
         self.assertEqual(merged[0]["number"], "2")
         self.assertEqual(merged[1]["number"], "3")
+
+from django.test import TestCase, Client
+from django.urls import reverse
+from django.core.files.uploadedfile import SimpleUploadedFile
+
+class PdfParserViewsTest(TestCase):
+    def setUp(self):
+        self.client = Client()
+
+    def test_rab_converted_pdf_get(self):
+        """
+        RED: Pastikan GET ke /pdf_parser/rab_converted/ merender template.
+        Akan gagal kalau view/urls/template belum dibuat.
+        """
+        url = reverse("pdf_parser:rab_converted_pdf")
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "pdf_parser/rab_converted.html")
+
+    def test_rab_converted_pdf_post_no_file(self):
+        """
+        RED: Pastikan POST tanpa file mengembalikan error 400.
+        """
+        url = reverse("pdf_parser:rab_converted_pdf")
+        response = self.client.post(url, {})
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("error", response.json())
+
+    def test_rab_converted_pdf_post_with_pdf(self):
+        """
+        RED: Pastikan POST dengan PDF valid mengembalikan JSON berisi rows.
+        Awalnya akan gagal (500/empty), nanti GREEN setelah implementasi pipeline.
+        """
+        dummy_pdf = SimpleUploadedFile(
+            "dummy.pdf",
+            b"%PDF-1.4\n%Fake PDF",  
+            content_type="application/pdf",
+        )
+
+        url = reverse("pdf_parser:rab_converted_pdf")
+        response = self.client.post(url, {"pdf_file": dummy_pdf})
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("rows", response.json())
