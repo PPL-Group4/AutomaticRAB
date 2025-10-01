@@ -49,6 +49,11 @@
 </head>
 <body>
   <div class="container">
+    <form id="uploadForm" enctype="multipart/form-data">
+      <input type="file" name="file" id="fileInput" accept=".xls,.xlsx">
+      <button type="submit">Upload & Preview</button>
+    </form>
+
     <div id="rabTables"></div>
 
     <!-- final total box -->
@@ -78,6 +83,8 @@
           body: formData
         });
         const data = await resp.json();
+        console.log("Response data:", data);
+
         if (data.rows) {
           renderTables(data.rows);
         } else {
@@ -126,7 +133,6 @@
                 <th>SAT</th>
                 <th>Harga Sat (Rp.)</th>
                 <th>Jumlah (Rp.)</th>
-                <th>Aksi</th>
               </tr>
             </thead>
             <tbody></tbody>
@@ -168,14 +174,13 @@
           const tr = document.createElement("tr");
           tr.innerHTML = `
             <td></td>
-            <td><input type="text" value="${row.description || ""}"></td>
-            <td><input type="text" value="${row.analysis_code || ""}"></td>
-            <td><input type="number" value="${row.volume || 0}"></td>
-            <td><input type="text" value="${row.unit || ""}"></td>
-            <td><input type="number" value="${row.price || 0}"></td>
+            <td>${row.description || ""}</td>
+            <td>${row.analysis_code || ""}</td>
+            <td>${row.volume || ""}</td>
+            <td>${row.unit || ""}</td>
+            <td>${(row.price || 0).toLocaleString()}</td>
             <td class="jumlah">Rp. ${(row.total_price || 0).toLocaleString()}</td>
-            <td><button type="button" onclick="this.closest('tr').remove();">❌</button></td>
-          `;
+        `;
           tbody.appendChild(tr);
           total += row.total_price || 0;
         }

@@ -1,7 +1,7 @@
 from django.http import JsonResponse
+from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
 from django.core.exceptions import ValidationError
-from django.shortcuts import render, redirect
 
 from rest_framework.decorators import api_view, parser_classes
 from rest_framework.parsers import MultiPartParser
@@ -15,7 +15,7 @@ from .services.validators import validate_excel_file
 
 
 def validate_pdf_file(file):
-    """Validator khusus PDF"""
+    """Special validator for PDF files."""
     if file.content_type != "application/pdf":
         raise ValidationError("Only .pdf files are allowed.")
 
@@ -23,12 +23,16 @@ def validate_pdf_file(file):
 @api_view(['POST'])
 @parser_classes([MultiPartParser])
 def detect_headers(request):
+    """
+    POST /excel_parser/detect_headers
+    body: multipart form-data with 'file'
+    """
     f = request.FILES.get('file')
     if not f:
         return Response({"detail": "file is required"}, status=400)
 
     try:
-        validate_excel_file(f)  
+        validate_excel_file(f)
     except ValidationError as ve:
         return Response({"detail": str(ve)}, status=400)
 
@@ -45,7 +49,7 @@ def detect_headers(request):
 
     return Response({
         "sheet": ws.title,
-        "header_row_index": hdr_idx + 1,
+        "header_row_index": hdr_idx + 1,  # 1-based index
         "mapping": mapping,
         "originals": originals,
         "missing": missing
@@ -56,14 +60,17 @@ def detect_headers(request):
 def preview_rows(request):
     """
     POST /excel_parser/preview_rows
-    body: multipart form-data dengan 3 field optional:
-      - excel_standard
-      - excel_apendo
-      - pdf_file
+    Accepts either:
+      - file (legacy, for frontend JS)
+      - excel_standard / excel_apendo / pdf_file (extended, from git)
     """
     if request.method != "POST":
         return JsonResponse({"detail": "Method not allowed"}, status=405)
 
+    # legacy (frontend expects 'file')
+    legacy_file = request.FILES.get("file")
+
+    # extended (multiple file support)
     excel_standard = request.FILES.get("excel_standard")
     excel_apendo = request.FILES.get("excel_apendo")
     pdf_file = request.FILES.get("pdf_file")
@@ -71,6 +78,12 @@ def preview_rows(request):
     try:
         results = {}
 
+        # === Legacy path ===
+        if legacy_file:
+            validate_excel_file(legacy_file)
+            results["rows"] = preview_file(legacy_file)
+
+        # === Extended path ===
         if excel_standard:
             validate_excel_file(excel_standard)
             results["excel_standard"] = preview_file(excel_standard)
@@ -96,7 +109,7 @@ def preview_rows(request):
 
 def upload_view(request):
     """
-    Render halaman upload untuk Excel & PDF dengan validasi format
+    Render upload page for Excel & PDF with format validation.
     """
     if request.method == 'POST':
         excel_standard = request.FILES.get("excel_standard")
@@ -106,25 +119,24 @@ def upload_view(request):
         try:
             if excel_standard:
                 validate_excel_file(excel_standard)
-                rows = preview_file(excel_standard)
-                request.session["preview_rows"] = rows
-                return redirect("rab_converted")
+                return render(request, 'excel_upload.html', {
+                    'success': 'Standard Excel uploaded successfully'
+                })
 
             if excel_apendo:
                 validate_excel_file(excel_apendo)
-                rows = preview_file(excel_apendo)
-                request.session["preview_rows"] = rows
-                return redirect("rab_converted")
+                return render(request, 'excel_upload.html', {
+                    'success': 'APENDO Excel uploaded successfully'
+                })
 
             if pdf_file:
                 validate_pdf_file(pdf_file)
-                request.session["preview_rows"] = [
-                    {"message": "PDF uploaded successfully"}
-                ]
-                return redirect("rab_converted")
+                return render(request, 'excel_upload.html', {
+                    'success': 'PDF uploaded successfully'
+                })
 
             return render(request, 'excel_upload.html', {
-                'error': 'File belum dipilih'
+                'error': 'No file selected'
             }, status=400)
 
         except ValidationError as ve:
@@ -134,10 +146,10 @@ def upload_view(request):
 
     return render(request, 'excel_upload.html')
 
+
 def rab_converted(request):
     """
-    Show the converted RAB preview.
-    For now, just return a template with rows if available.
+    Display converted rows in a table with ability to edit.
+    This will hit the preview_rows endpoint via AJAX/fetch.
     """
-    rows = request.session.get("preview_rows", [])
-    return render(request, "rab_converted.html", {"rows": rows})
+    return render(request, "rab_converted.html")
