@@ -3,7 +3,9 @@
 <html>
 <head>
   <title>RAB Editor</title>
-  <link rel="stylesheet" href="{% static 'style.css' %}">
+
+<link rel="stylesheet" href="{% static 'excel_parser/style.css' %}">
+
   <style>
     .bujak-header {
       margin-top: 20px;
@@ -47,11 +49,6 @@
 </head>
 <body>
   <div class="container">
-    <form id="uploadForm" enctype="multipart/form-data">
-      <input type="file" name="file" id="fileInput" accept=".xls,.xlsx">
-      <button type="submit">Upload & Preview</button>
-    </form>
-
     <div id="rabTables"></div>
 
     <!-- final total box -->

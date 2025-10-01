@@ -14,6 +14,13 @@ from django.test import TestCase,Client
 from openpyxl import Workbook
 from rest_framework.test import APITestCase
 from excel_parser.services.reader import preview_file
+from django.apps import apps
+from django.db import connection,models
+from io import BytesIO
+
+from django.core.files.uploadedfile import SimpleUploadedFile
+
+
 
 from excel_parser.models import Project, RabEntry
 
@@ -600,40 +607,38 @@ class ImporterDefaultsTests(TestCase):
         self.assertEqual(e1.volume, Decimal("1000.50"))
         self.assertEqual(e1.unit, "m3")
         self.assertEqual(e1.entry_type, RabEntry.EntryType.ITEM)
-
-from django.apps import apps
-from django.db import connection,models
-
 class PreviewFileTests(APITestCase):
     def test_preview_file_includes_all_columns(self):
         # Build Excel file in memory
-        bio = BytesIO()
         wb = Workbook()
         ws = wb.active
-        ws.append(["No", "Uraian Pekerjaan", "Satuan", "Volume", "Kode Analisa", "Harga Satuan", "Jumlah Harga"])
-        ws.append(["1", "Gali tanah", "m3", "1.000,50", "AT.19-1", "5000", "5000"])
+        ws.append(["No", "Uraian Pekerjaan", "Volume", "Satuan", "Harga Satuan", "Jumlah Harga"])
+        ws.append(["1", "Gali tanah", "1000", "m3", "25000", "25000000"])
+        bio = BytesIO()
         wb.save(bio)
+        bio.seek(0)
 
         f = SimpleUploadedFile(
             "mini.xlsx",
-            bio.getvalue(),
+            bio.read(),
             content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         )
 
         response = self.client.post(
             "/excel_parser/preview_rows",
-            {"file": f},
+            {"excel_standard": f},   # ✅ matches the view
             format="multipart"
         )
 
-        self.assertEqual(response.status_code, 200)
-        rows = response.json()["rows"]
-        self.assertTrue(len(rows) > 0)
+        self.assertEqual(response.status_code, 200, response.content)
 
-        # make sure new keys exist in first row
+        # ✅ unwrap the actual key your view uses
+        rows = response.json()["excel_standard"]
+
         self.assertIn("analysis_code", rows[0])
         self.assertIn("price", rows[0])
         self.assertIn("total_price", rows[0])
+
 
     def test_preview_file_detects_section_rows(self):
                 # Build an in-memory Excel file

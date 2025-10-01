@@ -21,5 +21,6 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path("api/", include("automatic_job_matching.urls")),
     path("excel_parser/", include("excel_parser.urls")),
+    path("pdf_parser/", include("pdf_parser.urls")),
 ]
 
