@@ -12,6 +12,7 @@ _UNIT_TOKENS = {
 }
 
 _ROMAN_RE = re.compile(r'^\s*([IVXLCDM]+)\.?\s*(.*)$', re.I)
+_PURE_ROMAN_RE = re.compile(r'^[IVXLCDM]+$', re.I)
 # handles "1Penyiapan", "2. Sosialisasi", "3-Something", "4) Another"
 _LEADING_DIGIT_RE = re.compile(r'^\s*(\d+)(?:[\.)-]?\s*)?(.*)$')
 _LEADING_ALPHA_RE = re.compile(r'^\s*([a-zA-Z])[\.)]\s*(.*)$')
@@ -172,6 +173,17 @@ class PdfRowNormalizer:
         ):
             desc = f"{num} {desc}".strip()
             num = ""
+
+        # 4d. If the number column accidentally captured a natural word (e.g. 'di', 'dan'),
+        # fold it back into the description to allow downstream merging logic to operate.
+        raw_num = num.strip()
+        alpha_only = re.sub(r"[^a-zA-Z]", "", raw_num)
+        if raw_num and alpha_only:
+            alpha_upper = alpha_only.upper()
+            looks_strict_roman = raw_num.isupper() and _PURE_ROMAN_RE.fullmatch(alpha_upper)
+            if len(alpha_only) > 1 and not looks_strict_roman:
+                desc = " ".join(part for part in [raw_num, desc] if part).strip()
+                num = ""
 
         # 5. Normalize numerics
         vol = vol_candidate

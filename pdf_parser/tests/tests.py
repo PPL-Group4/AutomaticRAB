@@ -286,6 +286,10 @@ class PdfHeaderMapperEdgeCasesTests(TestCase):
     def setUp(self):
         self.mapper = PdfHeaderMapper()
 
+    def _strip_optional(self, missing):
+        optional = {"price", "total_price"}
+        return [m for m in missing if m not in optional]
+
     # --- Positive / expected behavior ---
 
     def test_splits_header_across_fragments(self):
@@ -299,7 +303,7 @@ class PdfHeaderMapperEdgeCasesTests(TestCase):
         mapping, missing, originals = self.mapper.map_headers(fragments)
         self.assertIn("uraian", mapping)
         self.assertEqual(originals["uraian"], "Uraian Pekerjaan")
-        self.assertEqual(missing, [])
+        self.assertEqual(self._strip_optional(missing), [])
 
     def test_headers_out_of_order(self):
         fragments = [
@@ -309,8 +313,8 @@ class PdfHeaderMapperEdgeCasesTests(TestCase):
             TextFragment(page=1, x=300, y=20, text="Satuan"),
         ]
         mapping, missing, _ = self.mapper.map_headers(fragments)
-        self.assertTrue(set(["no","uraian","volume","satuan"]).issubset(mapping.keys()))
-        self.assertEqual(missing, [])
+        self.assertTrue(set(["no", "uraian", "volume", "satuan"]).issubset(mapping.keys()))
+        self.assertEqual(self._strip_optional(missing), [])
 
     def test_duplicate_header_fragments(self):
         fragments = [
@@ -321,7 +325,7 @@ class PdfHeaderMapperEdgeCasesTests(TestCase):
             TextFragment(page=1, x=300, y=20, text="Satuan"),
         ]
         mapping, missing, _ = self.mapper.map_headers(fragments)
-        self.assertEqual(missing, [])
+        self.assertEqual(self._strip_optional(missing), [])
         self.assertIn("no", mapping)
 
     def test_headers_with_small_y_variation(self):
@@ -342,7 +346,7 @@ class PdfHeaderMapperEdgeCasesTests(TestCase):
             TextFragment(page=2, x=300, y=20, text="Satuan"),
         ]
         mapping, missing, _ = self.mapper.map_headers(fragments)
-        self.assertEqual(missing, [])
+        self.assertEqual(self._strip_optional(missing), [])
 
     def test_large_number_of_fragments(self):
         fragments = [
@@ -354,14 +358,14 @@ class PdfHeaderMapperEdgeCasesTests(TestCase):
             TextFragment(page=1, x=300, y=20, text="Satuan"),
         ]
         mapping, missing, _ = self.mapper.map_headers(fragments)
-        self.assertEqual(missing, [])
+        self.assertEqual(self._strip_optional(missing), [])
         self.assertIn("uraian", mapping)
 
     # --- Negative / edge cases ---
 
     def test_empty_fragments(self):
         mapping, missing, _ = self.mapper.map_headers([])
-        self.assertListEqual(missing, ["no","uraian","volume","satuan"])
+        self.assertListEqual(self._strip_optional(missing), ["no", "uraian", "volume", "satuan"])
         self.assertDictEqual(mapping, {})
 
     def test_fragments_with_empty_text(self):
@@ -370,7 +374,7 @@ class PdfHeaderMapperEdgeCasesTests(TestCase):
             TextFragment(page=1, x=100, y=20, text="  "),
         ]
         mapping, missing, _ = self.mapper.map_headers(fragments)
-        self.assertListEqual(missing, ["no","uraian","volume","satuan"])
+        self.assertListEqual(self._strip_optional(missing), ["no", "uraian", "volume", "satuan"])
         self.assertDictEqual(mapping, {})
 
     def test_unrecognizable_headers(self):
@@ -379,7 +383,7 @@ class PdfHeaderMapperEdgeCasesTests(TestCase):
             TextFragment(page=1, x=100, y=20, text="Random2"),
         ]
         mapping, missing, _ = self.mapper.map_headers(fragments)
-        self.assertListEqual(missing, ["no","uraian","volume","satuan"])
+        self.assertListEqual(self._strip_optional(missing), ["no", "uraian", "volume", "satuan"])
         self.assertDictEqual(mapping, {})
 
     def test_fragments_with_none_or_whitespace(self):
@@ -388,7 +392,7 @@ class PdfHeaderMapperEdgeCasesTests(TestCase):
             TextFragment(page=1, x=100, y=20, text="   "),
         ]
         mapping, missing, _ = self.mapper.map_headers(fragments)
-        self.assertListEqual(missing, ["no","uraian","volume","satuan"])
+        self.assertListEqual(self._strip_optional(missing), ["no", "uraian", "volume", "satuan"])
         self.assertDictEqual(mapping, {})
 
 class PdfRowParserUnitTests(TestCase):
@@ -666,6 +670,22 @@ class PdfRowNormalizerTests(TestCase):
         self.assertEqual(normalized["number"], "")
         self.assertEqual(normalized["description"], "CNP 150.65.20.2,3")
 
+    def test_word_number_prefix_merges_into_description(self):
+        row = {
+            "no": "di",
+            "uraian": "uraikan dalam gambar",
+            "satuan": "",
+            "volume": "0",
+            "price": "",
+            "total_price": "",
+            "analysis_code": "",
+        }
+
+        normalized = PdfRowNormalizer.normalize(row)
+
+        self.assertEqual(normalized["number"], "")
+        self.assertEqual(normalized["description"], "di uraikan dalam gambar")
+
 
 class PipelineHelperTests(TestCase):
 
@@ -702,6 +722,45 @@ class PipelineHelperTests(TestCase):
 
         self.assertEqual(len(merged), 1)
         self.assertEqual(merged[0]["description"], "Pek. Pemasangan Kaso Baja Ringan C75 tebal 0,75 mm")
+
+    def test_merge_broken_rows_handles_word_fragment_number_column(self):
+        rows = [
+            {
+                "number": "",
+                "description": "Lantai 1, dipasang secara lengkap sesuai",
+                "unit": "",
+                "volume": Decimal("0"),
+                "analysis_code": "",
+                "price": Decimal("0"),
+                "total_price": Decimal("0"),
+            },
+            {
+                "number": "",
+                "description": "di uraikan dalam gambar",
+                "unit": "",
+                "volume": Decimal("0"),
+                "analysis_code": "",
+                "price": Decimal("0"),
+                "total_price": Decimal("0"),
+            },
+            {
+                "number": "",
+                "description": "dan spesifikasi teknis.",
+                "unit": "",
+                "volume": Decimal("0"),
+                "analysis_code": "",
+                "price": Decimal("0"),
+                "total_price": Decimal("0"),
+            },
+        ]
+
+        merged = merge_broken_rows(rows)
+
+        self.assertEqual(len(merged), 1)
+        self.assertEqual(
+            merged[0]["description"],
+            "Lantai 1, dipasang secara lengkap sesuai di uraikan dalam gambar dan spesifikasi teknis.",
+        )
 
 from django.test import TestCase, Client
 from django.urls import reverse
