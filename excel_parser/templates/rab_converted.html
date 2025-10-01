@@ -20,14 +20,52 @@
       margin-bottom: 25px;
       border-collapse: collapse;
       width: 100%;
+      table-layout: fixed;
     }
     .rab-category th, .rab-category td {
       border: 1px solid #ddd;
       padding: 6px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .rab-category td:hover {
+      overflow: visible;
+      white-space: normal;
+      word-wrap: break-word;
     }
     .rab-category th {
       background-color: #f8f9fa;
       font-weight: bold;
+    }
+    /* Column widths */
+    .rab-category th:nth-child(1),
+    .rab-category td:nth-child(1) {
+      width: 5%;
+    }
+    .rab-category th:nth-child(2),
+    .rab-category td:nth-child(2) {
+      width: 35%;
+    }
+    .rab-category th:nth-child(3),
+    .rab-category td:nth-child(3) {
+      width: 10%;
+    }
+    .rab-category th:nth-child(4),
+    .rab-category td:nth-child(4) {
+      width: 10%;
+    }
+    .rab-category th:nth-child(5),
+    .rab-category td:nth-child(5) {
+      width: 8%;
+    }
+    .rab-category th:nth-child(6),
+    .rab-category td:nth-child(6) {
+      width: 15%;
+    }
+    .rab-category th:nth-child(7),
+    .rab-category td:nth-child(7) {
+      width: 17%;
     }
     .grand-total-box {
       margin-top: 30px;
@@ -45,6 +83,14 @@
     .grand-total-box .label {
       font-weight: bold;
     }
+    .error-message {
+      background-color: #fee2e2;
+      border: 1px solid #ef4444;
+      color: #991b1b;
+      padding: 12px;
+      border-radius: 6px;
+      margin: 10px 0;
+    }
   </style>
 </head>
 <body>
@@ -54,6 +100,7 @@
       <button type="submit">Upload & Preview</button>
     </form>
 
+    <div id="errorContainer"></div>
     <div id="rabTables"></div>
 
     <!-- final total box -->
@@ -68,11 +115,19 @@
   </div>
 
   <script>
+    function showError(message) {
+      const errorContainer = document.getElementById("errorContainer");
+      errorContainer.innerHTML = `<div class="error-message">${message}</div>`;
+      setTimeout(() => {
+        errorContainer.innerHTML = "";
+      }, 5000);
+    }
+
     document.getElementById("uploadForm").addEventListener("submit", async function(e) {
       e.preventDefault();
       const fileInput = document.getElementById("fileInput");
       if (!fileInput.files.length) {
-        alert("Pilih file Excel dulu");
+        showError("Silakan pilih file Excel terlebih dahulu");
         return;
       }
       const formData = new FormData();
@@ -88,10 +143,10 @@
         if (data.rows) {
           renderTables(data.rows);
         } else {
-          alert("Gagal parsing file: " + (data.error || "Unknown error"));
+          showError("Gagal memproses file: " + (data.error || "Terjadi kesalahan yang tidak diketahui"));
         }
       } catch (err) {
-        alert("Error: " + err.message);
+        showError("Terjadi kesalahan saat mengunggah file: " + err.message);
       }
     });
 
@@ -102,6 +157,7 @@
       let currentTable = null;
       let tbody = null;
       let bujakCounter = 0;
+      let headerCreated = false;
 
       rows.forEach(row => {
         // Skip calculation rows that should not appear in the table
@@ -117,10 +173,8 @@
           header.classList.add("bujak-header");
           header.innerText = `BUJAK ${bujakCounter}`;
           container.appendChild(header);
-          currentTable = null;
-        }
-
-        if (row.is_section && row.section_type === "CATEGORY") {
+          
+          // Create a new table for this BUJAK
           const table = document.createElement("table");
           table.classList.add("rab-category");
           table.innerHTML = `
@@ -138,21 +192,21 @@
             <tbody></tbody>
           `;
           container.appendChild(table);
+          currentTable = table;
           tbody = table.querySelector("tbody");
+          headerCreated = true;
+        }
+
+        if (row.is_section && row.section_type === "CATEGORY") {
+          if (!currentTable) return;
+          tbody = currentTable.querySelector("tbody");
           const tr = document.createElement("tr");
           tr.dataset.role = "category";
           tr.innerHTML = `
             <td>${row.number}</td>
-            <td><strong>${row.description}</strong></td>
-            <td></td>
-            <td>${row.volume || ""}</td>
-            <td>${row.unit || ""}</td>
-            <td></td>
-            <td></td>
-            <td></td>
+            <td colspan="6"><strong>${row.description}</strong></td>
           `;
           tbody.appendChild(tr);
-          currentTable = table;
         }
 
         else if (row.is_section && row.section_type === "SECTION") {
@@ -162,8 +216,7 @@
           tr.dataset.role = "section";
           tr.innerHTML = `
             <td>${row.number}</td>
-            <td><em>${row.description}</em></td>
-            <td></td><td></td><td></td><td></td><td></td><td></td>
+            <td colspan="6"><strong>${row.description}</strong></td>
           `;
           tbody.appendChild(tr);
         }
@@ -180,7 +233,7 @@
             <td>${row.unit || ""}</td>
             <td>${(row.price || 0).toLocaleString()}</td>
             <td class="jumlah">Rp. ${(row.total_price || 0).toLocaleString()}</td>
-        `;
+          `;
           tbody.appendChild(tr);
           total += row.total_price || 0;
         }
