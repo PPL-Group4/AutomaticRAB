@@ -1,0 +1,96 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html>
+<head>
+  <title>RAB PDF Editor</title>
+  <link rel="stylesheet" href="{% static 'pdf_parser/style.css' %}">
+</head>
+<body>
+  <div class="container">
+    <h2>Upload PDF</h2>
+    <form id="uploadForm" enctype="multipart/form-data">
+      <input type="file" name="pdf_file" id="fileInput" accept=".pdf">
+      <button type="submit">Upload & Preview PDF</button>
+    </form>
+
+    <div id="rabTables"></div>
+
+    <div class="total-box" id="grandTotalBox" style="display:none;">
+      Total: <span id="grandTotal">Rp. 0</span>
+    </div>
+
+    <a href="#" class="action-btn">+ Tambah Kategori Pekerjaan/Pilih Referensi RAB</a>
+  </div>
+
+  <script>
+    document.getElementById("uploadForm").addEventListener("submit", async function(e) {
+      e.preventDefault();
+      const fileInput = document.getElementById("fileInput");
+      if (!fileInput.files.length) {
+        alert("Pilih file PDF dulu");
+        return;
+      }
+      const formData = new FormData();
+      formData.append("pdf_file", fileInput.files[0]);
+      try {
+        const resp = await fetch("/pdf_parser/rab_converted/", {
+          method: "POST",
+          body: formData
+        });
+        const data = await resp.json();
+
+        if (data.rows) {
+          renderTable(data.rows);
+        } else {
+          alert("Gagal parsing file: " + (data.error || "Unknown error"));
+        }
+      } catch (err) {
+        alert("Error: " + err.message);
+      }
+    });
+
+    function renderTable(rows) {
+      const container = document.getElementById("rabTables");
+      container.innerHTML = "";
+      let total = 0;
+
+      const table = document.createElement("table");
+      table.innerHTML = `
+        <thead>
+          <tr>
+            <th>No.</th>
+            <th>Uraian Pekerjaan</th>
+            <th>Kode</th>
+            <th>Volume</th>
+            <th>SAT</th>
+            <th>Harga Sat (Rp.)</th>
+            <th>Jumlah (Rp.)</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      `;
+      const tbody = table.querySelector("tbody");
+
+      rows.forEach(row => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${row.number || ""}</td>
+          <td>${row.description || ""}</td>
+          <td>${row.analysis_code || ""}</td>
+          <td>${(row.volume ?? 0).toLocaleString()}</td>
+          <td>${row.unit || ""}</td>
+          <td>${(row.price ?? 0).toLocaleString()}</td>
+          <td class="jumlah">Rp. ${(row.total_price ?? 0).toLocaleString()}</td>
+        `;
+        tbody.appendChild(tr);
+        total += row.total_price || 0;
+      });
+
+      container.appendChild(table);
+      document.getElementById("grandTotalBox").style.display = "inline-block";
+      document.getElementById("grandTotal").innerText = "Rp. " + total.toLocaleString();
+    }
+  </script>
+</body>
+</html>
