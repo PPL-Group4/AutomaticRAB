@@ -34,12 +34,13 @@ class PdfRowParser:
         self.x_merge_gap = x_merge_gap
 
     def parse(
-        self,
-        fragments: List[TextFragment],
-        vlines_by_page: Optional[Dict[int, List[float]]] = None
+            self,
+            fragments: List[TextFragment],
+            vlines_by_page: Optional[Dict[int, List[float]]] = None
     ) -> Tuple[List[ParsedRow], Dict[str, Tuple[float, float]]]:
         parsed_rows: List[ParsedRow] = []
         last_boundaries: Dict[str, Tuple[float, float]] = {}
+        last_header_y: Optional[float] = None  # ✅ initialize
 
         # 1. Group fragments by page
         frags_by_page = defaultdict(list)
@@ -50,22 +51,28 @@ class PdfRowParser:
         for page in sorted(frags_by_page.keys()):
             page_frags = frags_by_page[page]
 
-            # Detect headers
+            # Try to detect headers
             mapping, missing, _originals = self.mapper.map_headers(page_frags)
             core_headers = {"uraian", "satuan", "volume"}
-            if not mapping or not core_headers.issubset(mapping.keys()):
-                continue  # skip if no valid header found
 
-            header_y = self.mapper.find_header_y(page_frags)
+            if mapping and core_headers.issubset(mapping.keys()):
+                header_y = self.mapper.find_header_y(page_frags)
+                vlines = (vlines_by_page or {}).get(page) or []
+                if vlines:
+                    boundaries = self._compute_x_boundaries_with_lines(mapping, vlines)
+                else:
+                    boundaries = self._compute_x_boundaries(mapping)
 
-            # Boundaries: use vertical lines if available, else fallback
-            vlines = (vlines_by_page or {}).get(page) or []
-            if vlines:
-                boundaries = self._compute_x_boundaries_with_lines(mapping, vlines)
+                last_boundaries = boundaries
+                last_header_y = header_y
+            elif last_boundaries and last_header_y is not None:
+                # Reuse last valid header
+                boundaries = last_boundaries
+                header_y = last_header_y
             else:
-                boundaries = self._compute_x_boundaries(mapping)
+                continue
 
-            last_boundaries = boundaries
+
 
             # 3. Take only fragments below the header row
             body_frags = [f for f in page_frags if f.y > header_y + self.header_gap_px]
@@ -78,8 +85,7 @@ class PdfRowParser:
                 cells = self._assign_to_columns(row_frags, boundaries, mapping)
                 values = {k: self._merge_cell_text(v) for k, v in cells.items()}
 
-                # ✅ Section-row heuristic:
-                # If no volume and no valid unit, treat as a section header
+                # ✅ Section-row heuristic
                 if not any(ch.isdigit() for ch in values.get("volume", "")) \
                         and values.get("satuan", "").lower() not in _UNIT_TOKENS:
                     values["satuan"] = ""
