@@ -557,6 +557,27 @@ class PdfRowParserUnitTests(TestCase):
         self.assertLess(ura_min, 180)
         self.assertGreater(ura_max, 180)
 
+    def test_parse_reuses_headers_without_new_header_row(self):
+        fragments = []
+        # Page 1 header + row
+        fragments += self._headers_at(page=1, y=90)
+        fragments += self._row(page=1, y=110, no="1", uraian="P1", volume="1", satuan="m")
+
+        # Page 2 has no header row, only data near top of page
+        fragments += [
+            TextFragment(page=2, x=10, y=35, text="2"),
+            TextFragment(page=2, x=120, y=35, text="P2"),
+            TextFragment(page=2, x=260, y=35, text="2"),
+            TextFragment(page=2, x=360, y=35, text="kg"),
+        ]
+
+        rows, _ = self.parser.parse(fragments)
+
+        # Expect both rows to appear despite missing header on page 2
+        numbers = [(r.page, r.values.get("no")) for r in rows]
+        self.assertIn((1, "1"), numbers)
+        self.assertIn((2, "2"), numbers)
+
     def test_parse_empty_or_no_headers(self):
         rows, bounds = self.parser.parse([])
         self.assertEqual(rows, [])
@@ -597,6 +618,54 @@ class PdfRowNormalizerTests(TestCase):
         self.assertEqual(normalized["number"], "a")
         self.assertEqual(normalized["description"], "Peralatan P3K")
 
+    def test_single_letter_word_not_split_as_roman(self):
+        row = {
+            "no": "",
+            "uraian": "dan Reng",
+            "satuan": "",
+            "volume": "0",
+            "price": "",
+            "total_price": "",
+            "analysis_code": "",
+        }
+
+        normalized = PdfRowNormalizer.normalize(row)
+
+        self.assertEqual(normalized["number"], "")
+        self.assertEqual(normalized["description"], "dan Reng")
+
+    def test_numeric_fragment_without_unit_stays_in_description(self):
+        row = {
+            "no": "",
+            "uraian": "23 Watt",
+            "satuan": "",
+            "volume": "0",
+            "price": "",
+            "total_price": "",
+            "analysis_code": "",
+        }
+
+        normalized = PdfRowNormalizer.normalize(row)
+
+        self.assertEqual(normalized["number"], "")
+        self.assertEqual(normalized["description"], "23 Watt")
+
+    def test_uppercase_word_not_split_as_roman(self):
+        row = {
+            "no": "",
+            "uraian": "CNP 150.65.20.2,3",
+            "satuan": "",
+            "volume": "0",
+            "price": "",
+            "total_price": "",
+            "analysis_code": "",
+        }
+
+        normalized = PdfRowNormalizer.normalize(row)
+
+        self.assertEqual(normalized["number"], "")
+        self.assertEqual(normalized["description"], "CNP 150.65.20.2,3")
+
 
 class PipelineHelperTests(TestCase):
 
@@ -611,6 +680,28 @@ class PipelineHelperTests(TestCase):
         self.assertEqual(len(merged), 2)
         self.assertEqual(merged[0]["number"], "2")
         self.assertEqual(merged[1]["number"], "3")
+
+    def test_merge_broken_rows_merges_numeric_fragment(self):
+        rows = [
+            {"number": "1", "description": "Pek. Pemasangan Lampu LED Downlight", "unit": "unit", "volume": Decimal("76"), "analysis_code": "", "price": Decimal("0"), "total_price": Decimal("0")},
+            {"number": "", "description": "23 Watt", "unit": "", "volume": Decimal("0"), "analysis_code": "", "price": Decimal("0"), "total_price": Decimal("0")},
+        ]
+
+        merged = merge_broken_rows(rows)
+
+        self.assertEqual(len(merged), 1)
+        self.assertEqual(merged[0]["description"], "Pek. Pemasangan Lampu LED Downlight 23 Watt")
+
+    def test_merge_broken_rows_merges_measurement_suffix(self):
+        rows = [
+            {"number": "6", "description": "Pek. Pemasangan Kaso Baja Ringan C75", "unit": "m", "volume": Decimal("1302.22"), "analysis_code": "", "price": Decimal("0"), "total_price": Decimal("0")},
+            {"number": "", "description": "tebal 0,75", "unit": "mm", "volume": Decimal("0"), "analysis_code": "", "price": Decimal("0"), "total_price": Decimal("0")},
+        ]
+
+        merged = merge_broken_rows(rows)
+
+        self.assertEqual(len(merged), 1)
+        self.assertEqual(merged[0]["description"], "Pek. Pemasangan Kaso Baja Ringan C75 tebal 0,75 mm")
 
 from django.test import TestCase, Client
 from django.urls import reverse

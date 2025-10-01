@@ -68,7 +68,12 @@ class PdfRowParser:
             elif last_boundaries and last_header_y is not None:
                 # Reuse last valid header
                 boundaries = last_boundaries
-                header_y = last_header_y
+                if page_frags:
+                    min_y = min(f.y for f in page_frags)
+                    header_y = min_y - self.header_gap_px - 1.0
+                else:
+                    header_y = last_header_y
+                last_header_y = header_y
             else:
                 continue
 

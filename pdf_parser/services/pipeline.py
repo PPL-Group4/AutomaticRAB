@@ -46,8 +46,24 @@ def merge_broken_rows(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     → merge into one: {"description": "Fasilitas Sarana, Prasarana dan Alat Kesehatan", ...}
     """
     merged = []
+    measurement_units = {"mm", "cm", "cm2", "cm3", "m2", "m3"}
     for row in rows:
-        if merged and not row["unit"] and row["volume"] == 0 and not row.get("number"):
+        if merged and not row.get("number") and row["volume"] == 0:
+            if not row["unit"]:
+                merged[-1]["description"] = (
+                    merged[-1]["description"] + " " + row["description"]
+                ).strip()
+                continue
+            unit_lower = row["unit"].strip().lower()
+            if unit_lower in measurement_units:
+                suffix = row["description"].strip()
+                if row["unit"]:
+                    suffix = f"{suffix} {row['unit']}".strip()
+                merged[-1]["description"] = (
+                    merged[-1]["description"] + " " + suffix
+                ).strip()
+                continue
+
             merged[-1]["description"] = (
                 merged[-1]["description"] + " " + row["description"]
             ).strip()

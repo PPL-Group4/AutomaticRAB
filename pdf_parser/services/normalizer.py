@@ -20,7 +20,13 @@ _LEADING_ALPHA_RE = re.compile(r'^\s*([a-zA-Z])[\.)]\s*(.*)$')
 def _split_number_from_desc(desc: str) -> tuple[str, str]:
     m = _ROMAN_RE.match(desc)
     if m:
-        return (m.group(1), m.group(2))
+        numeral, rest = m.group(1), m.group(2)
+        following = desc[m.end(1):]
+        if following:
+            first = following[0]
+            if first.isalnum():
+                return ("", desc)
+        return (numeral, rest)
     m = _LEADING_DIGIT_RE.match(desc)
     if m:
         return (m.group(1), m.group(2))
@@ -153,8 +159,22 @@ class PdfRowNormalizer:
             if looks_like_header and token_lc not in _UNIT_TOKENS:
                 final_unit = ""
 
+        # 4c. If a short numeric prefix looks like a continuation fragment, keep it in description
+        vol_candidate = _decimal(row.get("volume"))
+        if (
+            num
+            and num.isdigit()
+            and desc
+            and len(desc.split()) <= 3
+            and len(desc) <= 25
+            and not (final_unit or "").strip()
+            and vol_candidate == Decimal("0")
+        ):
+            desc = f"{num} {desc}".strip()
+            num = ""
+
         # 5. Normalize numerics
-        vol = _decimal(row.get("volume"))
+        vol = vol_candidate
         price = _decimal(row.get("price"))
         total = _decimal(row.get("total_price"))
 
