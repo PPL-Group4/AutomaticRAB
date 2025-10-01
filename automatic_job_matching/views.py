@@ -52,51 +52,37 @@ class MatchingService:
         logger.debug("Multiple fuzzy match results count=%d", len(results))
         return results
     
+    @staticmethod
+    def perform_best_match(description: str):
+        logger.info("perform_best_match called (len=%d)", len(description))
+
+        min_similarity_single = 0.6  
+        min_similarity_multiple = 0.4
+        limit = 5           
+
+        # 1. Try exact
+        result = MatchingService.perform_exact_match(description)
+
+        # 2. Try fuzzy
+        if not result:
+            result = MatchingService.perform_fuzzy_match(description, min_similarity_single)
+
+        # 3. Try multiple matches
+        if not result:
+            result = MatchingService.perform_multiple_match(description, limit, min_similarity_multiple)
+
+        return result
 
 @api_view(['POST'])
-def match_exact_view(request):
+def match_best_view(request):
     try:
         payload = json.loads(request.body.decode("utf-8") or "{}")
-        logger.debug("match_exact_view payload: %s", payload)
+        logger.debug("match_best_view payload: %s", payload)
     except json.JSONDecodeError:
-        logger.warning("Invalid JSON received in match_exact_view")
+        logger.warning("Invalid JSON received in match_best_view")
         return JsonResponse({"error": "Invalid JSON"}, status=400)
 
     description = payload.get("description", "")
-
-    result = MatchingService.perform_exact_match(description)
+    result = MatchingService.perform_best_match(description)
 
     return JsonResponse({"match": result}, status=200)
-
-@api_view(['POST'])
-def match_fuzzy_view(request):
-    try:
-        payload = json.loads(request.body.decode("utf-8") or "{}")
-        logger.debug("match_fuzzy_view payload: %s", payload)
-    except json.JSONDecodeError:
-        logger.warning("Invalid JSON received in match_fuzzy_view")
-        return JsonResponse({"error": "Invalid JSON"}, status=400)
-
-    description = payload.get("description", "")
-    min_similarity = payload.get("min_similarity", 0.6)
-
-    result = MatchingService.perform_fuzzy_match(description, min_similarity)
-
-    return JsonResponse({"match": result}, status=200)
-
-@api_view(['POST'])
-def match_multiple_view(request):
-    try:
-        payload = json.loads(request.body.decode("utf-8") or "{}")
-        logger.debug("match_multiple_view payload: %s", payload)
-    except json.JSONDecodeError:
-        logger.warning("Invalid JSON received in match_multiple_view")
-        return JsonResponse({"error": "Invalid JSON"}, status=400)
-
-    description = payload.get("description", "")
-    limit = payload.get("limit", 5)
-    min_similarity = payload.get("min_similarity", 0.6)
-
-    results = MatchingService.perform_multiple_match(description, limit, min_similarity)
-
-    return JsonResponse({"matches": results}, status=200)

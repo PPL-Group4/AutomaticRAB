@@ -233,103 +233,6 @@ class ExactMatcherTests(SimpleTestCase):
         self.assertEqual(_norm_code("t.15-a/1"), "T15A1")
         self.assertEqual(_norm_name("Pemadatan Pasir!"), "pemadatan pasir")
 
-class MatchExactViewTests(TestCase):
-    def setUp(self):
-        self.client = Client()
-
-        self._repo_patcher = patch(
-            "automatic_job_matching.views.DbAhsRepository",
-        )
-        FakeRepo = type(
-            "FakeRepo",
-            (),
-            {
-                "by_code_like": lambda self, c: [AhsRow(id=1, code="X.01", name="Dummy")],
-                "by_name_candidates": lambda self, h: [],
-            },
-        )
-        self.mock_repo_cls = self._repo_patcher.start()
-        self.mock_repo_cls.return_value = FakeRepo()
-
-    def tearDown(self):
-        self._repo_patcher.stop()
-
-    def test_valid_request_returns_match(self):
-        url = reverse("match-exact")
-        payload = {"description": "X.01"}
-        response = self.client.post(
-            url,
-            json.dumps(payload),
-            content_type="application/json",
-        )
-        self.assertEqual(response.status_code, 200)
-        data = response.json()
-        self.assertIn("match", data)
-        self.assertEqual(data["match"]["code"], "X.01")
-
-    def test_valid_request_no_match(self):
-        self.mock_repo_cls.return_value.by_code_like = lambda c: []
-        url = reverse("match-exact")
-        payload = {"description": "NoMatch"}
-        response = self.client.post(
-            url,
-            json.dumps(payload),
-            content_type="application/json",
-        )
-        self.assertEqual(response.status_code, 200)
-        self.assertIsNone(response.json()["match"])
-
-    def test_missing_description_defaults_to_empty(self):
-        url = reverse("match-exact")
-        response = self.client.post(
-            url,
-            json.dumps({}),
-            content_type="application/json",
-        )
-        self.assertEqual(response.status_code, 200)
-        self.assertIsNone(response.json()["match"])
-
-    def test_invalid_json_returns_400(self):
-        url = reverse("match-exact")
-        response = self.client.post(
-            url,
-            "not-json",
-            content_type="application/json",
-        )
-        self.assertEqual(response.status_code, 400)
-        self.assertIn("error", response.json())
-
-    def test_match_exact_view_with_empty_body_triggering_fallback(self):
-        """Test exact view when request.body.decode() returns empty, triggering or '{}' fallback"""
-        url = reverse("match-exact")
-        response = self.client.post(url, b'', content_type="application/json")
-        self.assertEqual(response.status_code, 200)
-        data = response.json()
-        self.assertIn("match", data)
-
-    def test_match_exact_view_description_extraction(self):
-        """Test exact view description extraction from payload"""
-        url = reverse("match-exact")
-        payload = {"description": "test description"}
-        response = self.client.post(url, json.dumps(payload), content_type="application/json")
-        self.assertEqual(response.status_code, 200)
-
-    def test_match_exact_view_missing_description_defaults(self):
-        """Test exact view when description is missing from payload"""
-        url = reverse("match-exact")
-        payload = {"other_field": "value"}  # No description field
-        response = self.client.post(url, json.dumps(payload), content_type="application/json")
-        self.assertEqual(response.status_code, 200)
-
-    def test_match_exact_view_json_response_structure(self):
-        """Test exact view returns proper JSON structure"""
-        url = reverse("match-exact")
-        payload = {"description": "test"}
-        response = self.client.post(url, json.dumps(payload), content_type="application/json")
-        self.assertEqual(response.status_code, 200)
-        data = response.json()
-        self.assertIn("match", data)
-
 class FuzzyMatcherTests(SimpleTestCase):
     def setUp(self):
         self.sample_rows = [
@@ -511,88 +414,6 @@ class FuzzyMatcherTests(SimpleTestCase):
         matches = self.matcher._get_multiple_name_matches("   ", 5)
         self.assertEqual(matches, [])
 
-class FuzzyMatcherViewTests(TestCase):
-    def setUp(self):
-        self.client = Client()
-
-        self._repo_patcher = patch("automatic_job_matching.views.DbAhsRepository")
-        FakeRepo = type("FakeRepo", (), {
-            "by_code_like": lambda self, c: [AhsRow(id=1, code="AT.01", name="Test Item")],
-            "by_name_candidates": lambda self, h: [AhsRow(id=1, code="AT.01", name="Test Item")],
-            "get_all_ahs": lambda self: [AhsRow(id=1, code="AT.01", name="Test Item")],
-        })
-        self.mock_repo_cls = self._repo_patcher.start()
-        self.mock_repo_cls.return_value = FakeRepo()
-
-    def tearDown(self):
-        self._repo_patcher.stop()
-
-    def test_fuzzy_match_view_success(self):
-        url = reverse("match-fuzzy")
-        payload = {"description": "Test Item", "min_similarity": 0.6}
-        response = self.client.post(url, json.dumps(payload), content_type="application/json")
-        self.assertEqual(response.status_code, 200)
-        data = response.json()
-        self.assertIn("match", data)
-
-    def test_fuzzy_match_view_default_similarity(self):
-        url = reverse("match-fuzzy")
-        payload = {"description": "Test Item"}
-        response = self.client.post(url, json.dumps(payload), content_type="application/json")
-        self.assertEqual(response.status_code, 200)
-
-    def test_multiple_match_view_success(self):
-        url = reverse("match-multiple")
-        payload = {"description": "test", "limit": 3, "min_similarity": 0.5}
-        response = self.client.post(url, json.dumps(payload), content_type="application/json")
-        self.assertEqual(response.status_code, 200)
-        data = response.json()
-        self.assertIn("matches", data)
-        self.assertIsInstance(data["matches"], list)
-
-    def test_multiple_match_view_default_params(self):
-        url = reverse("match-multiple")
-        payload = {"description": "test"}
-        response = self.client.post(url, json.dumps(payload), content_type="application/json")
-        self.assertEqual(response.status_code, 200)
-
-    def test_fuzzy_match_view_invalid_json(self):
-        url = reverse("match-fuzzy")
-        response = self.client.post(url, "invalid-json", content_type="application/json")
-        self.assertEqual(response.status_code, 400)
-        self.assertIn("error", response.json())
-
-    def test_multiple_match_view_invalid_json(self):
-        url = reverse("match-multiple")
-        response = self.client.post(url, "invalid-json", content_type="application/json")
-        self.assertEqual(response.status_code, 400)
-        self.assertIn("error", response.json())
-
-    def test_fuzzy_match_view_empty_request_body(self):
-        url = reverse("match-fuzzy")
-        response = self.client.post(url, "", content_type="application/json")
-        self.assertEqual(response.status_code, 200)
-        data = response.json()
-        self.assertIn("match", data)
-
-    def test_multiple_match_view_empty_request_body(self):
-        url = reverse("match-multiple")
-        response = self.client.post(url, "", content_type="application/json")
-        self.assertEqual(response.status_code, 200)
-        data = response.json()
-        self.assertIn("matches", data)
-        self.assertIsInstance(data["matches"], list)
-
-    def test_fuzzy_match_view_with_none_body(self):
-        url = reverse("match-fuzzy")
-        response = self.client.post(url, None, content_type="application/json")
-        self.assertEqual(response.status_code, 200)
-
-    def test_multiple_match_view_with_none_body(self):
-        url = reverse("match-multiple")
-        response = self.client.post(url, None, content_type="application/json")
-        self.assertEqual(response.status_code, 200)
-
 class FuzzyMatcherConfidenceTDTests(SimpleTestCase):
     """TDD: Confidence scoring tests (should fail before implementation)."""
 
@@ -720,3 +541,77 @@ class MatchingServiceFallbackTests(TestCase):
         result = MatchingService.perform_multiple_match("test")
         self.assertEqual(result[0]["id"], 1)
         self.assertTrue(fake_matcher.find_multiple_matches.called)
+
+    @patch("automatic_job_matching.views.MatchingService.perform_exact_match")
+    @patch("automatic_job_matching.views.MatchingService.perform_fuzzy_match")
+    @patch("automatic_job_matching.views.MatchingService.perform_multiple_match")
+    def test_best_match_prefers_exact_then_fuzzy_then_multiple(
+        self, mock_multi, mock_fuzzy, mock_exact
+    ):
+        mock_exact.return_value = {"id": 1, "code": "E.01", "name": "Exact"}
+        result = MatchingService.perform_best_match("desc")
+        self.assertEqual(result["code"], "E.01")
+        mock_fuzzy.assert_not_called()
+        mock_multi.assert_not_called()
+
+        mock_exact.return_value = None
+        mock_fuzzy.return_value = {"id": 2, "code": "F.01", "name": "Fuzzy"}
+        result = MatchingService.perform_best_match("desc")
+        self.assertEqual(result["code"], "F.01")
+        mock_multi.assert_not_called()
+
+        mock_fuzzy.return_value = None
+        mock_multi.return_value = [{"id": 3, "code": "M.01", "name": "Multi"}]
+        result = MatchingService.perform_best_match("desc")
+        self.assertEqual(result[0]["code"], "M.01")
+
+class MatchBestViewTests(TestCase):
+    def setUp(self):
+        self.client = Client()
+
+        self._repo_patcher = patch("automatic_job_matching.views.DbAhsRepository")
+        FakeRepo = type("FakeRepo", (), {
+            "by_code_like": lambda self, c: [AhsRow(id=1, code="X.01", name="Dummy")] if "X.01" in c else [],
+            "by_name_candidates": lambda self, h: [AhsRow(id=2, code="Y.01", name="Some Name")] if h.lower() == "some" else [],
+            "get_all_ahs": lambda self: [AhsRow(id=3, code="Z.01", name="Fallback Item")],
+        })
+        self.mock_repo_cls = self._repo_patcher.start()
+        self.mock_repo_cls.return_value = FakeRepo()
+
+    def tearDown(self):
+        self._repo_patcher.stop()
+
+    def test_best_view_returns_exact_match(self):
+        url = reverse("match-best")
+        payload = {"description": "X.01"}
+        response = self.client.post(url, json.dumps(payload), content_type="application/json")
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["match"]["code"], "X.01")
+
+    def test_best_view_returns_fuzzy_when_no_exact(self):
+        url = reverse("match-best")
+        payload = {"description": "Some Name"}
+        response = self.client.post(url, json.dumps(payload), content_type="application/json")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["match"]["code"], "Y.01")
+
+    def test_best_view_returns_multiple_when_no_exact_or_fuzzy(self):
+        url = reverse("match-best")
+        payload = {"description": "Unknown"}
+        response = self.client.post(url, json.dumps(payload), content_type="application/json")
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["match"]["code"], "Z.01")
+
+    def test_best_view_invalid_json_returns_400(self):
+        url = reverse("match-best")
+        response = self.client.post(url, "not-json", content_type="application/json")
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("error", response.json())
+
+    def test_best_view_missing_description_defaults(self):
+        url = reverse("match-best")
+        response = self.client.post(url, json.dumps({}), content_type="application/json")
+        self.assertEqual(response.status_code, 200)
+        self.assertIsNone(response.json()["match"])
