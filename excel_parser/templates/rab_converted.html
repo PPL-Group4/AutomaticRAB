@@ -154,8 +154,9 @@
           <td>${row.analysis_code || ""}</td>
           <td>${row.volume || ""}</td>
           <td>${row.unit || ""}</td>
-          <td>${(row.price || 0).toLocaleString()}</td>
-          <td>Rp. ${(row.total_price || 0).toLocaleString()}</td>
+          <td>${parseFloat(row.price || 0).toLocaleString('id-ID', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+          <td>Rp. ${parseFloat(row.total_price || 0).toLocaleString('id-ID', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+
         `;
         tbody.appendChild(tr);
         total += row.total_price || 0;

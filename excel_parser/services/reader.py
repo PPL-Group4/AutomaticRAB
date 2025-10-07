@@ -300,15 +300,17 @@ def preview_file(file: UploadedFile):
     parsed = _parse_rows(cache, colmap)
     logger.info("Preview parsed %d rows from %s", len(parsed), file.name)
 
+    from decimal import ROUND_HALF_UP
+
     return [
         {
             "number": row.number,
             "description": row.description,
-            "volume": float(row.volume),
+            "volume": str(row.volume.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)),
             "unit": row.unit,
             "analysis_code": row.analysis_code,
-            "price": float(row.price),
-            "total_price": float(row.total_price),
+            "price": str(row.price.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)),
+            "total_price": str(row.total_price.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)),
             "is_section": row.is_section,
             "index_kind": row.index_kind,
             "section_letter": row.section_letter,
