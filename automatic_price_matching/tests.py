@@ -2,8 +2,6 @@ from decimal import Decimal
 
 from django.core.exceptions import ValidationError
 from django.test import SimpleTestCase
-
-
 class AhspValidationTests(SimpleTestCase):
 	"""Expectations for AHSP payload validation (TDD coverage)."""
 
@@ -235,3 +233,94 @@ class AhspValidationTests(SimpleTestCase):
 
 		self.assertEqual(cleaned["volume"], Decimal("2.5"))
 		self.assertEqual(cleaned["unit_price"], Decimal("123.45"))
+class FallbackValidatorTests(SimpleTestCase):
+    """Expectations for fallback behaviour when AHSP match is not found."""
+
+    def setUp(self) -> None:
+        super().setUp()
+        from automatic_price_matching.fallback_validator import apply_fallback
+        self.apply_fallback = apply_fallback
+
+    # --- Input type guards -------------------------------------------------
+
+    def test_rejects_null_description(self) -> None:
+        """Fallback should still handle None gracefully."""
+        result = self.apply_fallback(None)
+        self.assertIsInstance(result, dict)
+        self.assertEqual(result["uraian"], None)
+        self.assertIsNone(result["unit_price"])
+        self.assertEqual(result["total_price"], Decimal("0"))
+        self.assertEqual(result["match_status"], "Needs Manual Input")
+
+    def test_accepts_string_description(self) -> None:
+        """Fallback must accept a valid string description."""
+        desc = "Pekerjaan Pondasi Beton"
+        result = self.apply_fallback(desc)
+
+        self.assertIsInstance(result, dict)
+        self.assertEqual(result["uraian"], desc)
+        self.assertIsNone(result["unit_price"])
+        self.assertEqual(result["total_price"], Decimal("0"))
+        self.assertEqual(result["match_status"], "Needs Manual Input")
+        self.assertTrue(result["is_editable"])
+
+    # --- Field value validation --------------------------------------------
+
+    def test_total_price_is_decimal_zero(self) -> None:
+        """The fallback must always set total_price as Decimal('0')."""
+        result = self.apply_fallback("Any Job Description")
+        self.assertIsInstance(result["total_price"], Decimal)
+        self.assertEqual(result["total_price"], Decimal("0"))
+
+    def test_unit_price_is_none(self) -> None:
+        """The fallback must indicate missing price explicitly as None."""
+        result = self.apply_fallback("Any Job")
+        self.assertIsNone(result["unit_price"])
+
+    def test_status_is_needs_manual_input(self) -> None:
+        """The match_status field must correctly flag 'Needs Manual Input'."""
+        result = self.apply_fallback("Pekerjaan Cat Dinding")
+        self.assertEqual(result["match_status"], "Needs Manual Input")
+
+    def test_editable_flag_true(self) -> None:
+        """The fallback entry must always be editable for manual override."""
+        result = self.apply_fallback("Pekerjaan Plumbing")
+        self.assertTrue(result["is_editable"])
+
+    # --- Negative path: malformed / unexpected inputs ----------------------
+
+    def test_handles_non_string_input_safely(self) -> None:
+        """Fallback should not raise for numeric or dict inputs."""
+        weird_inputs = [123, {"desc": "Weird"}, ["array"], True]
+
+        for candidate in weird_inputs:
+            with self.subTest(candidate=candidate):
+                result = self.apply_fallback(candidate)
+                # It must still return a valid fallback dict
+                self.assertIn("uraian", result)
+                self.assertIsNone(result["unit_price"])
+                self.assertEqual(result["total_price"], Decimal("0"))
+                self.assertEqual(result["match_status"], "Needs Manual Input")
+                self.assertTrue(result["is_editable"])
+
+    # --- Positive scenario: confirm integration contract ------------------
+
+    def test_integration_contract_shape(self) -> None:
+        """Ensure the fallback dict shape matches downstream expectations."""
+        desc = "Pekerjaan Beton Bertulang"
+        result = self.apply_fallback(desc)
+
+        expected_keys = {
+            "uraian",
+            "unit_price",
+            "total_price",
+            "match_status",
+            "is_editable",
+        }
+
+        self.assertEqual(set(result.keys()), expected_keys)
+        self.assertEqual(result["uraian"], desc)
+        self.assertIsNone(result["unit_price"])
+        self.assertEqual(result["total_price"], Decimal("0"))
+        self.assertEqual(result["match_status"], "Needs Manual Input")
+        self.assertTrue(result["is_editable"])
