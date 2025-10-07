@@ -746,8 +746,8 @@ class PreviewFileTests(APITestCase):
                 self.assertFalse(rows[1]["is_section"])
                 self.assertEqual(rows[1]["description"], "Mobilisasi")
                 self.assertAlmostEqual(float(rows[1]["volume"]), 1.0, places=2)
-                self.assertEqual(rows[1]["price"], 1000.0)
-                self.assertEqual(rows[1]["total_price"], 1000.0)
+                self.assertEqual(rows[1]["price"], "1000.00")
+                self.assertEqual(rows[1]["total_price"], "1000.00")
 
 
 
