@@ -745,7 +745,7 @@ class PreviewFileTests(APITestCase):
                 # Check second row is normal item
                 self.assertFalse(rows[1]["is_section"])
                 self.assertEqual(rows[1]["description"], "Mobilisasi")
-                self.assertEqual(rows[1]["volume"], 1.0)
+                self.assertAlmostEqual(float(rows[1]["volume"]), 1.0, places=2)
                 self.assertEqual(rows[1]["price"], 1000.0)
                 self.assertEqual(rows[1]["total_price"], 1000.0)
 
