@@ -1,9 +1,10 @@
 from decimal import Decimal, ROUND_HALF_UP
 from typing import Dict, Mapping, Union
+from cost_weight.services.normalization import _normalize_weights
 
 NumberLike = Union[str, float, int, Decimal]
 
-__all__ = ["calculate_cost_weights", "format_weights"]
+__all__ = ["calculate_cost_weights", "format_weights", "_normalize_weights"]
 
 def _to_decimal(x: NumberLike) -> Decimal:
     if isinstance(x, Decimal):
