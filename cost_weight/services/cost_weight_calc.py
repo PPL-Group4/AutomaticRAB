@@ -60,6 +60,8 @@ def calculate_cost_weights(
         first_key = next(iter(result))
         result[first_key] = (result[first_key] + diff).quantize(base)
 
+    result = _normalize_weights(result, decimal_places=decimal_places)
+
     return result
 
 
