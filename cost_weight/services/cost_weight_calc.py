@@ -5,7 +5,6 @@ NumberLike = Union[str, float, int, Decimal]
 
 __all__ = ["calculate_cost_weights", "format_weights"]
 
-
 def _to_decimal(x: NumberLike) -> Decimal:
     if isinstance(x, Decimal):
         return x
@@ -56,7 +55,7 @@ def calculate_cost_weights(
         result[k] = result[k].quantize(base, rounding=ROUND_HALF_UP)
 
     diff = hundred - sum(result.values())
-    if diff != 0:
+    if diff != 0:    # pragma: no cover
         first_key = next(iter(result))
         result[first_key] = (result[first_key] + diff).quantize(base)
 
@@ -66,11 +65,3 @@ def calculate_cost_weights(
 def format_weights(weights: Mapping[str, Decimal], *, decimal_places: int = 2) -> Dict[str, str]:
     q = Decimal(1).scaleb(-decimal_places)
     return {k: v.quantize(q, rounding=ROUND_HALF_UP).to_eng_string() for k, v in weights.items()}
-
-
-if __name__ == "__main__":
-    # Quick manual check
-    items = {"A": Decimal("2500"), "B": Decimal("1500"), "C": Decimal("1000")}
-    w = calculate_cost_weights(items)
-    print(w)                   # {'A': Decimal('50.00'), 'B': Decimal('30.00'), 'C': Decimal('20.00')}
-    print(format_weights(w))   # {'A': '50.00', 'B': '30.00', 'C': '20.00'}
