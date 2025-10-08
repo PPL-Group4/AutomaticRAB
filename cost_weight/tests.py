@@ -4,6 +4,7 @@ from cost_weight.services.cost_weight_calc import (
     calculate_cost_weights,
     format_weights,
     _to_decimal,
+    _normalize_weights
 )
 
 class CostWeightCalcTests(unittest.TestCase):
@@ -55,6 +56,57 @@ class CostWeightCalcTests(unittest.TestCase):
         items = {"A": Decimal("2500"), "B": Decimal("1500"), "C": Decimal("1000")}
         res = calculate_cost_weights(items)
         self.assertEqual(format_weights(res), {"A": "50.00", "B": "30.00", "C": "20.00"})
+
+class CostWeightNormalizationTests(unittest.TestCase):
+    def test_normalization_handles_total_below_100(self):
+        weights = {"A": Decimal("33.33"), "B": Decimal("33.33"), "C": Decimal("33.33")}
+        res = _normalize_weights(weights.copy())
+        self.assertEqual(sum(res.values()), Decimal("100.00"))
+
+    def test_normalization_handles_total_above_100(self):
+        weights = {"A": Decimal("33.34"), "B": Decimal("33.34"), "C": Decimal("33.34")}
+        res = _normalize_weights(weights.copy())
+        self.assertEqual(sum(res.values()), Decimal("100.00"))
+
+    def test_normalization_does_nothing_if_exact_100(self):
+        weights = {"A": Decimal("20.00"), "B": Decimal("30.00"), "C": Decimal("50.00")}
+        res = _normalize_weights(weights.copy())
+        self.assertEqual(res, weights)
+
+    def test_normalization_zero_total_skipped(self):
+        weights = {"A": Decimal("0.00"), "B": Decimal("0.00")}
+        res = _normalize_weights(weights.copy())
+        self.assertEqual(res, weights)
+
+    def test_normalization_keeps_values_within_valid_range(self):
+        weights = {"A": Decimal("33.33"), "B": Decimal("33.33"), "C": Decimal("33.33")}
+        res = _normalize_weights(weights.copy())
+        for v in res.values():
+            self.assertTrue(Decimal("0.00") <= v <= Decimal("100.00"))
+        self.assertEqual(sum(res.values()), Decimal("100.00"))
+
+    def test_normalization_varied_decimal_places(self):
+        weights = {"A": Decimal("33.3"), "B": Decimal("33.3"), "C": Decimal("33.3")}
+        res = _normalize_weights(weights.copy(), decimal_places=1)
+        self.assertEqual(sum(res.values()), Decimal("100.0"))
+
+    def test_normalization_is_deterministic(self):
+        weights = {"X": Decimal("25.00"), "Y": Decimal("25.00"), "Z": Decimal("50.00")}
+        r1 = _normalize_weights(weights.copy())
+        r2 = _normalize_weights(weights.copy())
+        self.assertEqual(r1, r2)
+
+    def test_normalization_affects_largest_weight_only(self):
+        weights = {"A": Decimal("30.00"), "B": Decimal("30.00"), "C": Decimal("39.99")}
+        res = _normalize_weights(weights.copy())
+        changed_key = [k for k in res if res[k] != weights[k]]
+        self.assertEqual(changed_key, ["C"])  # only the largest should change
+
+class IntegrationWithCostWeightCalcTests(unittest.TestCase):
+    def test_integration_normalization_makes_total_exactly_100(self):
+        items = {"A": Decimal("333.33"), "B": Decimal("333.33"), "C": Decimal("333.34")}
+        res = calculate_cost_weights(items)
+        self.assertEqual(sum(res.values()), Decimal("100.00"))
 
 if __name__ == "__main__":
     unittest.main()
