@@ -4,7 +4,7 @@ from automatic_job_matching.repository.ahs_repo import DbAhsRepository
 from automatic_job_matching.service.exact_matcher import ExactMatcher
 from automatic_job_matching.service.fuzzy_matcher import FuzzyMatcher
 from automatic_job_matching.service.scoring import FuzzyConfidenceScorer
-
+from automatic_price_matching.fallback_validator import apply_fallback
 logger = logging.getLogger(__name__)
 
 class MatchingService:
@@ -48,24 +48,29 @@ class MatchingService:
             
         logger.debug("Multiple fuzzy match results count=%d", len(results))
         return results
-    
+
     @staticmethod
     def perform_best_match(description: str):
         logger.info("perform_best_match called (len=%d)", len(description))
 
-        min_similarity_single = 0.6  
+        min_similarity_single = 0.6
         min_similarity_multiple = 0.4
-        limit = 5           
+        limit = 5
 
-        # 1. Try exact
+        # 1️⃣ Try exact
         result = MatchingService.perform_exact_match(description)
 
-        # 2. Try fuzzy
+        # 2️⃣ Try fuzzy
         if not result:
             result = MatchingService.perform_fuzzy_match(description, min_similarity_single)
 
-        # 3. Try multiple matches
+        # 3️⃣ Try multiple fuzzy matches
         if not result:
             result = MatchingService.perform_multiple_match(description, limit, min_similarity_multiple)
+
+        # 4️⃣ Fallback rule
+        if not result:
+            logger.warning("No AHSP match found for: %s", description)
+            result = apply_fallback(description)
 
         return result
