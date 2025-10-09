@@ -45,7 +45,7 @@ class FileValidatorTests(TestCase):
         try:
             validate_excel_file(file)
         except ValidationError:
-            self.fail("Valid .xlsx file ditolak")
+            self.fail("Valid .xlsx file was rejected")
 
     def test_accepts_xls_file(self):
         file = SimpleUploadedFile(
@@ -56,7 +56,7 @@ class FileValidatorTests(TestCase):
         try:
             validate_excel_file(file)
         except ValidationError:
-            self.fail("Valid .xls file ditolak")
+            self.fail("Valid .xls file was rejected")
 
     def test_rejects_pdf_file(self):
         file = SimpleUploadedFile("dummy.pdf", b"%PDF", content_type="application/pdf")
@@ -82,7 +82,88 @@ class FileValidatorTests(TestCase):
         try:
             validate_excel_file(file)
         except ValidationError:
-            self.fail("File kosong dengan tipe valid harus diterima")
+            self.fail("Empty valid Excel file was rejected")
+
+    def test_rejects_doc_file(self):
+        file = SimpleUploadedFile(
+            "dummy.doc",
+            b"fake word",
+            content_type="application/msword",
+        )
+        with self.assertRaises(ValidationError):
+            validate_excel_file(file)
+
+    def test_rejects_docx_file(self):
+        file = SimpleUploadedFile(
+            "dummy.docx",
+            b"fake word",
+            content_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        )
+        with self.assertRaises(ValidationError):
+            validate_excel_file(file)
+
+    def test_rejects_ppt_file(self):
+        file = SimpleUploadedFile(
+            "dummy.ppt",
+            b"fake ppt",
+            content_type="application/vnd.ms-powerpoint",
+        )
+        with self.assertRaises(ValidationError):
+            validate_excel_file(file)
+
+    def test_rejects_pptx_file(self):
+        file = SimpleUploadedFile(
+            "dummy.pptx",
+            b"fake ppt",
+            content_type="application/vnd.openxmlformats-officedocument.presentationml.presentation",
+        )
+        with self.assertRaises(ValidationError):
+            validate_excel_file(file)
+
+    def test_rejects_csv_file(self):
+        file = SimpleUploadedFile(
+            "dummy.csv",
+            b"a,b,c\n1,2,3",
+            content_type="text/csv",
+        )
+        with self.assertRaises(ValidationError):
+            validate_excel_file(file)
+
+    def test_rejects_image_file(self):
+        file = SimpleUploadedFile(
+            "image.jpg",
+            b"\xff\xd8\xff\xe0",
+            content_type="image/jpeg",
+        )
+        with self.assertRaises(ValidationError):
+            validate_excel_file(file)
+
+    def test_rejects_png_file(self):
+        file = SimpleUploadedFile(
+            "image.png",
+            b"\x89PNG\r\n\x1a\n",
+            content_type="image/png",
+        )
+        with self.assertRaises(ValidationError):
+            validate_excel_file(file)
+
+    def test_rejects_gif_file(self):
+        file = SimpleUploadedFile(
+            "image.gif",
+            b"GIF89a",
+            content_type="image/gif",
+        )
+        with self.assertRaises(ValidationError):
+            validate_excel_file(file)
+
+    def test_rejects_zip_file(self):
+        file = SimpleUploadedFile(
+            "archive.zip",
+            b"PK\x03\x04",
+            content_type="application/zip",
+        )
+        with self.assertRaises(ValidationError):
+            validate_excel_file(file)
 
 class ExcelSnifferTests(TestCase):
     def _temp_path(self, suffix):
@@ -775,3 +856,47 @@ class RABConvertedViewTests(TestCase):
         response = self.client.get("/excel_parser/rab_converted/")
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "rab_converted.html")
+
+class LoggingTests(TestCase):
+    def _make_excel_file(self, filename="logtest.xlsx"):
+        bio = BytesIO()
+        wb = Workbook()
+        ws = wb.active
+        ws.append(["No", "Uraian Pekerjaan", "Volume", "Satuan"])
+        ws.append([1, "Test pekerjaan", 10, "m2"])
+        wb.save(bio)
+        return SimpleUploadedFile(
+            filename, bio.getvalue(),
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+
+    def test_import_file_logs(self):
+        f = self._make_excel_file()
+        importer = ExcelImporter()
+
+        with self.assertLogs("excel_parser", level="INFO") as cm:
+            importer.import_file(f)
+
+        logs = "\n".join(cm.output)
+        self.assertIn("Starting import", logs)
+        self.assertIn("Import finished", logs)
+
+    def test_preview_file_logs(self):
+        f = self._make_excel_file()
+
+        with self.assertLogs("excel_parser", level="INFO") as cm:
+            preview_file(f)
+
+        logs = "\n".join(cm.output)
+        self.assertIn("Previewing file", logs)
+        self.assertIn("Preview parsed", logs)
+
+    def test_validator_logs_warning(self):
+        bad_file = SimpleUploadedFile("bad.txt", b"not excel", content_type="text/plain")
+
+        with self.assertLogs("excel_parser", level="WARNING") as cm:
+            with self.assertRaises(ValidationError):
+                validate_excel_file(bad_file)
+
+        logs = "\n".join(cm.output)
+        self.assertIn("Rejected file", logs)

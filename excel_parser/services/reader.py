@@ -8,6 +8,9 @@ import string
 from django.core.files.uploadedfile import UploadedFile
 from excel_parser.models import Project, RabEntry
 
+import logging
+logger = logging.getLogger("excel_parser")
+
 class UnsupportedFileError(Exception):
     pass
 
@@ -235,11 +238,18 @@ def _parse_rows(cache: List[List], colmap: Dict[str, int]) -> List[ParsedRow]:
 
 class ExcelImporter:
     def import_file(self, file: UploadedFile) -> int:
+        logger.info("Starting import: file=%s", getattr(file, "name", "?"))
+
         reader = make_reader(file)
         cache = list(reader.iter_rows(file))
+        logger.debug("Read %d rows from file=%s", len(cache), getattr(file, "name", "?"))
+
         colmap, header_row = _find_header_map(cache)
+        logger.debug("Header row detected at index=%d, mapped columns=%s",
+                     header_row, list(colmap.keys()))
         colmap["_header_row"] = header_row
-        project, _ = Project.objects.get_or_create(
+
+        project, created = Project.objects.get_or_create(
             program="Default Program",
             kegiatan="Default Activity",
             pekerjaan="Imported from Excel",
@@ -247,39 +257,60 @@ class ExcelImporter:
             tahun_anggaran=2025,
             defaults={'source_filename': file.name}
         )
+        if created:
+            logger.info("Created new default Project id=%s for source=%s", project.id, file.name)
+
         parsed = _parse_rows(cache, colmap)
+        logger.info("Parsed %d rows from %s", len(parsed), file.name)
+
         count = 0
         for idx, p in enumerate(parsed, start=1):
-            RabEntry.objects.create(
-                project=project,
-                entry_type=RabEntry.EntryType.SECTION if p.is_section else RabEntry.EntryType.ITEM,
-                item_number=p.number,
-                description=p.description,
-                volume=p.volume,
-                unit=p.unit,
-                analysis_code=p.analysis_code,
-                unit_price=p.price,
-                total_price=p.total_price,
-                row_index=idx,
-            )
-            count += 1
+            try:
+                RabEntry.objects.create(
+                    project=project,
+                    entry_type=RabEntry.EntryType.SECTION if p.is_section else RabEntry.EntryType.ITEM,
+                    item_number=p.number,
+                    description=p.description,
+                    volume=p.volume,
+                    unit=p.unit,
+                    analysis_code=p.analysis_code,
+                    unit_price=p.price,
+                    total_price=p.total_price,
+                    row_index=idx,
+                )
+                count += 1
+            except Exception:
+                logger.exception("Failed to insert row %d into DB (file=%s)", idx, file.name)
+
+        logger.info("Import finished: inserted=%d rows from %s", count, file.name)
         return count
 
+
 def preview_file(file: UploadedFile):
+    logger.info("Previewing file=%s", getattr(file, "name", "?"))
+
     reader = make_reader(file)
     cache = list(reader.iter_rows(file))
+    logger.debug("Read %d rows during preview for file=%s", len(cache), getattr(file, "name", "?"))
+
     colmap, header_row = _find_header_map(cache)
+    logger.debug("Preview header row index=%d, columns=%s", header_row, list(colmap.keys()))
     colmap["_header_row"] = header_row
+
     parsed = _parse_rows(cache, colmap)
+    logger.info("Preview parsed %d rows from %s", len(parsed), file.name)
+
+    from decimal import ROUND_HALF_UP
+
     return [
         {
             "number": row.number,
             "description": row.description,
-            "volume": float(row.volume),
+            "volume": str(row.volume.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)),
             "unit": row.unit,
             "analysis_code": row.analysis_code,
-            "price": float(row.price),
-            "total_price": float(row.total_price),
+            "price": str(row.price.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)),
+            "total_price": str(row.total_price.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)),
             "is_section": row.is_section,
             "index_kind": row.index_kind,
             "section_letter": row.section_letter,
