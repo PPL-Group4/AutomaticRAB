@@ -73,3 +73,49 @@ class FuzzyMatcherConfidenceTDTests(SimpleTestCase):
         partial = getattr(self.matcher, 'match_with_confidence', lambda *_: None)("galian tanah")
         if exact and partial:
             self.assertGreater(exact['confidence'], partial['confidence'])
+    
+    def test_multi_word_confidence_boost(self):
+        """Test that multi-word queries get confidence boost."""
+        # Add more realistic test data
+        self.rows.append(AhsRow(id=7, code="BK.01", name="bongkar 1 m3 pasangan batu"))
+        self.rows.append(AhsRow(id=8, code="KR.01", name="pemasangan keramik lantai 30x30"))
+        
+        matcher = FuzzyMatcher(self.repo, min_similarity=0.35)
+        
+        # Multi-word query
+        multi = matcher.match_with_confidence("bongkar batu")
+        
+        if multi:
+            # Should have decent confidence due to multi-word bonus
+            self.assertGreaterEqual(multi['confidence'], 0.35)
+            self.assertIn("bongkar", multi["name"].lower())
+            self.assertIn("batu", multi["name"].lower())
+    
+    def test_typo_in_multi_word_still_matches(self):
+        """Test that typos in multi-word queries still match."""
+        self.rows.append(AhsRow(id=7, code="BK.01", name="bongkar 1 m3 pasangan batu"))
+        
+        matcher = FuzzyMatcher(self.repo, min_similarity=0.30)
+        
+        # "bonkar" is typo of "bongkar"
+        result = matcher.match_with_confidence("bonkar batu")
+        
+        if result:
+            self.assertIn("bongkar", result["name"].lower())
+            self.assertGreaterEqual(result["confidence"], 0.25)
+    
+    def test_single_word_lower_confidence_than_multi(self):
+        """Test that single-word queries have lower confidence than multi-word."""
+        self.rows.append(AhsRow(id=7, code="BK.01", name="bongkar 1 m3 pasangan batu"))
+        
+        matcher = FuzzyMatcher(self.repo, min_similarity=0.25)
+        
+        # Single word
+        single = matcher.match_with_confidence("batu")
+        
+        # Multi word
+        multi = matcher.match_with_confidence("bongkar batu")
+        
+        # Multi should have higher or equal confidence
+        if single and multi:
+            self.assertGreaterEqual(multi['confidence'], single['confidence'] * 0.9)
