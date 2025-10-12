@@ -7,6 +7,8 @@ import re
 
 from automatic_job_matching.utils.text_normalizer import normalize_text
 from automatic_job_matching.service.scoring import ConfidenceScorer, FuzzyConfidenceScorer
+from automatic_job_matching.config.action_synonyms import get_synonyms, has_synonyms
+from automatic_job_matching.service.word_embeddings import SynonymExpander
 
 logger = logging.getLogger(__name__)
 
@@ -32,112 +34,75 @@ class WordWeightConfig:
     LOW_WEIGHT = 0.3
     ULTRA_LOW_WEIGHT = 0.15
     
-    # ========== ACTION WORD PATTERNS (from CSV analysis) ==========
     ACTION_PATTERNS = [
-        # Common prefixes
-        r'^pe[mr]',              # pemasangan, pembongkaran, perbaikan
-        r'^pen[yg]?',            # penggalian, pengecatan, penyelesaian
-        r'^di',                  # passive voice
-        
-        # Suffix patterns  
-        r'an$',                  # pekerjaan, pemasangan, galian, urugan
-        r'kan$',                 # pasangkan
-        
-        # Specific action roots from your CSV
+        r'^pe[mr]',
+        r'^pen[yg]?',
+        r'^di',
+        r'an$',
+        r'kan$',
         r'^(pasang|bongkar|ganti|bangun|renovasi|perbaik|buat|install)',
         r'^(galian|urugan|pemadatan|pembuangan|pengangkutan)',
         r'^(pengukuran|pengecatan|pelituran|pemolesan|finishing)',
         r'^(plester|acian|grouting|curing|ereksi|fabrikasi)',
     ]
     
-    # ========== GENERIC/STOPWORDS ==========
     GENERIC_WORDS = {
         'untuk', 'dan', 'atau', 'dengan', 'pada', 'di', 'ke', 'dari', 
         'yang', 'ini', 'itu', 'tersebut', 'sebagai', 'antara', 'oleh',
         'dalam', 'luar', 'atas', 'bawah', 'semua', 'beberapa',
         'cara', 'secara', 'tiap', 'per', 'setiap', 'hingga', 'sampai',
-        'volume', 'ukuran', 'lebar', 'tinggi',
+        'volume', 'ukuran', 'lebar', 'tinggi', 'pekerjaan', 'item', 'jenis',
+        'bagian',
     }
     
-    # ========== TECHNICAL/MATERIAL INDICATORS (from your CSV) ==========
     TECHNICAL_INDICATORS = {
-        # === PRIMARY MATERIALS (very common in your CSV) ===
         'keramik', 'beton', 'semen', 'besi', 'baja', 'kayu', 'aluminium', 
         'pvc', 'gypsum', 'granit', 'marmer', 'kaca', 'aspal',
-        
-        # === BUILDING MATERIALS ===
         'hollow', 'batako', 'hebel', 'conblock', 'roster', 'rooster',
         'triplek', 'multiplek', 'plywood', 'partikel', 'mdf',
         'tegel', 'teraso', 'homogeneous', 'porselen', 'teralux',
-        
-        # === STRUCTURAL COMPONENTS ===
         'pipa', 'kabel', 'balok', 'kolom', 'sloof', 'pondasi', 'rangka',
         'dinding', 'lantai', 'atap', 'genteng', 'pintu', 'jendela',
         'tangga', 'railing', 'pagar', 'kanopi', 'plafon', 'ceiling',
         'bekisting', 'tulangan', 'wiremesh', 'angkur', 'baut',
-        
-        # === METAL & COMPOSITES ===
         'logam', 'stainless', 'galvanis', 'tembaga', 'kuningan', 'seng',
         'fiber', 'fiberglass', 'composite', 'resin', 'epoxy',
-        
-        # === SYSTEMS & INSTALLATIONS ===
         'listrik', 'plumbing', 'sanitasi', 'drainase', 'septic', 'ac',
         'lift', 'elevator', 'ventilasi', 'exhaust', 'hydrant', 'sprinkler',
-        
-        # === FINISHING MATERIALS ===
         'cat', 'wallpaper', 'vinyl', 'karpet', 'parket', 'laminate',
         'nat', 'grout', 'menie', 'vernis', 'pelitur', 'plamir',
-        
-        # === AGGREGATES ===
         'pasir', 'kerikil', 'sirtu', 'makadam', 'split', 'batu', 'cor',
-        
-        # === SANITAIR ===
         'wastafel', 'closet', 'kloset', 'urinoir', 'bathup', 'shower',
         'kran', 'floor', 'drain',
-        
-        # === DOORS & WINDOWS ===
         'kusen', 'daun', 'engsel', 'kunci', 'handle', 'grendel',
         'jalusi', 'rolling', 'lipat',
-        
-        # === MEASUREMENTS (strong technical signal) ===
         'meter', 'cm', 'mm', 'inch', 'm2', 'm3', 'kg', 'ton', 'liter',
         'diameter', 'tebal', 'panjang', 'dimensi', 'kapasitas',
-        
-        # === PLANTS/LANDSCAPING (from your CSV section 4) ===
         'pohon', 'palem', 'semak', 'rumput', 'tanaman', 'penutup',
         'polybag', 'pupuk', 'organik', 'anorganik',
-        
-        # === TECHNICAL SPECS ===
         'mutu', 'kualitas', 'standar', 'spesifikasi', 'grade', 'class',
         'mpa', 'sni', 'iso', 'astm',
     }
     
     @classmethod
     def get_word_weight(cls, word: str) -> float:
-        """Dynamically calculate word weight based on rules."""
         word_lower = word.lower()
         
-        # Rule 1: Stopwords get ultra-low weight
         if word_lower in cls.GENERIC_WORDS:
             return cls.ULTRA_LOW_WEIGHT
         
-        # Rule 2: Action patterns get low weight
         if cls._is_action_word(word_lower):
             return cls.LOW_WEIGHT
         
-        # Rule 3: Technical/material words get high weight
         if cls._is_technical_word(word_lower):
             return cls.HIGH_WEIGHT
         
-        # Rule 4: Numbers indicate technical context (dimensions, specs)
         if re.search(r'\d', word_lower):
             return cls.HIGH_WEIGHT * 0.9
         
-        # Rule 5: Very short words (<=2 chars) are likely abbreviations or generic
         if len(word_lower) <= 2:
             return cls.ULTRA_LOW_WEIGHT
         
-        # Rule 6: Length-based heuristic (longer = more specific)
         if len(word_lower) >= 10:
             return cls.NORMAL_WEIGHT * 1.3
         elif len(word_lower) >= 7:
@@ -149,7 +114,6 @@ class WordWeightConfig:
     
     @classmethod
     def _is_action_word(cls, word: str) -> bool:
-        """Check if word matches action patterns."""
         for pattern in cls.ACTION_PATTERNS:
             if re.search(pattern, word):
                 return True
@@ -157,20 +121,15 @@ class WordWeightConfig:
     
     @classmethod
     def _is_technical_word(cls, word: str) -> bool:
-        """Check if word is technical/material term."""
-        # Direct match
         if word in cls.TECHNICAL_INDICATORS:
             return True
         
-        # Contains technical indicator as substring (for compound words)
-        # e.g., "keramik30x30", "pipa3/4"
         for indicator in cls.TECHNICAL_INDICATORS:
             if len(indicator) >= 4 and indicator in word:
                 return True
         
         return False
 
-# SimilarityCalculator stays exactly the same
 class SimilarityCalculator:
     def __init__(self, word_weight_config: WordWeightConfig = None):
         self._weight_config = word_weight_config or WordWeightConfig()
@@ -269,18 +228,147 @@ class SimilarityCalculator:
         return partial_matches / total_comparisons
 
 class CandidateProvider:
-    def __init__(self, repository: AhsRepository):
+    def __init__(self, repository: AhsRepository, synonym_expander: SynonymExpander = None):
         self._repository = repository
+        self._synonym_expander = synonym_expander
     
     def get_candidates_by_head_token(self, normalized_input: str) -> List[AhsRow]:
         logger.debug("CandidateProvider: head_token search for input=%s", normalized_input)
         if not normalized_input:
             return self._repository.get_all_ahs()
-        head = normalized_input.split(" ", 1)[0]
+        
+        words = normalized_input.split()
+        head = words[0]
+        
+        # Detect material and action words
+        material_words = [w for w in words if WordWeightConfig._is_technical_word(w)]
+        action_words = [w for w in words if WordWeightConfig._is_action_word(w)]
+        significant_words = [
+            w for w in words 
+            if w not in WordWeightConfig.GENERIC_WORDS 
+            and len(w) >= 4
+        ]
+        
+        # Single-word material query: strict material filtering
+        if len(words) == 1 and material_words:
+            logger.debug("Single material word '%s' → MATERIAL MODE", material_words[0])
+            all_candidates = self._repository.get_all_ahs()
+            filtered = [
+                c for c in all_candidates 
+                if material_words[0] in _norm_name(c.name).split()
+            ]
+            
+            if filtered:
+                logger.info("Single-word material-mode: %d → %d candidates containing '%s'",
+                           len(all_candidates), len(filtered), material_words[0])
+                return filtered
+        
+        # Multi-word query with significant words: ALL-word matching with fuzzy support
+        elif len(significant_words) >= 2:
+            logger.debug("Multi-word query: %s → ALL-WORD FILTER", significant_words)
+            all_candidates = self._repository.get_all_ahs()
+            
+            logger.debug("DEBUG: Total candidates: %d", len(all_candidates))
+            logger.debug("DEBUG: Significant words: %s", significant_words)
+            
+            # Filter by ALL significant words (must contain ALL words)
+            filtered = []
+            for cand in all_candidates:
+                norm_name = _norm_name(cand.name)
+                name_words_set = set(norm_name.split())
+                
+                # Check if ALL significant words are present (exact or fuzzy)
+                matched_count = 0
+                for sig_word in significant_words:
+                    # Exact match
+                    if sig_word in name_words_set:
+                        matched_count += 1
+                        continue
+                    
+                    # Fuzzy match (for typos like "bonkar" → "bongkar")
+                    for name_word in name_words_set:
+                        if len(sig_word) >= 4 and len(name_word) >= 4:
+                            similarity = difflib.SequenceMatcher(None, sig_word, name_word).ratio()
+                            if similarity >= 0.80:  # 80% threshold (more lenient)
+                                matched_count += 1
+                                break
+                
+                # Candidate must match ALL significant words
+                if matched_count >= len(significant_words):
+                    filtered.append(cand)
+            
+            if filtered:
+                logger.info("Multi-word filter: %d → %d candidates matching ALL words %s", 
+                            len(all_candidates), len(filtered), significant_words)
+                logger.debug("DEBUG: First 5 names: %s", [c.name for c in filtered[:5]])
+                return filtered
+            else:
+                # FALLBACK: If ALL-word filter returns nothing, try ANY-word filter
+                logger.debug("ALL-word filter returned 0, trying ANY-word fallback...")
+                filtered = [
+                    c for c in all_candidates 
+                    if any(sig_word in _norm_name(c.name).split() for sig_word in significant_words)
+                ]
+                
+                if filtered:
+                    logger.info("Multi-word filter (ANY-word fallback): %d → %d candidates", 
+                              len(all_candidates), len(filtered))
+                    return filtered
+        
+        # Single material word query but also has action word
+        elif material_words:
+            logger.debug("Material + other words: %s → MATERIAL FILTER", material_words)
+            all_candidates = self._repository.get_all_ahs()
+            filtered = [
+                c for c in all_candidates 
+                if any(mat_word in _norm_name(c.name).split() for mat_word in material_words)
+            ]
+            
+            if filtered:
+                logger.info("Material-mode: %d → %d candidates containing material words",
+                           len(all_candidates), len(filtered))
+                return filtered
+        
+        # For non-material multi-word queries, use head token + synonym expansion
         candidates = self._repository.by_name_candidates(head)
+        logger.debug("Direct '%s' → %d candidates", head, len(candidates))
+        
+        # SYNONYM EXPANSION
+        synonyms_to_search = set()
+        
+        if has_synonyms(head):
+            manual = get_synonyms(head)
+            synonyms_to_search.update(manual)
+            logger.debug("+ %d manual synonyms", len(manual))
+        
+        if self._synonym_expander and self._synonym_expander.is_available():
+            try:
+                embedding = self._synonym_expander.expand_with_manual(head)
+                synonyms_to_search.update(embedding)
+                logger.debug("+ embedding synonyms (total now: %d)", len(synonyms_to_search))
+            except Exception as e:
+                logger.warning("Embedding expansion failed: %s", e)
+        
+        for synonym in synonyms_to_search:
+            syn_candidates = self._repository.by_name_candidates(synonym)
+            candidates.extend(syn_candidates)
+            if syn_candidates:
+                logger.debug("'%s' → +%d candidates", synonym, len(syn_candidates))
+        
+        # Deduplicate
+        seen = set()
+        unique = []
+        for c in candidates:
+            if c.id not in seen:
+                seen.add(c.id)
+                unique.append(c)
+        candidates = unique
+        logger.debug("After dedup: %d unique candidates", len(candidates))
+        
         if not candidates:
-            logger.debug("No candidates by head token, falling back to all AHS")
+            logger.debug("No candidates → fallback to all AHS")
             candidates = self._repository.get_all_ahs()
+        
         logger.info("CandidateProvider returned %d candidates", len(candidates))
         return candidates
 
@@ -335,12 +423,12 @@ class MatchingProcessor:
         return [match[1] for match in matches[:limit]]
 
 class FuzzyMatcher:
-    def __init__(self, repo: AhsRepository, min_similarity: float = 0.6, scorer: ConfidenceScorer | None = None):
+    def __init__(self, repo: AhsRepository, min_similarity: float = 0.6, scorer: ConfidenceScorer | None = None, synonym_expander: SynonymExpander = None):
         self.repo = repo
         self.min_similarity = max(0.0, min(1.0, min_similarity))
         self.scorer: ConfidenceScorer = scorer or FuzzyConfidenceScorer()
         self._similarity_calculator = SimilarityCalculator(WordWeightConfig())
-        self._candidate_provider = CandidateProvider(repo)
+        self._candidate_provider = CandidateProvider(repo, synonym_expander)
         self._matching_processor = MatchingProcessor(self._similarity_calculator, self._candidate_provider, min_similarity)
 
     def match(self, description: str) -> Optional[dict]:
