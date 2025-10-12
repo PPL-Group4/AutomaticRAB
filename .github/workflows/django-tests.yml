@@ -10,7 +10,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.13"]
+        python-version: ["3.12"]
     env:
       DJANGO_SETTINGS_MODULE: AutomaticRAB.settings
       SECRET_KEY: ${{ secrets.SECRET_KEY || 'insecure-test-key' }}
