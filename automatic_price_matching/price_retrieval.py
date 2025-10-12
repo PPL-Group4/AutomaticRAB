@@ -4,35 +4,7 @@ from dataclasses import dataclass
 from decimal import Decimal
 from typing import Dict, Mapping, Optional, Protocol
 
-
-def _canonicalise_code(code: str) -> str:
-    """Normalise an AHSP job code to a canonical form.
-
-    Rules:
-    - Trim whitespace
-    - Uppercase letters
-    - Treat dash and dot as equivalent separators (canonical '.' used)
-    - Collapse repeated separators
-    """
-    if not isinstance(code, str):  # guard for unexpected inputs
-        return ""
-
-    text = code.strip().upper()
-    if not text:
-        return ""
-
-    # Replace common separators with '.'
-    unified = (
-        text.replace("-", ".")
-        .replace(" ", ".")
-        .replace("/", ".")
-        .replace("_", ".")
-    )
-
-    # Collapse multiple dots and strip leading/trailing dots
-    while ".." in unified:
-        unified = unified.replace("..", ".")
-    return unified.strip(".")
+from .normalization import canonicalize_job_code
 
 
 class AhspSource(Protocol):
@@ -52,7 +24,7 @@ class MockAhspSource:
     def __init__(self, data: Mapping[str, Decimal | int | float | str]):
         self._store: Dict[str, Decimal] = {}
         for raw_code, raw_price in data.items():
-            key = _canonicalise_code(raw_code)
+            key = canonicalize_job_code(raw_code)
             self._store[key] = (
                 raw_price
                 if isinstance(raw_price, Decimal)
@@ -63,7 +35,7 @@ class MockAhspSource:
         if not canonical_code:
             return None
         # Ensure safety even if caller forgot to canonicalise
-        key = _canonicalise_code(canonical_code)
+        key = canonicalize_job_code(canonical_code)
         return self._store.get(key)
 
 
@@ -77,7 +49,7 @@ class AhspPriceRetriever:
         # Type/blank guards per tests
         if not isinstance(code, str):
             return None
-        canonical = _canonicalise_code(code)
+        canonical = canonicalize_job_code(code)
         if not canonical:
             return None
         return self.source.get_price_by_code(canonical)
