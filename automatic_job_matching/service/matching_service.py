@@ -6,6 +6,7 @@ from automatic_job_matching.service.fuzzy_matcher import FuzzyMatcher
 from automatic_job_matching.service.scoring import FuzzyConfidenceScorer
 from automatic_job_matching.utils.text_normalizer import normalize_text
 from automatic_job_matching.service.translation_service import TranslationService
+from automatic_job_matching.service.abbreviation_service import AbbreviationService
 
 
 logger = logging.getLogger(__name__)
@@ -71,6 +72,7 @@ class MatchingService:
 
         translated_text = MatchingService.translator.translate_to_indonesian(description)
         description = translated_text or description
+        description = AbbreviationService.expand(description)
         
         try:
             # Adaptive thresholds based on query complexity
