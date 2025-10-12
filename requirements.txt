@@ -19,3 +19,4 @@ gensim>=4.3.0
 sentence-transformers>=2.2.0
 torch>=2.0.0
 deep-translator==1.11.4
+langdetect==1.0.9
