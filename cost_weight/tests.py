@@ -1,5 +1,7 @@
 import unittest
 from decimal import Decimal
+from unittest.mock import patch
+
 from cost_weight.services.cost_weight_calc import (
     calculate_cost_weights,
     format_weights,
@@ -125,5 +127,104 @@ class CostWeightZeroDivisionTests(unittest.TestCase):
         self.assertEqual(res["C"], Decimal("100.00"))
         self.assertEqual(res["A"], Decimal("0.00"))
 
-if __name__ == "__main__":
-    unittest.main()
+
+from django.test import TestCase, TransactionTestCase
+from django.apps import apps
+
+from cost_weight.services.recalc_orchestrator import (
+    ITEM_MODEL, JOB_MODEL, ITEM_COST_FIELD, ITEM_WEIGHT_FIELD
+)
+
+Item = apps.get_model(ITEM_MODEL)
+Job  = apps.get_model(JOB_MODEL)
+
+class LiveRecalcSignalsTests(TestCase):
+    def setUp(self):
+        self.job = Job.objects.create(name="J1")
+
+    def _mk(self, name, cost):
+        return Item.objects.create(**{
+            "name": name,
+            ITEM_COST_FIELD: Decimal(cost),
+            "job": self.job,
+        })
+
+    def test_create_items_triggers_weights_sum_100(self):
+        a = self._mk("A", "200")
+        b = self._mk("B", "200")
+        a.refresh_from_db(); b.refresh_from_db()
+        self.assertEqual(
+            getattr(a, ITEM_WEIGHT_FIELD) + getattr(b, ITEM_WEIGHT_FIELD),
+            Decimal("100.00")
+        )
+        self.assertEqual(getattr(a, ITEM_WEIGHT_FIELD), Decimal("50.00"))
+        self.assertEqual(getattr(b, ITEM_WEIGHT_FIELD), Decimal("50.00"))
+
+    def test_update_cost_rebalances(self):
+        a = self._mk("A", "100")
+        b = self._mk("B", "100")
+        # Only cost changes: pass update_fields to ensure selective trigger
+        setattr(a, ITEM_COST_FIELD, Decimal("300"))
+        a.save(update_fields=[ITEM_COST_FIELD])
+        a.refresh_from_db(); b.refresh_from_db()
+        self.assertEqual(getattr(a, ITEM_WEIGHT_FIELD), Decimal("75.00"))
+        self.assertEqual(getattr(b, ITEM_WEIGHT_FIELD), Decimal("25.00"))
+
+    def test_delete_item_rebalances_remaining(self):
+        a = self._mk("A", "2500")
+        b = self._mk("B", "1500")
+        c = self._mk("C", "1000")
+        c.delete()
+        a.refresh_from_db(); b.refresh_from_db()
+        self.assertEqual(getattr(a, ITEM_WEIGHT_FIELD), Decimal("62.50"))
+        self.assertEqual(getattr(b, ITEM_WEIGHT_FIELD), Decimal("37.50"))
+
+    def test_zero_total_sets_all_zero(self):
+        a = self._mk("A", "0")
+        b = self._mk("B", "0")
+        a.refresh_from_db(); b.refresh_from_db()
+        self.assertEqual(getattr(a, ITEM_WEIGHT_FIELD), Decimal("0.00"))
+        self.assertEqual(getattr(b, ITEM_WEIGHT_FIELD), Decimal("0.00"))
+
+    def test_irrelevant_item_update_does_not_trigger_recalc(self):
+        a = self._mk("A", "100")
+        b = self._mk("B", "100")
+        with patch("cost_weight.services.recalc_orchestrator.recalc_weights_for_job") as recalc:
+            # Change name only; cost untouched — should NOT recalc
+            a.name = "A-rename"
+            a.save(update_fields=["name"])
+            recalc.assert_not_called()
+
+    def test_job_field_in_whitelist_triggers_recalc(self):
+        # Temporarily add a job field to the whitelist to simulate dependency
+        from cost_weight import signals
+        orig = signals.JOB_FIELDS_THAT_AFFECT_WEIGHTS
+        try:
+            signals.JOB_FIELDS_THAT_AFFECT_WEIGHTS = ("name",)
+            with patch("cost_weight.services.recalc_orchestrator.recalc_weights_for_job") as recalc:
+                self.job.name = "J1-new"
+                self.job.save(update_fields=["name"])
+                recalc.assert_called_once_with(self.job.pk)
+        finally:
+            signals.JOB_FIELDS_THAT_AFFECT_WEIGHTS = orig
+
+
+class OrchestratorBehaviorTests(TransactionTestCase):
+    reset_sequences = True
+
+    def setUp(self):
+        self.job = Job.objects.create(name="J2")
+        self.a = Item.objects.create(job=self.job, name="A", **{ITEM_COST_FIELD: Decimal("100")})
+        self.b = Item.objects.create(job=self.job, name="B", **{ITEM_COST_FIELD: Decimal("100")})
+
+    def test_bulk_update_used_and_single_tx(self):
+        # Spy: ensure bulk_update is called once; calculate_cost_weights called once
+        with patch("cost_weight.services.recalc_orchestrator.Item.objects.bulk_update") as bulk_upd, \
+             patch("cost_weight.services.recalc_orchestrator.calculate_cost_weights") as calc:
+            # mock calc to return deterministic 60/40
+            calc.return_value = {str(self.a.pk): Decimal("60.00"), str(self.b.pk): Decimal("40.00")}
+            from cost_weight.services.recalc_orchestrator import recalc_weights_for_job
+            updated = recalc_weights_for_job(self.job.pk)
+            self.assertEqual(updated, 2)
+            self.assertTrue(bulk_upd.called)
+            calc.assert_called_once()
