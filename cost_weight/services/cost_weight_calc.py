@@ -1,6 +1,7 @@
 from decimal import Decimal, ROUND_HALF_UP
 from typing import Dict, Mapping, Union
 from cost_weight.services.normalization import _normalize_weights
+from cost_weight.services.zero_division_handler import handle_zero_division
 
 NumberLike = Union[str, float, int, Decimal]
 
@@ -22,13 +23,13 @@ def calculate_cost_weights(
     base = Decimal(1).scaleb(-decimal_places)  # e.g., 0.01 for 2 dp
     hundred = Decimal("100")
 
+    safe_result = handle_zero_division(item_costs, decimal_places=decimal_places)
+    if safe_result is not None:
+        return safe_result
+
     # Convert inputs
     costs = {k: _to_decimal(v) for k, v in item_costs.items()}
     total = sum(costs.values(), Decimal(0))
-
-    # Edge case: no cost at all
-    if total == 0:
-        return {k: Decimal(0).quantize(base) for k in costs}
 
     # Raw (unrounded) shares
     raw = {k: (cost / total) * hundred for k, cost in costs.items()}
