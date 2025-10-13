@@ -2,7 +2,14 @@ from decimal import Decimal
 
 from django.core.exceptions import ValidationError
 from django.test import SimpleTestCase
+from automatic_price_matching.ahs_cache import AhsCache
+from automatic_job_matching.service.exact_matcher import AhsRow
+from unittest.mock import patch
+from automatic_job_matching.repository.ahs_repo import DbAhsRepository
+from rencanakan_core.models import Ahs
 class AhspValidationTests(SimpleTestCase):
+
+
 	"""Expectations for AHSP payload validation (TDD coverage)."""
 
 	def setUp(self) -> None:
@@ -324,3 +331,74 @@ class FallbackValidatorTests(SimpleTestCase):
         self.assertEqual(result["total_price"], Decimal("0"))
         self.assertEqual(result["match_status"], "Needs Manual Input")
         self.assertTrue(result["is_editable"])
+
+
+class AhsCacheTests(SimpleTestCase):
+    """Expectations for AHSP in-memory caching behavior (unit-level)."""
+
+    def setUp(self):
+        self.cache = AhsCache()
+        self.sample_rows = [AhsRow(id=1, code="AT.01.001", name="Galian Tanah")]
+
+    # ✅ NEGATIVE test: triggers DB lookup when cache miss
+    def test_cache_miss_triggers_db_lookup(self):
+        repo = DbAhsRepository()
+
+        with patch("rencanakan_core.models.Ahs.objects.filter") as mock_filter:
+            mock_filter.return_value = Ahs.objects.none()
+
+            # Nothing cached yet → must hit DB
+            repo.by_code_like("NON_EXISTENT_CODE")
+            self.assertGreater(mock_filter.call_count, 0)
+
+    # ✅ POSITIVE tests
+    def test_cache_stores_and_retrieves_by_code(self):
+        self.cache.set_by_code("AT.01.001", self.sample_rows)
+        cached = self.cache.get_by_code("AT.01.001")
+        self.assertEqual(cached, self.sample_rows)
+
+    def test_cache_miss_returns_none(self):
+        self.assertIsNone(self.cache.get_by_code("unknown"))
+
+    def test_cache_stores_by_name_token(self):
+        self.cache.set_by_name("galian", self.sample_rows)
+        cached = self.cache.get_by_name("galian")
+        self.assertEqual(cached[0].name, "Galian Tanah")
+
+    def test_cache_stores_full_list(self):
+        self.cache.set_all(self.sample_rows)
+        cached_all = self.cache.get_all()
+        self.assertEqual(len(cached_all), 1)
+
+    # ✅ EDGE CASES
+    def test_cache_handles_empty_or_none_key(self):
+        """Edge case: Ensure cache handles empty or None keys gracefully."""
+        # Empty key should still store and retrieve fine
+        self.cache.set_by_code("", self.sample_rows)
+        cached_empty = self.cache.get_by_code("")
+        self.assertEqual(cached_empty, self.sample_rows)
+
+        # None key → should return None, not crash
+        cached_none = self.cache.get_by_code(None)
+        self.assertIsNone(cached_none)
+
+
+class AhsRepositoryCacheIntegrationTests(SimpleTestCase):
+    """Integration-level verification for repository caching."""
+
+    def test_uses_cache_after_first_call(self):
+        repo = DbAhsRepository()
+
+        with patch("rencanakan_core.models.Ahs.objects.filter") as mock_filter:
+            mock_filter.return_value = Ahs.objects.none()
+
+            # First run → will hit DB once per variant (expected)
+            repo.by_code_like("AT.01.001")
+            first_call_count = mock_filter.call_count
+
+            # Second run → should not call DB at all (cache hit)
+            repo.by_code_like("AT.01.001")
+            second_call_count = mock_filter.call_count
+
+            # ✅ Assert total calls unchanged → cache prevents new lookups
+            self.assertEqual(first_call_count, second_call_count)
