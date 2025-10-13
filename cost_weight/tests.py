@@ -108,5 +108,22 @@ class IntegrationWithCostWeightCalcTests(unittest.TestCase):
         res = calculate_cost_weights(items)
         self.assertEqual(sum(res.values()), Decimal("100.00"))
 
+class CostWeightZeroDivisionTests(unittest.TestCase):
+    def test_zero_division_returns_all_zero(self):
+        items = {"A": 0, "B": 0, "C": 0}
+        res = calculate_cost_weights(items)
+        self.assertTrue(all(v == Decimal("0.00") for v in res.values()))
+        self.assertEqual(sum(res.values()), Decimal("0.00"))
+
+    def test_zero_division_with_empty_input(self):
+        res = calculate_cost_weights({})
+        self.assertEqual(res, {})
+
+    def test_zero_division_with_partial_nonzero(self):
+        items = {"A": 0, "B": 0, "C": 100}
+        res = calculate_cost_weights(items)
+        self.assertEqual(res["C"], Decimal("100.00"))
+        self.assertEqual(res["A"], Decimal("0.00"))
+
 if __name__ == "__main__":
     unittest.main()
