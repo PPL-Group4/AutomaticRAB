@@ -28,7 +28,8 @@ class BenchmarkRunnerTests(SimpleTestCase):
         # logic validation
         self.assertEqual(result["runs"], 5)
         self.assertEqual(len(result["times_ms"]), 5)
-        self.assertEqual(fake_work.call_count, 5)
+        self.assertEqual(fake_work.call_count, runner.runs + runner.warmup)
+
 
         # metrics sanity
         for t in result["times_ms"]:
