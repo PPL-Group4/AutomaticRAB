@@ -98,7 +98,7 @@ class AhsRepositoryOptimizationTests(TransactionTestCase):
         print(f"SLA Test: by_name_candidates")
         print(f"{'='*60}")
         print(f"Average: {avg_time:.2f}ms")
-        print(f"Target:  <20.00ms")
+        print(f"Target:  <100.00ms")
         print(f"Status:  {'✅ PASS' if avg_time < 100 else '❌ FAIL'}")
         print(f"{'='*60}\n")
         
