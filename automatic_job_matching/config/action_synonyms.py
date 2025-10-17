@@ -35,32 +35,54 @@ _BASE_ACTION_SYNONYMS = {
 }
 
 _BASE_CONSTRUCTION_SYNONYMS = { # noun synonyms related to construction materials and methods
-    # Structural materials
-    "hebel": ["bata ringan", "bata putih"],
-    "bata": ["hebel", "bata ringan"],
-    "ringan": ["hebel", "bata putih"],
-    
     # Structural terms
-    "borepile": ["strauss", "strauss pile", "bored pile", "borepile"],
-    "pengecoran": ["cor", "pekerjaan cor"],
+    "borepile": ["strauss", "pile", "bored"],
+    "strauss": ["borepile", "pile"],
+    "pile": ["borepile", "strauss", "bored"],
+    "bored": ["borepile", "pile"],
+    
+    "pengecoran": ["cor", "pekerjaan"],
+    "cor": ["pengecoran", "beton"],
     "bekisting": ["cetakan", "formwork"],
+    "cetakan": ["bekisting", "formwork"],
+    "formwork": ["bekisting", "cetakan"],
 
     # Plumbing
-    "pipa": ["plumbing", "instalasi pipa"],
+    "pipa": ["plumbing", "instalasi"],
+    "plumbing": ["pipa", "instalasi"],
     "kloset": ["toilet", "wc"],
+    "toilet": ["kloset", "wc"],
+    "wc": ["kloset", "toilet"],
     "wastafel": ["sink", "wasbak"],
+    "sink": ["wastafel", "wasbak"],
+    "wasbak": ["wastafel", "sink"],
     
     # Electrical
     "saklar": ["switch", "tombol"],
-    "stop kontak": ["colokan", "outlet"],
+    "switch": ["saklar", "tombol"],
+    "tombol": ["saklar", "switch"],
+    "stop": ["kontak", "colokan", "outlet"],
+    "kontak": ["stop", "colokan", "outlet"],
+    "colokan": ["stop", "kontak", "outlet"],
+    "outlet": ["stop", "kontak", "colokan"],
     
     # Painting
     "cat": ["pengecatan"],
     "pelitur": ["vernis"],
+    "vernis": ["pelitur"],
 
     # Flooring
     "keramik": ["ceramic", "ubin"],
-    "expose": ["beton expose", "semen expose"],
+    "ceramic": ["keramik", "ubin"],
+    "ubin": ["keramik", "ceramic"],
+    "expose": ["beton", "semen"],
+}
+
+# Compound materials that should be treated as units (not expanded to individual words)
+COMPOUND_MATERIALS = {
+    # Hebel = Bata Ringan (lightweight brick/AAC block)
+    'hebel': ['bata ringan'],
+    'bata ringan': ['hebel'],
 }
 
 def _make_bidirectional(base_dict: dict[str, list[str]]) -> dict[str, list[str]]:
@@ -78,6 +100,7 @@ def _make_bidirectional(base_dict: dict[str, list[str]]) -> dict[str, list[str]]
 ACTION_SYNONYMS = _make_bidirectional(_BASE_ACTION_SYNONYMS)
 CONSTRUCTION_SYNONYMS = _make_bidirectional(_BASE_CONSTRUCTION_SYNONYMS)
 ALL_SYNONYMS = {**ACTION_SYNONYMS, **CONSTRUCTION_SYNONYMS}
+
 def get_synonyms(word: str) -> list[str]:
     """Get synonyms for a given action word."""
     return ALL_SYNONYMS.get(word.lower(), [])
@@ -89,3 +112,11 @@ def has_synonyms(word: str) -> bool:
 def get_all_action_words() -> set[str]:
     """Get all action words that have synonym mappings."""
     return set(ALL_SYNONYMS.keys())
+
+def get_compound_materials() -> dict[str, list[str]]:
+    """Get compound materials that should be treated as units."""
+    return COMPOUND_MATERIALS
+
+def is_compound_material(word: str) -> bool:
+    """Check if word is a compound material."""
+    return word.lower() in COMPOUND_MATERIALS

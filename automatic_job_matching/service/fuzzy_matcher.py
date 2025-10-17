@@ -7,7 +7,7 @@ import re
 
 from automatic_job_matching.utils.text_normalizer import normalize_text
 from automatic_job_matching.service.scoring import ConfidenceScorer, FuzzyConfidenceScorer
-from automatic_job_matching.config.action_synonyms import get_synonyms, has_synonyms
+from automatic_job_matching.config.action_synonyms import get_synonyms, has_synonyms, get_compound_materials, is_compound_material
 from automatic_job_matching.service.word_embeddings import SynonymExpander
 
 logger = logging.getLogger(__name__)
@@ -51,7 +51,7 @@ class WordWeightConfig:
         'yang', 'ini', 'itu', 'tersebut', 'sebagai', 'antara', 'oleh',
         'dalam', 'luar', 'atas', 'bawah', 'semua', 'beberapa',
         'cara', 'secara', 'tiap', 'per', 'setiap', 'hingga', 'sampai',
-        'volume', 'ukuran', 'lebar', 'tinggi', 'pekerjaan', 'item', 'jenis',
+        'volume', 'ukuran', 'lebar', 'tinggi', 'item', 'jenis',
         'bagian',
     }
     
@@ -231,6 +231,7 @@ class CandidateProvider:
     def __init__(self, repository: AhsRepository, synonym_expander: SynonymExpander = None):
         self._repository = repository
         self._synonym_expander = synonym_expander
+        self._compound_materials = get_compound_materials()
     
     def get_candidates_by_head_token(self, normalized_input: str) -> List[AhsRow]:
         logger.debug("CandidateProvider: head_token search for input=%s", normalized_input)
@@ -249,75 +250,144 @@ class CandidateProvider:
             and len(w) >= 4
         ]
         
+        # DETECT COMPOUND MATERIALS IN INPUT
+        detected_compounds = self._detect_compound_materials_in_input(normalized_input)
+        logger.debug("Detected compound materials: %s", detected_compounds)
+        
         # Single-word material query: strict material filtering
         if len(words) == 1 and material_words:
-            logger.debug("Single material word '%s' → MATERIAL MODE", material_words[0])
+            material_word = material_words[0]
+            logger.debug("Single material word '%s' → MATERIAL MODE", material_word)
             all_candidates = self._repository.get_all_ahs()
-            filtered = [
-                c for c in all_candidates 
-                if material_words[0] in _norm_name(c.name).split()
-            ]
+            
+            # Check if it's a compound material
+            if material_word in detected_compounds:
+                compound_phrases = detected_compounds[material_word]
+                filtered = [
+                    c for c in all_candidates 
+                    if self._candidate_contains_compound(c.name, material_word, compound_phrases)
+                ]
+            else:
+                # Regular exact word matching
+                filtered = [
+                    c for c in all_candidates 
+                    if material_word in _norm_name(c.name).split()
+                ]
             
             if filtered:
                 logger.info("Single-word material-mode: %d → %d candidates containing '%s'",
-                           len(all_candidates), len(filtered), material_words[0])
+                           len(all_candidates), len(filtered), material_word)
                 return filtered
         
-        # Multi-word query with significant words: ALL-word matching with fuzzy support
+        # Multi-word query with significant words: ALL-word matching with compound support
         elif len(significant_words) >= 2:
-            logger.debug("Multi-word query: %s → ALL-WORD FILTER", significant_words)
+            logger.debug("Multi-word query: %s → ALL-WORD FILTER (compound-aware)", significant_words)
             all_candidates = self._repository.get_all_ahs()
             
+            # Build expanded words (with compound material handling)
             words_to_check = set()
             for word in significant_words:
+                # Skip if word is part of a detected compound
+                if word in detected_compounds:
+                    logger.debug("Skipping individual synonym expansion for compound material: '%s'", word)
+                    words_to_check.add(word)
+                    continue
+                
+                # Add the word itself
                 words_to_check.add(word)
-                # Add synonyms for this word
+                
+                # Add synonyms for non-compound words
                 if has_synonyms(word):
                     syns = get_synonyms(word)
                     for syn in syns:
-                        if ' ' in syn:
-                            words_to_check.update(syn.split())
-                        else:
+                        # Don't expand multi-word synonyms
+                        if ' ' not in syn:
                             words_to_check.add(syn)
-    
+            
             logger.debug("Expanded words to check: %s", words_to_check)
             
-            # Filter by ALL significant words (must contain ALL words)
+            # Filter by ALL significant words (compound-aware matching)
             filtered = []
             for cand in all_candidates:
                 norm_name = _norm_name(cand.name)
                 name_words_set = set(norm_name.split())
-                            
-                # Check how many words from our expanded set match
-                matched_count = 0
-                for check_word in words_to_check:  # ← Use expanded words
-                    # Check for exact word match
-                    if check_word in name_words_set:
-                        matched_count += 1
-                        continue
-                    
-                    # Fuzzy match (for typos like "bonkar" → "bongkar")
-                    for name_word in name_words_set:
-                        if len(check_word) >= 4 and len(name_word) >= 4:
-                            similarity = difflib.SequenceMatcher(None, check_word, name_word).ratio()
-                            if similarity >= 0.80:  # 80% threshold (more lenient)
-                                matched_count += 1
-                                break
                 
-                # Need at least 2 matches for multi-word queries
-                if matched_count >= 2:
+                matched_count = 0
+                
+                for sig_word in significant_words:
+                    # COMPOUND MATERIAL MATCHING
+                    if sig_word in detected_compounds:
+                        compound_phrases = detected_compounds[sig_word]
+                        if self._candidate_contains_compound(norm_name, sig_word, compound_phrases):
+                            matched_count += 1
+                            logger.debug("COMPOUND MATCH: '%s' found in '%s'", sig_word, cand.name)
+                            continue
+                    
+                    # REGULAR WORD MATCHING (with synonyms)
+                    word_matched = False
+                    
+                    # Check exact match
+                    if sig_word in name_words_set:
+                        word_matched = True
+                    else:
+                        # Check synonyms
+                        if has_synonyms(sig_word):
+                            for syn in get_synonyms(sig_word):
+                                if ' ' not in syn and syn in name_words_set:
+                                    word_matched = True
+                                    logger.debug("SYNONYM MATCH: '%s' (for '%s') found in '%s'", 
+                                               syn, sig_word, cand.name)
+                                    break
+                    
+                    # Fuzzy match (for typos)
+                    if not word_matched:
+                        for name_word in name_words_set:
+                            if len(sig_word) >= 4 and len(name_word) >= 4:
+                                similarity = difflib.SequenceMatcher(None, sig_word, name_word).ratio()
+                                if similarity >= 0.80:
+                                    word_matched = True
+                                    logger.debug("FUZZY MATCH: '%s' ≈ '%s' (%.2f) in '%s'", 
+                                               sig_word, name_word, similarity, cand.name)
+                                    break
+                    
+                    if word_matched:
+                        matched_count += 1
+                
+                # Need ALL significant words to match
+                if matched_count >= len(significant_words):
                     filtered.append(cand)
+                    logger.debug("CANDIDATE ACCEPTED: '%s' (matched %d/%d words)", 
+                               cand.name, matched_count, len(significant_words))
             
             if filtered:
-                logger.info(f"Multi-word filter: {len(all_candidates)} → {len(filtered)} candidates")
+                logger.info("Multi-word filter (compound-aware): %d → %d candidates matching ALL words %s", 
+                            len(all_candidates), len(filtered), significant_words)
                 return filtered
             else:
-                # FALLBACK: If ALL-word filter returns nothing, try ANY-word filter
+                # FALLBACK: Try ANY-word filter
                 logger.debug("ALL-word filter returned 0, trying ANY-word fallback...")
-                filtered = [
-                    c for c in all_candidates 
-                    if any(check_word in _norm_name(c.name).split() for check_word in words_to_check)
-                ]
+                filtered = []
+                for cand in all_candidates:
+                    norm_name = _norm_name(cand.name)
+                    name_words_set = set(norm_name.split())
+                    
+                    for sig_word in significant_words:
+                        # Check compound
+                        if sig_word in detected_compounds:
+                            if self._candidate_contains_compound(norm_name, sig_word, detected_compounds[sig_word]):
+                                filtered.append(cand)
+                                break
+                        
+                        # Check regular word or synonym
+                        if sig_word in name_words_set:
+                            filtered.append(cand)
+                            break
+                        
+                        if has_synonyms(sig_word):
+                            for syn in get_synonyms(sig_word):
+                                if ' ' not in syn and syn in name_words_set:
+                                    filtered.append(cand)
+                                    break
                 
                 if filtered:
                     logger.info("Multi-word filter (ANY-word fallback): %d → %d candidates", 
@@ -380,6 +450,48 @@ class CandidateProvider:
         
         logger.info("CandidateProvider returned %d candidates", len(candidates))
         return candidates
+    
+    def _detect_compound_materials_in_input(self, normalized_input: str) -> dict:
+        """Detect which compound materials are present in the input.
+        
+        Returns:
+            Dict mapping detected material → list of compound phrase variants
+            Example: {'hebel': ['bata ringan']}
+        """
+        detected = {}
+        
+        for material, variants in self._compound_materials.items():
+            # Check if material word appears in input
+            if material in normalized_input:
+                detected[material] = variants
+                logger.debug("Detected compound material '%s' with variants: %s", material, variants)
+        
+        return detected
+    
+    def _candidate_contains_compound(self, candidate_name: str, material: str, compound_phrases: list) -> bool:
+        """Check if candidate contains the material or its compound phrase variants.
+        
+        Args:
+            candidate_name: Normalized candidate name
+            material: The material word (e.g., 'hebel')
+            compound_phrases: List of compound variants (e.g., ['bata ringan'])
+        
+        Returns:
+            True if material OR any compound phrase is found in candidate
+        """
+        norm_name = _norm_name(candidate_name)
+        
+        # Check for exact material word
+        if material in norm_name.split():
+            return True
+        
+        # Check for compound phrases (as multi-word sequences)
+        for phrase in compound_phrases:
+            if phrase in norm_name:
+                logger.debug("Found compound phrase '%s' in candidate '%s'", phrase, candidate_name)
+                return True
+        
+        return False
 
 class MatchingProcessor:
     def __init__(self, similarity_calculator: SimilarityCalculator, candidate_provider: CandidateProvider, min_similarity: float = 0.6):
@@ -459,18 +571,32 @@ class FuzzyMatcher:
         normalized_query = _norm_name(description.strip())
         if not normalized_query:
             return None
+        
+        # Apply compound material expansion for scoring
+        expanded_query = self._expand_query_for_scoring(normalized_query)
+        logger.info("Query for scoring: '%s' → '%s'", normalized_query, expanded_query)
+        
         candidates = self._candidate_provider.get_candidates_by_head_token(normalized_query)
         best = None
         best_conf = 0.0
+        
         for cand in candidates:
             norm_cand = _norm_name(cand.name)
             if not norm_cand:
                 continue
-            conf = self.scorer.score(normalized_query, norm_cand)
-            logger.debug("Confidence score vs candidate %r = %.4f", cand.name, conf)
+            
+            # Score with both original and expanded query
+            conf_original = self.scorer.score(normalized_query, norm_cand)
+            conf_expanded = self.scorer.score(expanded_query, norm_cand) if expanded_query != normalized_query else 0.0
+            conf = max(conf_original, conf_expanded)
+            
+            logger.debug("Confidence vs %r: orig=%.4f, expanded=%.4f, final=%.4f", 
+                        cand.name, conf_original, conf_expanded, conf)
+            
             if conf >= self.min_similarity and conf > best_conf:
                 best_conf = conf
                 best = cand
+        
         if best:
             logger.info("Best confidence match id=%s score=%.4f", best.id, best_conf)
             return {"source": "ahs", "id": best.id, "code": best.code, "name": best.name, "matched_on": "name", "confidence": round(best_conf, 4)}
@@ -484,19 +610,67 @@ class FuzzyMatcher:
         normalized_query = _norm_name(description.strip())
         if not normalized_query:
             return []
+        
+        # Apply compound material expansion for scoring
+        expanded_query = self._expand_query_for_scoring(normalized_query)
+        logger.info("Query for scoring: '%s' → '%s'", normalized_query, expanded_query)
+        
         candidates = self._candidate_provider.get_candidates_by_head_token(normalized_query)
         results = []
+        
         for cand in candidates:
             norm_cand = _norm_name(cand.name)
             if not norm_cand:
                 continue
-            conf = self.scorer.score(normalized_query, norm_cand)
-            logger.debug("Confidence score vs candidate %r = %.4f", cand.name, conf)
+            
+            # Score with both original and expanded query
+            conf_original = self.scorer.score(normalized_query, norm_cand)
+            conf_expanded = self.scorer.score(expanded_query, norm_cand) if expanded_query != normalized_query else 0.0
+            conf = max(conf_original, conf_expanded)
+            
+            logger.debug("Confidence vs %r: orig=%.4f, expanded=%.4f, final=%.4f", 
+                        cand.name, conf_original, conf_expanded, conf)
+            
             if conf >= self.min_similarity:
                 results.append((conf, {"source": "ahs", "id": cand.id, "code": cand.code, "name": cand.name, "matched_on": "name", "confidence": round(conf, 4)}))
+        
         results.sort(key=lambda x: x[0], reverse=True)
         logger.info("Found %d matches with confidence >= %.2f", len(results), self.min_similarity)
         return [result[1] for result in results[:limit]]
+    
+    def _expand_query_for_scoring(self, normalized_query: str) -> str:
+        """Expand query by replacing compound materials and action words.
+        
+        Example: 
+            "pemasangan hebel" → "pemasangan bata ringan"
+            "pekerjaan keramik" → "pemasangan keramik"
+        """
+        words = normalized_query.split()
+        expanded_words = []
+        compound_materials = get_compound_materials()
+        
+        for word in words:
+            # Replace action words with first synonym
+            if has_synonyms(word) and not is_compound_material(word):
+                syns = get_synonyms(word)
+                if syns:
+                    expanded_words.append(syns[0])
+                    logger.debug("Expanded action '%s' → '%s'", word, syns[0])
+                    continue
+            
+            # Replace compound materials with first variant
+            if word in compound_materials:
+                variants = compound_materials[word]
+                if variants:
+                    # Use first variant (most common)
+                    expanded_words.append(variants[0])
+                    logger.debug("Expanded compound '%s' → '%s'", word, variants[0])
+                    continue
+            
+            # Keep original word
+            expanded_words.append(word)
+        
+        return ' '.join(expanded_words)
 
     def _calculate_partial_similarity(self, text1: str, text2: str) -> float:
         logger.debug("Backward partial similarity between %r and %r", text1, text2)
