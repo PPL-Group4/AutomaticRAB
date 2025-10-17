@@ -2,6 +2,7 @@ from decimal import Decimal, ROUND_HALF_UP
 from typing import Dict, Mapping, Union
 from cost_weight.services.normalization import _normalize_weights
 from cost_weight.services.zero_division_handler import handle_zero_division
+from cost_weight.services.validators import validate_cost_inputs
 
 NumberLike = Union[str, float, int, Decimal]
 
@@ -20,6 +21,9 @@ def calculate_cost_weights(
     *,
     decimal_places: int = 2,
 ) -> Dict[str, Decimal]:
+    
+    validate_cost_inputs(item_costs)
+    
     base = Decimal(1).scaleb(-decimal_places)  # e.g., 0.01 for 2 dp
     hundred = Decimal("100")
 
