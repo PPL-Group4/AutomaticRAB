@@ -268,46 +268,55 @@ class CandidateProvider:
             logger.debug("Multi-word query: %s → ALL-WORD FILTER", significant_words)
             all_candidates = self._repository.get_all_ahs()
             
-            logger.debug("DEBUG: Total candidates: %d", len(all_candidates))
-            logger.debug("DEBUG: Significant words: %s", significant_words)
+            words_to_check = set()
+            for word in significant_words:
+                words_to_check.add(word)
+                # Add synonyms for this word
+                if has_synonyms(word):
+                    syns = get_synonyms(word)
+                    for syn in syns:
+                        if ' ' in syn:
+                            words_to_check.update(syn.split())
+                        else:
+                            words_to_check.add(syn)
+    
+            logger.debug("Expanded words to check: %s", words_to_check)
             
             # Filter by ALL significant words (must contain ALL words)
             filtered = []
             for cand in all_candidates:
                 norm_name = _norm_name(cand.name)
                 name_words_set = set(norm_name.split())
-                
-                # Check if ALL significant words are present (exact or fuzzy)
+                            
+                # Check how many words from our expanded set match
                 matched_count = 0
-                for sig_word in significant_words:
-                    # Exact match
-                    if sig_word in name_words_set:
+                for check_word in words_to_check:  # ← Use expanded words
+                    # Check for exact word match
+                    if check_word in name_words_set:
                         matched_count += 1
                         continue
                     
                     # Fuzzy match (for typos like "bonkar" → "bongkar")
                     for name_word in name_words_set:
-                        if len(sig_word) >= 4 and len(name_word) >= 4:
-                            similarity = difflib.SequenceMatcher(None, sig_word, name_word).ratio()
+                        if len(check_word) >= 4 and len(name_word) >= 4:
+                            similarity = difflib.SequenceMatcher(None, check_word, name_word).ratio()
                             if similarity >= 0.80:  # 80% threshold (more lenient)
                                 matched_count += 1
                                 break
                 
-                # Candidate must match ALL significant words
-                if matched_count >= len(significant_words):
+                # Need at least 2 matches for multi-word queries
+                if matched_count >= 2:
                     filtered.append(cand)
             
             if filtered:
-                logger.info("Multi-word filter: %d → %d candidates matching ALL words %s", 
-                            len(all_candidates), len(filtered), significant_words)
-                logger.debug("DEBUG: First 5 names: %s", [c.name for c in filtered[:5]])
+                logger.info(f"Multi-word filter: {len(all_candidates)} → {len(filtered)} candidates")
                 return filtered
             else:
                 # FALLBACK: If ALL-word filter returns nothing, try ANY-word filter
                 logger.debug("ALL-word filter returned 0, trying ANY-word fallback...")
                 filtered = [
                     c for c in all_candidates 
-                    if any(sig_word in _norm_name(c.name).split() for sig_word in significant_words)
+                    if any(check_word in _norm_name(c.name).split() for check_word in words_to_check)
                 ]
                 
                 if filtered:
