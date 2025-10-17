@@ -353,3 +353,20 @@ class MatchingServiceEdgeCaseTests(TestCase):
             self.assertEqual(len(result), 1)
             self.assertEqual(result[0]["code"], "A.01")
             mock_exact.assert_called_once()
+
+    @patch("automatic_job_matching.service.matching_service.TranslationService.translate_to_indonesian")
+    @patch("automatic_job_matching.service.matching_service.MatchingService.perform_exact_match")
+    def test_perform_best_match_calls_translation(self, mock_exact, mock_translate):
+        """Test that perform_best_match calls translation before matching."""
+        mock_translate.return_value = "pasang lantai beton"
+        mock_exact.return_value = {"id": 1, "code": "A.01", "name": "batu"}
+        
+        result = MatchingService.perform_best_match("install concrete floor")
+
+        mock_translate.assert_called_once_with("install concrete floor")
+
+        mock_exact.assert_called_once_with("pasang lantai beton")
+
+        self.assertEqual(result["code"], "A.01")
+
+    
