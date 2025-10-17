@@ -1,6 +1,7 @@
 import unittest
 from decimal import Decimal
 from unittest.mock import patch
+from cost_weight.services.cost_weight_calc import calculate_cost_weights
 
 from cost_weight.services.cost_weight_calc import (
     calculate_cost_weights,
@@ -228,3 +229,20 @@ class OrchestratorBehaviorTests(TransactionTestCase):
             self.assertEqual(updated, 2)
             self.assertTrue(bulk_upd.called)
             calc.assert_called_once()
+
+class CostWeightValidationTests(unittest.TestCase):
+    def test_negative_cost_rejected(self):
+        with self.assertRaises(ValueError):
+            calculate_cost_weights({"A": -100, "B": 200})
+
+    def test_invalid_cost_type_rejected(self):
+        with self.assertRaises(ValueError):
+            calculate_cost_weights({"A": "invalid", "B": 200})
+
+    def test_zero_cost_is_allowed(self):
+        res = calculate_cost_weights({"A": 0, "B": 100})
+        self.assertIn("A", res)
+        self.assertIn("B", res)
+
+if __name__ == "__main__":
+    unittest.main()
