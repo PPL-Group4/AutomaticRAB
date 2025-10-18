@@ -12,7 +12,7 @@ class DbAhsRepository:
 
         dot_variant = code.replace("-", ".")
         dash_variant = code.replace(".", "-")
-        variants = set([code, dot_variant, dash_variant])
+        variants = {code, dot_variant, dash_variant}
         logger.debug("Querying variants: %s", variants)
 
         q_filter = Q()

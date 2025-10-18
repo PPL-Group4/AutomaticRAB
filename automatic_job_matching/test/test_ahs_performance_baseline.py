@@ -55,7 +55,7 @@ class AhsRepositoryPerformanceBaseline(TransactionTestCase):
             times_ms.append(elapsed)
         
         print(f"\n{'='*60}")
-        print(f"BASELINE: by_code_like('AHS.0050')")
+        print("BASELINE: by_code_like('AHS.0050')")
         print(f"{'='*60}")
         print(f"Queries: {query_counts[0]} (all runs: {query_counts})")
         print(f"Avg time: {sum(times_ms)/len(times_ms):.2f}ms")
@@ -88,7 +88,7 @@ class AhsRepositoryPerformanceBaseline(TransactionTestCase):
             times_ms.append(elapsed)
         
         print(f"\n{'='*60}")
-        print(f"BASELINE: by_name_candidates('Material')")
+        print("BASELINE: by_name_candidates('Material')")
         print(f"{'='*60}")
         print(f"Queries: {query_counts[0]}")
         print(f"Avg time: {sum(times_ms)/len(times_ms):.2f}ms")

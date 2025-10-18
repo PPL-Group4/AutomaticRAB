@@ -58,17 +58,17 @@ class AhsRepositoryOptimizationTests(TransactionTestCase):
         times = []
         for _ in range(5):
             start = time.perf_counter()
-            result = repo.by_code_like("AHS.0050")
+            repo.by_code_like("AHS.0050")
             elapsed = (time.perf_counter() - start) * 1000
             times.append(elapsed)
         
         avg_time = sum(times) / len(times)
         
         print(f"\n{'='*60}")
-        print(f"SLA Test: by_code_like")
+        print("SLA Test: by_code_like")
         print(f"{'='*60}")
         print(f"Average: {avg_time:.2f}ms")
-        print(f"Target:  <100.00ms")
+        print("Target:  <100.00ms")
         print(f"Status:  {'✅ PASS' if avg_time < 100 else '❌ FAIL'}")
         print(f"{'='*60}\n")
         
@@ -88,17 +88,17 @@ class AhsRepositoryOptimizationTests(TransactionTestCase):
         times = []
         for _ in range(5):
             start = time.perf_counter()
-            result = repo.by_name_candidates("Material")
+            repo.by_name_candidates("Material")
             elapsed = (time.perf_counter() - start) * 1000
             times.append(elapsed)
         
         avg_time = sum(times) / len(times)
         
         print(f"\n{'='*60}")
-        print(f"SLA Test: by_name_candidates")
+        print("SLA Test: by_name_candidates")
         print(f"{'='*60}")
         print(f"Average: {avg_time:.2f}ms")
-        print(f"Target:  <100.00ms")
+        print("Target:  <100.00ms")
         print(f"Status:  {'✅ PASS' if avg_time < 100 else '❌ FAIL'}")
         print(f"{'='*60}\n")
         

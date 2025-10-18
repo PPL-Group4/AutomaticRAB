@@ -87,6 +87,7 @@ class PhraseSynonymMatchingTests(TransactionTestCase):
         else:
             matched_item = result
         
+        self.assertIsNotNone(matched_item)
         self.assertEqual(matched_item["code"], "AHS.001")
         print(f"✓ 'hebel' matched 'bata ringan': {matched_item['name']}")
     
@@ -101,7 +102,8 @@ class PhraseSynonymMatchingTests(TransactionTestCase):
         self.assertIsNotNone(result, "bata putih should match bata ringan")
         
         if isinstance(result, list):
-            matched_item = result[0] if result else None
+            self.assertGreater(len(result), 0)
+            matched_item = result[0]
         else:
             matched_item = result
         
@@ -120,7 +122,8 @@ class PhraseSynonymMatchingTests(TransactionTestCase):
         self.assertIsNotNone(result, "strauss pile should match borepile")
         
         if isinstance(result, list):
-            matched_item = result[0] if result else None
+            self.assertGreater(len(result), 0)
+            matched_item = result[0]
         else:
             matched_item = result
         
@@ -139,7 +142,8 @@ class PhraseSynonymMatchingTests(TransactionTestCase):
         self.assertIsNotNone(result, "cor beton should match pengecoran beton")
         
         if isinstance(result, list):
-            matched_item = result[0] if result else None
+            self.assertGreater(len(result), 0)
+            matched_item = result[0]
         else:
             matched_item = result
         
@@ -158,7 +162,8 @@ class PhraseSynonymMatchingTests(TransactionTestCase):
         self.assertIsNotNone(result, "cetakan should match bekisting")
         
         if isinstance(result, list):
-            matched_item = result[0] if result else None
+            self.assertGreater(len(result), 0)
+            matched_item = result[0]
         else:
             matched_item = result
         
@@ -181,7 +186,8 @@ class PhraseSynonymMatchingTests(TransactionTestCase):
         self.assertIsNotNone(result, "plumbing should match instalasi pipa")
         
         if isinstance(result, list):
-            matched_item = result[0] if result else None
+            self.assertGreater(len(result), 0)
+            matched_item = result[0]
         else:
             matched_item = result
         
@@ -200,7 +206,8 @@ class PhraseSynonymMatchingTests(TransactionTestCase):
         self.assertIsNotNone(result, "toilet should match kloset")
         
         if isinstance(result, list):
-            matched_item = result[0] if result else None
+            self.assertGreater(len(result), 0)
+            matched_item = result[0]
         else:
             matched_item = result
         
@@ -219,7 +226,8 @@ class PhraseSynonymMatchingTests(TransactionTestCase):
         self.assertIsNotNone(result, "wc should match kloset")
         
         if isinstance(result, list):
-            matched_item = result[0] if result else None
+            self.assertGreater(len(result), 0)
+            matched_item = result[0]
         else:
             matched_item = result
         
@@ -238,7 +246,8 @@ class PhraseSynonymMatchingTests(TransactionTestCase):
         self.assertIsNotNone(result, "sink should match wastafel")
         
         if isinstance(result, list):
-            matched_item = result[0] if result else None
+            self.assertGreater(len(result), 0)
+            matched_item = result[0]
         else:
             matched_item = result
         
@@ -261,7 +270,8 @@ class PhraseSynonymMatchingTests(TransactionTestCase):
         self.assertIsNotNone(result, "pasang should match pemasangan")
         
         if isinstance(result, list):
-            matched_item = result[0] if result else None
+            self.assertGreater(len(result), 0)
+            matched_item = result[0]
         else:
             matched_item = result
         
@@ -280,7 +290,8 @@ class PhraseSynonymMatchingTests(TransactionTestCase):
         self.assertIsNotNone(result, "lantai expose should match finishing lantai beton expose")
         
         if isinstance(result, list):
-            matched_item = result[0] if result else None
+            self.assertGreater(len(result), 0)
+            matched_item = result[0]
         else:
             matched_item = result
         
@@ -303,7 +314,8 @@ class PhraseSynonymMatchingTests(TransactionTestCase):
         self.assertIsNotNone(result, "pekerjaan listrik should match instalasi listrik")
         
         if isinstance(result, list):
-            matched_item = result[0] if result else None
+            self.assertGreater(len(result), 0)
+            matched_item = result[0]
         else:
             matched_item = result
         
@@ -322,7 +334,8 @@ class PhraseSynonymMatchingTests(TransactionTestCase):
         self.assertIsNotNone(result, "switch should match saklar")
         
         if isinstance(result, list):
-            matched_item = result[0] if result else None
+            self.assertGreater(len(result), 0)
+            matched_item = result[0]
         else:
             matched_item = result
         
@@ -341,7 +354,8 @@ class PhraseSynonymMatchingTests(TransactionTestCase):
         self.assertIsNotNone(result, "colokan should match stop kontak")
         
         if isinstance(result, list):
-            matched_item = result[0] if result else None
+            self.assertGreater(len(result), 0)
+            matched_item = result[0]
         else:
             matched_item = result
         
@@ -364,7 +378,8 @@ class PhraseSynonymMatchingTests(TransactionTestCase):
         self.assertIsNotNone(result, "pengecatan should match cat")
         
         if isinstance(result, list):
-            matched_item = result[0] if result else None
+            self.assertGreater(len(result), 0)
+            matched_item = result[0]
         else:
             matched_item = result
         
@@ -383,7 +398,8 @@ class PhraseSynonymMatchingTests(TransactionTestCase):
         self.assertIsNotNone(result, "cat duco should match pintu kayu duco")
         
         if isinstance(result, list):
-            matched_item = result[0] if result else None
+            self.assertGreater(len(result), 0)
+            matched_item = result[0]
         else:
             matched_item = result
         
