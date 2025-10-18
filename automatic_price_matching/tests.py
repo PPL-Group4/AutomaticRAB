@@ -4,6 +4,7 @@ from django.core.exceptions import ValidationError
 from django.test import SimpleTestCase
 from automatic_price_matching.ahs_cache import AhsCache
 from automatic_job_matching.service.exact_matcher import AhsRow
+from automatic_price_matching.total_cost import TotalCostCalculator
 from unittest.mock import patch
 from automatic_job_matching.repository.ahs_repo import DbAhsRepository
 from rencanakan_core.models import Ahs
@@ -225,6 +226,7 @@ class AhspValidationTests(SimpleTestCase):
 		self.assertIsInstance(cleaned["volume"], Decimal)
 		self.assertEqual(cleaned["volume"], Decimal("1.5"))
 		self.assertEqual(cleaned["unit_price"], Decimal("250000.00"))
+		self.assertEqual(cleaned["total_cost"], Decimal("375000.00"))
 		self.assertEqual(cleaned["components"][0]["coefficient"], Decimal("0.75"))
 
 	def test_accepts_decimal_inputs(self) -> None:
@@ -240,6 +242,66 @@ class AhspValidationTests(SimpleTestCase):
 
 		self.assertEqual(cleaned["volume"], Decimal("2.5"))
 		self.assertEqual(cleaned["unit_price"], Decimal("123.45"))
+		self.assertEqual(cleaned["total_cost"], Decimal("308.63"))
+
+	def test_total_cost_rounding(self) -> None:
+		payload = {
+			"code": "AT.03.003",
+			"name": "Beton",
+			"unit": "m3",
+			"volume": Decimal("2.333"),
+			"unit_price": Decimal("123.456"),
+		}
+
+		cleaned = self.validate(payload)
+		self.assertEqual(cleaned["total_cost"], Decimal("288.02"))
+
+	def test_total_cost_none_when_unit_price_missing(self) -> None:
+		payload = {
+			"code": "AT.04.004",
+			"name": "Tanah",
+			"unit": "m3",
+			"volume": Decimal("5"),
+		}
+
+		cleaned = self.validate(payload)
+		self.assertIsNone(cleaned["unit_price"])
+		self.assertIsNone(cleaned["total_cost"])
+
+	def test_total_cost_none_when_volume_missing(self) -> None:
+		payload = {
+			"code": "AT.05.005",
+			"name": "Pasir",
+			"unit": "m3",
+			"volume": None,
+			"unit_price": Decimal("111.11"),
+		}
+
+		cleaned = self.validate(payload)
+		self.assertIsNone(cleaned["volume"])
+		self.assertIsNone(cleaned["total_cost"])
+
+
+class TotalCostCalculatorTests(SimpleTestCase):
+	def test_calculates_when_both_decimals(self) -> None:
+		result = TotalCostCalculator.calculate(Decimal("10"), Decimal("3.333"))
+		self.assertEqual(result, Decimal("33.33"))
+
+	def test_returns_none_when_missing_inputs(self) -> None:
+		self.assertIsNone(TotalCostCalculator.calculate(None, Decimal("5")))
+		self.assertIsNone(TotalCostCalculator.calculate(Decimal("5"), None))
+
+	def test_rounds_half_up(self) -> None:
+		result = TotalCostCalculator.calculate(Decimal("1.005"), Decimal("1"))
+		self.assertEqual(result, Decimal("1.01"))
+
+	def test_handles_negative_values(self) -> None:
+		result = TotalCostCalculator.calculate(Decimal("-2"), Decimal("3.5"))
+		self.assertEqual(result, Decimal("-7.00"))
+
+	def test_returns_none_for_non_decimal_inputs(self) -> None:
+		self.assertIsNone(TotalCostCalculator.calculate(Decimal("2"), 3))
+		self.assertIsNone(TotalCostCalculator.calculate("2", Decimal("3")))
 class FallbackValidatorTests(SimpleTestCase):
     """Expectations for fallback behaviour when AHSP match is not found."""
 
