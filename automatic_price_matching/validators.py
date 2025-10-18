@@ -7,6 +7,8 @@ from typing import Any, Dict, List, MutableMapping, Optional, TypedDict
 
 from django.core.exceptions import ValidationError
 
+from automatic_price_matching.total_cost import TotalCostCalculator
+
 # ---------------------------------------------------------------------------
 # Regex patterns for identifying numeric formatting variants & disallowed
 # expression-like inputs (we explicitly reject multiplication / equations so
@@ -217,6 +219,10 @@ def validate_ahsp_payload(payload: Any) -> Dict[str, Any]:
 
     # Optional numeric field
     cleaned["unit_price"] = _coerce_decimal(errors, payload.get("unit_price"), "unit_price")
+
+    volume = cleaned.get("volume")
+    unit_price = cleaned.get("unit_price")
+    cleaned["total_cost"] = TotalCostCalculator.calculate(volume, unit_price)
 
     # Components ----------------------------------------------------------
     cleaned["components"] = _clean_components(errors, payload.get("components", []))
