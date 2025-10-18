@@ -254,159 +254,342 @@ class CandidateProvider:
         detected_compounds = self._detect_compound_materials_in_input(normalized_input)
         logger.debug("Detected compound materials: %s", detected_compounds)
         
-        # Single-word material query: strict material filtering
-        if len(words) == 1 and material_words:
-            material_word = material_words[0]
-            logger.debug("Single material word '%s' → MATERIAL MODE", material_word)
-            all_candidates = self._repository.get_all_ahs()
-            
-            # Check if it's a compound material
-            if material_word in detected_compounds:
-                compound_phrases = detected_compounds[material_word]
-                filtered = [
-                    c for c in all_candidates 
-                    if self._candidate_contains_compound(c.name, material_word, compound_phrases)
-                ]
-            else:
-                # Regular exact word matching
-                filtered = [
-                    c for c in all_candidates 
-                    if material_word in _norm_name(c.name).split()
-                ]
-            
-            if filtered:
-                logger.info("Single-word material-mode: %d → %d candidates containing '%s'",
-                           len(all_candidates), len(filtered), material_word)
-                return filtered
+        # Try single-word material query
+        single_word_result = self._try_single_word_material_query(
+            words, material_words, detected_compounds
+        )
+        if single_word_result is not None:
+            return single_word_result
         
-        # Multi-word query with significant words: ALL-word matching with compound support
-        elif len(significant_words) >= 2:
-            logger.debug("Multi-word query: %s → ALL-WORD FILTER (compound-aware)", significant_words)
-            all_candidates = self._repository.get_all_ahs()
-            
-            # Determine query type for better filtering strategy
-            has_material = bool(material_words)
-            has_action = bool(action_words)
-            has_compound = bool(detected_compounds)
-            
-            logger.debug("Query analysis: material=%s, action=%s, compound=%s", has_material, has_action, has_compound)
-            
-            # Filter by ALL significant words (compound-aware matching)
-            filtered = []
-            for cand in all_candidates:
-                norm_name = _norm_name(cand.name)
-                name_words_set = set(norm_name.split())
-                
-                matched_count = 0
-                
-                for sig_word in significant_words:
-                    # COMPOUND MATERIAL MATCHING (only for detected compounds)
-                    if sig_word in detected_compounds:
-                        compound_phrases = detected_compounds[sig_word]
-                        if self._candidate_contains_compound(norm_name, sig_word, compound_phrases):
-                            matched_count += 1
-                            logger.debug("COMPOUND MATCH: '%s' found in '%s'", sig_word, cand.name)
-                            continue
-                    
-                    # REGULAR WORD MATCHING (with synonyms)
-                    word_matched = False
-                    
-                    # Check exact match
-                    if sig_word in name_words_set:
-                        word_matched = True
-                        logger.debug("EXACT MATCH: '%s' found in '%s'", sig_word, cand.name)
-                    else:
-                        # Check synonyms (ONLY for action words, NOT materials)
-                        if has_synonyms(sig_word) and WordWeightConfig._is_action_word(sig_word):
-                            for syn in get_synonyms(sig_word):
-                                if ' ' not in syn and syn in name_words_set:
-                                    word_matched = True
-                                    logger.debug("SYNONYM MATCH: '%s' (for '%s') found in '%s'", 
-                                               syn, sig_word, cand.name)
-                                    break
-                    
-                    # Fuzzy match (for typos) - stricter threshold
-                    if not word_matched and len(sig_word) >= 4:
-                        for name_word in name_words_set:
-                            if len(name_word) >= 4:
-                                similarity = difflib.SequenceMatcher(None, sig_word, name_word).ratio()
-                                if similarity >= 0.85:  # Stricter threshold
-                                    word_matched = True
-                                    logger.debug("FUZZY MATCH: '%s' ≈ '%s' (%.2f) in '%s'", 
-                                               sig_word, name_word, similarity, cand.name)
-                                    break
-                    
-                    if word_matched:
-                        matched_count += 1
-                
-                # Need ALL significant words to match
-                if matched_count >= len(significant_words):
-                    filtered.append(cand)
-                    logger.debug("CANDIDATE ACCEPTED: '%s' (matched %d/%d words)", 
-                               cand.name, matched_count, len(significant_words))
-            
-            if filtered:
-                logger.info("Multi-word filter (compound-aware): %d → %d candidates matching ALL words %s", 
-                            len(all_candidates), len(filtered), significant_words)
-                return filtered
-            else:
-                # FALLBACK: Only for material-based queries
-                logger.debug("ALL-word filter returned 0, checking if fallback appropriate...")
-                
-                # Fallback ONLY if query has material words (not for generic action-only queries)
-                if has_material:
-                    logger.debug("Material query detected, trying ANY-material fallback...")
-                    filtered = []
-                    for cand in all_candidates:
-                        norm_name = _norm_name(cand.name)
-                        name_words_set = set(norm_name.split())
-                        
-                        # Check if ANY material word matches (with compounds)
-                        for sig_word in significant_words:
-                            # Skip action words in fallback - only match materials
-                            if WordWeightConfig._is_action_word(sig_word):
-                                continue
-                            
-                            # Check compound
-                            if sig_word in detected_compounds:
-                                if self._candidate_contains_compound(norm_name, sig_word, detected_compounds[sig_word]):
-                                    filtered.append(cand)
-                                    logger.debug("FALLBACK COMPOUND MATCH: '%s' in '%s'", sig_word, cand.name)
-                                    break
-                            
-                            # Check regular material word
-                            if sig_word in name_words_set:
-                                filtered.append(cand)
-                                logger.debug("FALLBACK MATERIAL MATCH: '%s' in '%s'", sig_word, cand.name)
-                                break
-                    
-                    if filtered:
-                        logger.info("Multi-word filter (ANY-material fallback): %d → %d candidates", 
-                                  len(all_candidates), len(filtered))
-                        return filtered
-                
-                logger.info("No appropriate fallback available, returning empty candidates")
-                return []
+        # Try multi-word query with significant words
+        multi_word_result = self._try_multi_word_query(
+            significant_words, material_words, action_words, detected_compounds
+        )
+        if multi_word_result is not None:
+            return multi_word_result
         
-        # Single material word query but also has action word
-        elif material_words:
-            logger.debug("Material + other words: %s → MATERIAL FILTER", material_words)
-            all_candidates = self._repository.get_all_ahs()
+        # Try material filter mode
+        material_filter_result = self._try_material_filter_mode(material_words)
+        if material_filter_result is not None:
+            return material_filter_result
+        
+        # Fallback to head token + synonym expansion
+        return self._get_candidates_with_synonym_expansion(head)
+    
+    def _try_single_word_material_query(
+        self, 
+        words: List[str], 
+        material_words: List[str], 
+        detected_compounds: dict
+    ) -> Optional[List[AhsRow]]:
+        """Handle single-word material query with strict material filtering."""
+        if len(words) != 1 or not material_words:
+            return None
+        
+        material_word = material_words[0]
+        logger.debug("Single material word '%s' → MATERIAL MODE", material_word)
+        all_candidates = self._repository.get_all_ahs()
+        
+        # Check if it's a compound material
+        if material_word in detected_compounds:
+            compound_phrases = detected_compounds[material_word]
             filtered = [
                 c for c in all_candidates 
-                if any(mat_word in _norm_name(c.name).split() for mat_word in material_words)
+                if self._candidate_contains_compound(c.name, material_word, compound_phrases)
             ]
-            
-            if filtered:
-                logger.info("Material-mode: %d → %d candidates containing material words",
-                           len(all_candidates), len(filtered))
-                return filtered
+        else:
+            # Regular exact word matching
+            filtered = [
+                c for c in all_candidates 
+                if material_word in _norm_name(c.name).split()
+            ]
         
-        # For non-material multi-word queries, use head token + synonym expansion
+        if filtered:
+            logger.info("Single-word material-mode: %d → %d candidates containing '%s'",
+                       len(all_candidates), len(filtered), material_word)
+            return filtered
+        
+        return None
+    
+    def _try_multi_word_query(
+        self,
+        significant_words: List[str],
+        material_words: List[str],
+        action_words: List[str],
+        detected_compounds: dict
+    ) -> Optional[List[AhsRow]]:
+        """Handle multi-word query with ALL-word matching and compound support."""
+        if len(significant_words) < 2:
+            return None
+        
+        logger.debug("Multi-word query: %s → ALL-WORD FILTER (compound-aware)", significant_words)
+        all_candidates = self._repository.get_all_ahs()
+        
+        # Determine query type for better filtering strategy
+        has_material = bool(material_words)
+        has_action = bool(action_words)
+        has_compound = bool(detected_compounds)
+        
+        logger.debug("Query analysis: material=%s, action=%s, compound=%s", has_material, has_action, has_compound)
+        
+        # Filter by ALL significant words (compound-aware matching)
+        filtered = self._filter_candidates_all_words(
+            all_candidates, significant_words, detected_compounds
+        )
+        
+        if filtered:
+            logger.info("Multi-word filter (compound-aware): %d → %d candidates matching ALL words %s", 
+                        len(all_candidates), len(filtered), significant_words)
+            return filtered
+        
+        # Try fallback if appropriate
+        return self._try_multi_word_fallback(
+            all_candidates, significant_words, detected_compounds, has_material
+        )
+    
+    def _filter_candidates_all_words(
+        self,
+        candidates: List[AhsRow],
+        significant_words: List[str],
+        detected_compounds: dict
+    ) -> List[AhsRow]:
+        """Filter candidates requiring ALL significant words to match."""
+        filtered = []
+        
+        for cand in candidates:
+            norm_name = _norm_name(cand.name)
+            name_words_set = set(norm_name.split())
+            
+            matched_count = self._count_matched_words(
+                norm_name, name_words_set, significant_words, detected_compounds, cand.name
+            )
+            
+            # Need ALL significant words to match
+            if matched_count >= len(significant_words):
+                filtered.append(cand)
+                logger.debug("CANDIDATE ACCEPTED: '%s' (matched %d/%d words)", 
+                           cand.name, matched_count, len(significant_words))
+        
+        return filtered
+    
+    def _count_matched_words(
+        self,
+        norm_name: str,
+        name_words_set: set,
+        significant_words: List[str],
+        detected_compounds: dict,
+        candidate_name: str
+    ) -> int:
+        """Count how many significant words match in candidate."""
+        matched_count = 0
+        
+        for sig_word in significant_words:
+            # COMPOUND MATERIAL MATCHING (only for detected compounds)
+            if sig_word in detected_compounds:
+                compound_phrases = detected_compounds[sig_word]
+                if self._candidate_contains_compound(norm_name, sig_word, compound_phrases):
+                    matched_count += 1
+                    logger.debug("COMPOUND MATCH: '%s' found in '%s'", sig_word, candidate_name)
+                    continue
+            
+            # REGULAR WORD MATCHING (with synonyms and fuzzy)
+            if self._check_word_match(sig_word, name_words_set, candidate_name):
+                matched_count += 1
+        
+        return matched_count
+    
+    def _check_word_match(
+        self,
+        sig_word: str,
+        name_words_set: set,
+        candidate_name: str
+    ) -> bool:
+        """Check if a word matches through exact, synonym, or fuzzy matching."""
+        # Check exact match
+        if sig_word in name_words_set:
+            logger.debug("EXACT MATCH: '%s' found in '%s'", sig_word, candidate_name)
+            return True
+        
+        # Check synonyms (ONLY for action words, NOT materials)
+        if self._check_synonym_match(sig_word, name_words_set, candidate_name):
+            return True
+        
+        # Fuzzy match (for typos) - stricter threshold
+        if self._check_fuzzy_match(sig_word, name_words_set, candidate_name):
+            return True
+        
+        return False
+    
+    def _check_synonym_match(
+        self,
+        sig_word: str,
+        name_words_set: set,
+        candidate_name: str
+    ) -> bool:
+        """Check if word matches through synonyms (action words only)."""
+        if not has_synonyms(sig_word) or not WordWeightConfig._is_action_word(sig_word):
+            return False
+        
+        for syn in get_synonyms(sig_word):
+            if ' ' not in syn and syn in name_words_set:
+                logger.debug("SYNONYM MATCH: '%s' (for '%s') found in '%s'", 
+                           syn, sig_word, candidate_name)
+                return True
+        
+        return False
+    
+    def _check_fuzzy_match(
+        self,
+        sig_word: str,
+        name_words_set: set,
+        candidate_name: str
+    ) -> bool:
+        """Check if word matches through fuzzy matching (typo tolerance)."""
+        if len(sig_word) < 4:
+            return False
+        
+        for name_word in name_words_set:
+            if len(name_word) >= 4:
+                similarity = difflib.SequenceMatcher(None, sig_word, name_word).ratio()
+                if similarity >= 0.85:  # Stricter threshold
+                    logger.debug("FUZZY MATCH: '%s' ≈ '%s' (%.2f) in '%s'", 
+                               sig_word, name_word, similarity, candidate_name)
+                    return True
+        
+        return False
+    
+    def _try_multi_word_fallback(
+        self,
+        all_candidates: List[AhsRow],
+        significant_words: List[str],
+        detected_compounds: dict,
+        has_material: bool
+    ) -> Optional[List[AhsRow]]:
+        """Try fallback strategy for multi-word queries that found no matches."""
+        logger.debug("ALL-word filter returned 0, checking if fallback appropriate...")
+        
+        # Fallback ONLY if query has material words (not for generic action-only queries)
+        if not has_material:
+            logger.info("No appropriate fallback available, returning empty candidates")
+            return []
+        
+        logger.debug("Material query detected, trying ANY-material fallback...")
+        filtered = self._filter_candidates_any_material(
+            all_candidates, significant_words, detected_compounds
+        )
+        
+        if filtered:
+            logger.info("Multi-word filter (ANY-material fallback): %d → %d candidates", 
+                      len(all_candidates), len(filtered))
+            return filtered
+        
+        logger.info("No appropriate fallback available, returning empty candidates")
+        return []
+    
+    def _filter_candidates_any_material(
+        self,
+        candidates: List[AhsRow],
+        significant_words: List[str],
+        detected_compounds: dict
+    ) -> List[AhsRow]:
+        """Filter candidates matching ANY material word."""
+        filtered = []
+        
+        for cand in candidates:
+            if self._candidate_matches_any_material(cand, significant_words, detected_compounds):
+                filtered.append(cand)
+        
+        return filtered
+    
+    def _candidate_matches_any_material(
+        self,
+        candidate: AhsRow,
+        significant_words: List[str],
+        detected_compounds: dict
+    ) -> bool:
+        """Check if candidate matches any material word from significant words."""
+        norm_name = _norm_name(candidate.name)
+        name_words_set = set(norm_name.split())
+        
+        for sig_word in significant_words:
+            # Skip action words in fallback - only match materials
+            if WordWeightConfig._is_action_word(sig_word):
+                continue
+            
+            # Check compound match
+            if self._check_compound_material_match(norm_name, sig_word, detected_compounds, candidate.name):
+                return True
+            
+            # Check regular material word
+            if sig_word in name_words_set:
+                logger.debug("FALLBACK MATERIAL MATCH: '%s' in '%s'", sig_word, candidate.name)
+                return True
+        
+        return False
+    
+    def _check_compound_material_match(
+        self,
+        norm_name: str,
+        sig_word: str,
+        detected_compounds: dict,
+        candidate_name: str
+    ) -> bool:
+        """Check if a compound material matches in the candidate."""
+        if sig_word not in detected_compounds:
+            return False
+        
+        if self._candidate_contains_compound(norm_name, sig_word, detected_compounds[sig_word]):
+            logger.debug("FALLBACK COMPOUND MATCH: '%s' in '%s'", sig_word, candidate_name)
+            return True
+        
+        return False
+    
+    def _try_material_filter_mode(self, material_words: List[str]) -> Optional[List[AhsRow]]:
+        """Handle queries with material words using material filtering."""
+        if not material_words:
+            return None
+        
+        logger.debug("Material + other words: %s → MATERIAL FILTER", material_words)
+        all_candidates = self._repository.get_all_ahs()
+        filtered = [
+            c for c in all_candidates 
+            if any(mat_word in _norm_name(c.name).split() for mat_word in material_words)
+        ]
+        
+        if filtered:
+            logger.info("Material-mode: %d → %d candidates containing material words",
+                       len(all_candidates), len(filtered))
+            return filtered
+        
+        return None
+    
+    def _get_candidates_with_synonym_expansion(self, head: str) -> List[AhsRow]:
+        """Get candidates using head token with synonym expansion."""
         candidates = self._repository.by_name_candidates(head)
         logger.debug("Direct '%s' → %d candidates", head, len(candidates))
         
         # SYNONYM EXPANSION
+        synonyms_to_search = self._get_synonyms_to_search(head)
+        
+        for synonym in synonyms_to_search:
+            syn_candidates = self._repository.by_name_candidates(synonym)
+            candidates.extend(syn_candidates)
+            if syn_candidates:
+                logger.debug("'%s' → +%d candidates", synonym, len(syn_candidates))
+        
+        # Deduplicate
+        candidates = self._deduplicate_candidates(candidates)
+        logger.debug("After dedup: %d unique candidates", len(candidates))
+        
+        if not candidates:
+            logger.debug("No candidates → fallback to all AHS")
+            candidates = self._repository.get_all_ahs()
+        
+        logger.info("CandidateProvider returned %d candidates", len(candidates))
+        return candidates
+    
+    def _get_synonyms_to_search(self, head: str) -> set:
+        """Get all synonyms to search for the head token."""
         synonyms_to_search = set()
         
         if has_synonyms(head):
@@ -422,28 +605,17 @@ class CandidateProvider:
             except Exception as e:
                 logger.warning("Embedding expansion failed: %s", e)
         
-        for synonym in synonyms_to_search:
-            syn_candidates = self._repository.by_name_candidates(synonym)
-            candidates.extend(syn_candidates)
-            if syn_candidates:
-                logger.debug("'%s' → +%d candidates", synonym, len(syn_candidates))
-        
-        # Deduplicate
+        return synonyms_to_search
+    
+    def _deduplicate_candidates(self, candidates: List[AhsRow]) -> List[AhsRow]:
+        """Remove duplicate candidates based on ID."""
         seen = set()
         unique = []
         for c in candidates:
             if c.id not in seen:
                 seen.add(c.id)
                 unique.append(c)
-        candidates = unique
-        logger.debug("After dedup: %d unique candidates", len(candidates))
-        
-        if not candidates:
-            logger.debug("No candidates → fallback to all AHS")
-            candidates = self._repository.get_all_ahs()
-        
-        logger.info("CandidateProvider returned %d candidates", len(candidates))
-        return candidates
+        return unique
     
     def _detect_compound_materials_in_input(self, normalized_input: str) -> dict:
         """Detect which compound materials are present in the input.

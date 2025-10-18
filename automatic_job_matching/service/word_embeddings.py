@@ -134,13 +134,40 @@ class SemanticMatcher:
         logger.debug("Encoding %d candidates...", len(all_candidates))
         
         # Encode query
-        try:
-            query_embedding = self.model.encode(normalized_query, convert_to_tensor=True)
-        except Exception as e:
-            logger.error("Failed to encode query: %s", e)
+        query_embedding = self._encode_query(normalized_query)
+        if query_embedding is None:
             return []
         
         # Encode candidates (with caching)
+        candidate_embeddings, candidate_objects = self._encode_candidates(all_candidates)
+        
+        # Early return if no valid candidates after encoding
+        if not candidate_embeddings:
+            logger.warning("No valid candidates after encoding")
+            return []
+        
+        # Calculate similarities and get results
+        results = self._calculate_and_rank_matches(
+            query_embedding, 
+            candidate_embeddings, 
+            candidate_objects, 
+            limit, 
+            min_similarity
+        )
+        
+        logger.info("Semantic matching found %d results", len(results))
+        return results
+    
+    def _encode_query(self, normalized_query: str):
+        """Encode query string into embedding."""
+        try:
+            return self.model.encode(normalized_query, convert_to_tensor=True)
+        except Exception as e:
+            logger.error("Failed to encode query: %s", e)
+            return None
+    
+    def _encode_candidates(self, all_candidates: List) -> tuple:
+        """Encode all candidates with caching."""
         candidate_embeddings = []
         candidate_objects = []
         
@@ -151,20 +178,33 @@ class SemanticMatcher:
             
             # Check cache
             if norm_name not in self._cache:
-                try:
-                    self._cache[norm_name] = self.model.encode(norm_name, convert_to_tensor=True)
-                except Exception as e:
-                    logger.warning("Failed to encode candidate '%s': %s", norm_name, e)
+                embedding = self._encode_single_candidate(norm_name)
+                if embedding is None:
                     continue
+                self._cache[norm_name] = embedding
             
             candidate_embeddings.append(self._cache[norm_name])
             candidate_objects.append(cand)
         
-        # Early return if no valid candidates after encoding
-        if not candidate_embeddings:
-            logger.warning("No valid candidates after encoding")
-            return []
-        
+        return candidate_embeddings, candidate_objects
+    
+    def _encode_single_candidate(self, norm_name: str):
+        """Encode a single candidate name."""
+        try:
+            return self.model.encode(norm_name, convert_to_tensor=True)
+        except Exception as e:
+            logger.warning("Failed to encode candidate '%s': %s", norm_name, e)
+            return None
+    
+    def _calculate_and_rank_matches(
+        self, 
+        query_embedding, 
+        candidate_embeddings: List, 
+        candidate_objects: List, 
+        limit: int, 
+        min_similarity: float
+    ) -> List[dict]:
+        """Calculate similarities and rank matches."""
         # Calculate cosine similarities
         try:
             similarities = util.cos_sim(query_embedding, candidate_embeddings)[0]
@@ -175,7 +215,25 @@ class SemanticMatcher:
         # Sort by similarity
         top_indices = similarities.argsort(descending=True)
         
+        return self._build_results(
+            top_indices, 
+            similarities, 
+            candidate_objects, 
+            limit, 
+            min_similarity
+        )
+    
+    def _build_results(
+        self, 
+        top_indices, 
+        similarities, 
+        candidate_objects: List, 
+        limit: int, 
+        min_similarity: float
+    ) -> List[dict]:
+        """Build result list from top matches."""
         results = []
+        
         for idx in top_indices[:limit * 2]:  # Get 2x to filter by threshold
             idx = idx.item()
             score = similarities[idx].item()
@@ -196,5 +254,4 @@ class SemanticMatcher:
             if len(results) >= limit:
                 break
         
-        logger.info("Semantic matching found %d results", len(results))
         return results
