@@ -1,5 +1,5 @@
 from decimal import Decimal
-
+import json
 from django.core.exceptions import ValidationError
 from django.test import SimpleTestCase
 from automatic_price_matching.ahs_cache import AhsCache
