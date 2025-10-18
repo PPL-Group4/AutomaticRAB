@@ -8,6 +8,8 @@ from automatic_price_matching.total_cost import TotalCostCalculator
 from unittest.mock import patch
 from automatic_job_matching.repository.ahs_repo import DbAhsRepository
 from rencanakan_core.models import Ahs
+from django.test import TestCase, Client
+from django.urls import reverse
 class AhspValidationTests(SimpleTestCase):
 
 
@@ -464,3 +466,47 @@ class AhsRepositoryCacheIntegrationTests(SimpleTestCase):
 
             # ✅ Assert total calls unchanged → cache prevents new lookups
             self.assertEqual(first_call_count, second_call_count)
+class RecomputeTotalCostTDDTests(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.url = reverse("recompute_total_cost")
+
+    # ---------- RED TEST CASES ----------
+    def test_invalid_input_should_fail(self):
+        """🔴 Should return error when given invalid input."""
+        payload = {"volume": "abc", "unit_price": "xyz"}
+        response = self.client.post(self.url, json.dumps(payload), content_type="application/json")
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("error", response.json())
+
+    def test_missing_fields_should_default_to_zero(self):
+        """🔴 Should still work when one field is missing."""
+        payload = {"volume": 3.5}
+        response = self.client.post(self.url, json.dumps(payload), content_type="application/json")
+        data = response.json()
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(Decimal(data["total_cost"]), Decimal("0"))
+
+    def test_malformed_json_returns_error(self):
+        """🔴 Should safely handle malformed JSON input."""
+        response = self.client.post(self.url, "not-a-json", content_type="application/json")
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("error", response.json())
+
+    # ---------- GREEN TEST CASES ----------
+    def test_valid_computation_matches_calculator(self):
+        """🟢 Should compute correct total using TotalCostCalculator."""
+        payload = {"volume": "2.5", "unit_price": "1500000"}
+        response = self.client.post(self.url, json.dumps(payload), content_type="application/json")
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        expected = TotalCostCalculator.calculate(Decimal("2.5"), Decimal("1500000"))
+        self.assertEqual(Decimal(data["total_cost"]), expected)
+
+    def test_zero_values_returns_zero(self):
+        """🟢 Should return 0 total when volume or price is zero."""
+        for case in [{"volume": 0, "unit_price": 1000}, {"volume": 2, "unit_price": 0}]:
+            response = self.client.post(self.url, json.dumps(case), content_type="application/json")
+            self.assertEqual(response.status_code, 200)
+            data = response.json()
+            self.assertEqual(Decimal(data["total_cost"]), Decimal("0"))
