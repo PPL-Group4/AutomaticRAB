@@ -284,18 +284,16 @@ class ConfidenceScorerStrategyTests(SimpleTestCase):
         # Low similarity should not get bonus
         low_sim = self.fuzzy.score("xyz", "abc def")
         self.assertLess(low_sim, 0.3)
-    
+        
     def test_significant_word_detection_for_bonuses(self):
         """Test that significant words are properly identified for bonuses."""
         # Query with 2+ significant words (>=4 chars)
         significant = self.fuzzy.score("bongkar batu", "bongkar pasangan batu")
         
-        # Query with short words (<4 chars)
-        short_words = self.fuzzy.score("abc def", "abc def ghi")
-        
         # Significant words should produce higher scores
         self.assertGreater(significant, 0.4)
-    
+
+        
     def test_overlap_metrics_with_various_inputs(self):
         """Test overlap metric calculations with various input combinations."""
         # Normal case
@@ -330,14 +328,11 @@ class ConfidenceScorerStrategyTests(SimpleTestCase):
         self.assertGreater(score, 0.0, "Partial match should have positive score")
         self.assertLess(score, 1.0, "Partial match shouldn't be perfect")
         self.assertGreater(score, 0.4, "Good partial match should score reasonably high")
-    
+        
     def test_high_quality_matches_receive_appropriate_bonuses(self):
         """Test that high-quality matches receive appropriate bonuses."""
         # Multi-word match with significant overlap
         high_quality = self.fuzzy.score("bongkar batu", "bongkar 1 m3 batu")
-        
-        # Single word match
-        single_word = self.fuzzy.score("batu", "batu belah")
         
         # Multi-word should score higher due to bonus
         self.assertGreater(high_quality, 0.45, "Multi-word matches should get bonuses")

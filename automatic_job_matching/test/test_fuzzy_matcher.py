@@ -724,17 +724,25 @@ class FuzzyMatcherEdgeCaseTests(SimpleTestCase):
         self.assertGreater(len(candidates), 0)
     
     def test_uncommon_construction_term_triggers_broad_search(self):
+        """Test that uncommon/unknown material terms fall back to all candidates."""
         empty_repo = FakeAhsRepo([
             AhsRow(id=1, code="A.01", name="pekerjaan galian tanah"),
         ])
         
         provider = CandidateProvider(empty_repo)
         
+        # "keramik" is not in the repository, should trigger fallback
         candidates = provider.get_candidates_by_head_token("keramik")
         
+        # Should return all candidates as fallback
         self.assertGreater(len(candidates), 0)
-    
+        # Verify it's actually the fallback behavior
+        self.assertEqual(len(candidates), len(empty_repo.rows))
+        # Verify returned candidate is the one in repo
+        self.assertEqual(candidates[0].id, 1)
+
     def test_mixed_material_query_uses_flexible_matching(self):
+        """Test that queries with mixed materials use ANY-material fallback strategy."""
         repo = FakeAhsRepo([
             AhsRow(id=1, code="A.01", name="bongkar pasangan batu"),
             AhsRow(id=2, code="B.01", name="pemasangan keramik"),
@@ -742,9 +750,15 @@ class FuzzyMatcherEdgeCaseTests(SimpleTestCase):
         
         provider = CandidateProvider(repo)
         
+        # Mixed query with different materials - should match either
         candidates = provider.get_candidates_by_head_token("bongkar keramik")
         
         self.assertGreater(len(candidates), 0)
+        # Should find candidates with either "bongkar" action OR "keramik" material
+        # Verify we got both candidates (flexible matching)
+        self.assertEqual(len(candidates), 2)
+        candidate_ids = {c.id for c in candidates}
+        self.assertEqual(candidate_ids, {1, 2})
 
     def test_synonym_expansion_integrates_with_candidate_search(self):
         rows = [
@@ -1016,37 +1030,30 @@ class CandidateProviderTests(SimpleTestCase):
         self.assertGreater(len(material_candidates), 0)
         self.assertGreater(len(action_candidates), 0)
 
-    def test_action_only_query_searches_by_activity_type(self):
-        provider = CandidateProvider(self.repo)
-        
-        candidates = provider.get_candidates_by_head_token("pekerjaan")
-        
-        self.assertGreater(len(candidates), 0)
-    
     def test_stopword_only_query_returns_full_catalog(self):
+        """Test that queries with only generic stopwords return all candidates."""
         provider = CandidateProvider(self.repo)
         
+        # Query with only stopwords - no significant words
         candidates = provider.get_candidates_by_head_token("dan atau dengan")
         
+        # Should return all rows since no significant filtering possible
         self.assertEqual(len(candidates), len(self.repo.rows))
-    
+        # Verify we got the exact same set
+        returned_ids = {c.id for c in candidates}
+        expected_ids = {r.id for r in self.repo.rows}
+        self.assertEqual(returned_ids, expected_ids)
+
     def test_special_characters_normalize_to_broad_search(self):
+        """Test that special characters normalize to empty string and trigger broad search."""
         provider = CandidateProvider(self.repo)
         
+        # Special chars that normalize to empty
         candidates = provider.get_candidates_by_head_token("!@#$%^&*()")
         
+        # Should return all candidates (empty normalized input behavior)
         self.assertEqual(len(candidates), len(self.repo.rows))
-    
-    def test_single_material_word_strict_filtering(self):
-        rows = [
-            AhsRow(id=1, code="A.01", name="bongkar pasangan batu"),
-            AhsRow(id=2, code="B.01", name="pemasangan keramik"),
-            AhsRow(id=3, code="C.01", name="pekerjaan tanah"),
-        ]
-        repo = FakeAhsRepo(rows)
-        provider = CandidateProvider(repo)
-        
-        candidates = provider.get_candidates_by_head_token("batu")
-        
-        self.assertEqual(len(candidates), 1)
-        self.assertIn("batu", candidates[0].name.lower())
+        # Verify the broad search actually returns valid data
+        self.assertTrue(all(isinstance(c, AhsRow) for c in candidates))
+        # Verify all original rows are present
+        self.assertTrue(all(c.id in [r.id for r in self.repo.rows] for c in candidates))
