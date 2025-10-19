@@ -276,3 +276,20 @@ class ChartTransformerTests(TestCase):
             {"label": "B", "value": 66.7},
             {"label": "A", "value": 33.3},
         ])
+        
+class ChartEndpointTests(TestCase):
+    def setUp(self):
+        from django.apps import apps
+        from cost_weight.services.recalc_orchestrator import ITEM_MODEL, JOB_MODEL, ITEM_COST_FIELD, ITEM_FK_TO_JOB
+        Item = apps.get_model(ITEM_MODEL); Job = apps.get_model(JOB_MODEL)
+        self.job = Job.objects.create(name="J Chart")
+        self.a = Item.objects.create(**{ITEM_FK_TO_JOB: self.job, "name": "A", ITEM_COST_FIELD: 200})
+        self.b = Item.objects.create(**{ITEM_FK_TO_JOB: self.job, "name": "B", ITEM_COST_FIELD: 200})
+
+    def test_chart_json_structure(self):
+        url = f"/cost-weight/jobs/{self.job.pk}/chart-data/?dp=1&sort=desc"
+        resp = self.client.get(url)
+        self.assertEqual(resp.status_code, 200)
+        payload = resp.json()
+        self.assertIn("items", payload)
+        self.assertTrue(all(set(r.keys()) == {"label","value"} for r in payload["items"]))
