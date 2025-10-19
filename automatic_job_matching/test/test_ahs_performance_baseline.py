@@ -1,4 +1,3 @@
-# automatic_job_matching/test/test_ahs_performance_baseline.py
 from django.test import TransactionTestCase
 from django.db import connection
 from django.test.utils import CaptureQueriesContext
@@ -17,16 +16,17 @@ class AhsRepositoryPerformanceBaseline(TransactionTestCase):
         with connection.cursor() as cursor:
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS ahs (
-                    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+                    id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
                     reference_group_id BIGINT NULL,
                     code VARCHAR(50) NULL,
                     name VARCHAR(500) NULL
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
             """)
         
-        # Insert test data
+        # Insert test data (provide explicit ids to avoid NULL id errors)
         for i in range(100):
             Ahs.objects.create(
+                id=i + 1,
                 code=f"AHS.{i:04d}",
                 name=f"Material Type {i % 10}"
             )

@@ -24,7 +24,7 @@ class AhsRepositoryOptimizationTests(TransactionTestCase):
         with connection.cursor() as cursor:
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS ahs (
-                id BIGINT PRIMARY KEY AUTO_INCREMENT,
+                id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
                 reference_group_id BIGINT NULL,
                 code VARCHAR(50) NULL,
                 name VARCHAR(500) NULL,
@@ -34,9 +34,10 @@ class AhsRepositoryOptimizationTests(TransactionTestCase):
         """)
 
         
-        # Insert test data
+        # Insert test data (provide explicit ids to avoid NULL id errors)
         for i in range(100):
             Ahs.objects.create(
+                id=i + 1,
                 code=f"AHS.{i:04d}",
                 name=f"Material Type {i % 10}"
             )
@@ -133,3 +134,4 @@ class AhsRepositoryOptimizationTests(TransactionTestCase):
             1,
             f"by_name_candidates used {len(ctx.captured_queries)} queries, expected 1"
         )
+# ...existing code...

@@ -1,3 +1,4 @@
+# ...existing code...
 from django.test import TransactionTestCase
 from django.db import connection
 from django.core.management import call_command
@@ -18,10 +19,21 @@ class PhraseSynonymMatchingTests(TransactionTestCase):
     def setUpClass(cls):
         super().setUpClass()
         
-        # Run migrations to ensure proper table structure with auto-increment ID
+        # Run migrations to ensure proper table structure for managed models
         call_command("migrate", "rencanakan_core", verbosity=0, interactive=False)
         
-        # Populate minimal test data - MUST explicitly provide id due to AUTO_INCREMENT issue
+        # Ensure test table exists with proper AUTO_INCREMENT id (some setups have managed=False)
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS ahs (
+                    id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                    reference_group_id BIGINT NULL,
+                    code VARCHAR(50) NULL,
+                    name VARCHAR(500) NULL
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+            """)
+        
+        # Populate minimal test data - MUST explicitly provide id due to some DB setups
         Ahs.objects.create(id=1, code="AHS.001", name="Pemasangan Bata Ringan")
         Ahs.objects.create(id=2, code="AHS.002", name="Pekerjaan Borepile")
         Ahs.objects.create(id=3, code="AHS.003", name="Pengecoran Beton Sloof")
