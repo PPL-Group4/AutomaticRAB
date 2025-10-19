@@ -10,6 +10,13 @@ from cost_weight.services.cost_weight_calc import (
     _normalize_weights
 )
 
+from django.test import TestCase, TransactionTestCase
+from django.apps import apps
+
+from cost_weight.services.recalc_orchestrator import (
+    ITEM_MODEL, JOB_MODEL, ITEM_COST_FIELD, ITEM_WEIGHT_FIELD
+)
+
 class CostWeightCalcTests(unittest.TestCase):
     def test_simple_exact_split_no_distribution(self):
         items = {"A": Decimal("200"), "B": Decimal("200")}
@@ -128,14 +135,6 @@ class CostWeightZeroDivisionTests(unittest.TestCase):
         self.assertEqual(res["C"], Decimal("100.00"))
         self.assertEqual(res["A"], Decimal("0.00"))
 
-
-from django.test import TestCase, TransactionTestCase
-from django.apps import apps
-
-from cost_weight.services.recalc_orchestrator import (
-    ITEM_MODEL, JOB_MODEL, ITEM_COST_FIELD, ITEM_WEIGHT_FIELD
-)
-
 Item = apps.get_model(ITEM_MODEL)
 Job  = apps.get_model(JOB_MODEL)
 
@@ -246,3 +245,34 @@ class CostWeightValidationTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+from cost_weight.services.chart_transformer import to_chart_data
+
+class ChartTransformerTests(TestCase):
+    def test_basic_transform_from_decimal(self):
+        weights = {"1": Decimal("62.50"), "2": Decimal("37.50")}
+        names   = {"1": "Item A", "2": "Item B"}
+        out = to_chart_data(weights, names)
+        self.assertEqual(out, [
+            {"label": "Item A", "value": 62.5},
+            {"label": "Item B", "value": 37.5},
+        ])
+
+    def test_missing_name_falls_back_to_id(self):
+        weights = {"10": Decimal("100.00")}
+        names   = {}  # no name
+        out = to_chart_data(weights, names)
+        self.assertEqual(out, [{"label": "10", "value": 100.0}])
+
+    def test_empty_input_returns_empty_list(self):
+        self.assertEqual(to_chart_data({}, {}), [])
+
+    def test_rounding_and_order_by_value_desc(self):
+        weights = {"a": Decimal("33.333"), "b": Decimal("66.667")}
+        names   = {"a": "A", "b": "B"}
+        out = to_chart_data(weights, names, sort_desc=True, decimal_places=1)
+        # round to 33.3 and 66.7, order desc -> B first
+        self.assertEqual(out, [
+            {"label": "B", "value": 66.7},
+            {"label": "A", "value": 33.3},
+        ])
