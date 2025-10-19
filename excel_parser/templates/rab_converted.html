@@ -5,7 +5,6 @@
 <div class="section-box position-relative">
   <h5 class="section-title">RAB Preview (Excel)</h5>
 
-  <!-- Upload form -->
   <form id="uploadForm" enctype="multipart/form-data" class="mb-3">
     <div class="input-group">
       <input type="file" name="file" id="fileInput" accept=".xls,.xlsx" class="form-control">
@@ -13,10 +12,7 @@
     </div>
   </form>
 
-  <!-- Error messages -->
   <div id="errorContainer"></div>
-
-  <!-- Spinner -->
   <div id="loadingSpinner" class="text-center py-4" style="display:none;">
     <div class="spinner-border text-primary" role="status">
       <span class="visually-hidden">Loading...</span>
@@ -24,10 +20,8 @@
     <p class="mt-2">Memproses file, mohon tunggu...</p>
   </div>
 
-  <!-- Tables will render here -->
   <div id="rabTables" class="mt-3"></div>
 
-  <!-- Grand total -->
   <div class="grand-total-box card mt-4 p-3 shadow-sm" id="grandTotalBox" style="display:none; max-width:400px;">
     <div class="d-flex justify-content-between"><span class="fw-bold">Total</span> <span id="grandTotal">Rp. 0</span></div>
     <div class="d-flex justify-content-between"><span class="fw-bold">PPN (10%)</span> <span id="ppn">Rp. 0</span></div>
@@ -47,20 +41,17 @@
   function showError(message) {
     const errorContainer = document.getElementById("errorContainer");
     errorContainer.innerHTML = `<div class="alert alert-danger">${message}</div>`;
-    setTimeout(() => {
-      errorContainer.innerHTML = "";
-    }, 5000);
+    setTimeout(() => (errorContainer.innerHTML = ""), 4000);
   }
 
   function showLoading() {
     document.getElementById("loadingSpinner").style.display = "block";
   }
-
   function hideLoading() {
     document.getElementById("loadingSpinner").style.display = "none";
   }
 
-  document.getElementById("uploadForm").addEventListener("submit", async function(e) {
+  document.getElementById("uploadForm").addEventListener("submit", async (e) => {
     e.preventDefault();
     const fileInput = document.getElementById("fileInput");
     if (!fileInput.files.length) {
@@ -71,25 +62,20 @@
     formData.append("file", fileInput.files[0]);
 
     try {
-      showLoading(); // spinner ON
-      const resp = await fetch("/excel_parser/preview_rows", {
-        method: "POST",
-        body: formData
-      });
+      showLoading();
+      const resp = await fetch("/excel_parser/preview_rows", { method: "POST", body: formData });
       const data = await resp.json();
-      hideLoading(); // spinner OFF
+      hideLoading();
 
-      if (data.rows) {
-        renderTables(data.rows);
-      } else {
-        showError("Gagal memproses file: " + (data.error || "Terjadi kesalahan yang tidak diketahui"));
-      }
+      if (data.rows) renderTables(data.rows);
+      else showError("Gagal memproses file: " + (data.error || "Terjadi kesalahan yang tidak diketahui"));
     } catch (err) {
       hideLoading();
       showError("Terjadi kesalahan saat mengunggah file: " + err.message);
     }
   });
 
+  // ---------- MAIN TABLE RENDER ----------
   function renderTables(rows) {
     const container = document.getElementById("rabTables");
     container.innerHTML = "";
@@ -99,21 +85,19 @@
     let bujakCounter = 0;
 
     rows.forEach(row => {
-      // Skip calculation rows
       const skipKeywords = ["PAJAK", "JUMLAH SETELAH PAJAK", "DIBULATKAN", "TERBILANG"];
       if (row.description && skipKeywords.some(k => row.description.toUpperCase().includes(k))) return;
 
-      // BUJAK header
+      // start a new section
       if (row.is_section && row.section_type === "CATEGORY" && row.number === "A") {
         bujakCounter++;
         const header = document.createElement("div");
-        header.classList.add("alert","alert-warning","fw-bold","mt-3");
+        header.classList.add("alert", "alert-warning", "fw-bold", "mt-3");
         header.innerText = `BUJAK ${bujakCounter}`;
         container.appendChild(header);
 
-        // New table for BUJAK
         const table = document.createElement("table");
-        table.classList.add("table","table-bordered","table-sm","align-middle","mb-4");
+        table.classList.add("table", "table-bordered", "table-sm", "align-middle", "mb-4");
         table.innerHTML = `
           <thead class="table-light">
             <tr>
@@ -126,50 +110,94 @@
               <th>Jumlah (Rp.)</th>
             </tr>
           </thead>
-          <tbody></tbody>
-        `;
+          <tbody></tbody>`;
         container.appendChild(table);
         currentTable = table;
         tbody = table.querySelector("tbody");
       }
 
+      if (!currentTable) return;
+
       if (row.is_section && row.section_type === "CATEGORY") {
-        if (!currentTable) return;
         const tr = document.createElement("tr");
         tr.innerHTML = `<td>${row.number}</td><td colspan="6"><strong>${row.description}</strong></td>`;
         tbody.appendChild(tr);
-      }
-      else if (row.is_section && row.section_type === "SECTION") {
-        if (!currentTable) return;
+      } else if (row.is_section && row.section_type === "SECTION") {
         const tr = document.createElement("tr");
         tr.innerHTML = `<td>${row.number}</td><td colspan="6"><em>${row.description}</em></td>`;
         tbody.appendChild(tr);
-      }
-      else if (!row.is_section) {
-        if (!currentTable) return;
+      } else if (!row.is_section) {
         const tr = document.createElement("tr");
         tr.innerHTML = `
           <td></td>
           <td>${row.description || ""}</td>
           <td>${row.analysis_code || ""}</td>
-          <td>${row.volume || ""}</td>
+          <td><input type="number" class="form-control form-control-sm volume-input" value="${row.volume || 0}" min="0" step="0.01"></td>
           <td>${row.unit || ""}</td>
-          <td>${parseFloat(row.price || 0).toLocaleString('id-ID', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-          <td>Rp. ${parseFloat(row.total_price || 0).toLocaleString('id-ID', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-
-        `;
+          <td><input type="number" class="form-control form-control-sm price-input" value="${row.price || 0}" min="0" step="0.01"></td>
+          <td class="total-cell">Rp. ${parseFloat(row.total_price || 0).toLocaleString("id-ID", { minimumFractionDigits: 2 })}</td>`;
         tbody.appendChild(tr);
         total += row.total_price || 0;
       }
     });
 
-    // Update grand total
+    updateGrandTotalFromRows();
+  }
+
+  // ---------- LISTEN FOR INPUT CHANGES ----------
+  document.addEventListener("input", async (event) => {
+    if (!event.target.classList.contains("volume-input") &&
+        !event.target.classList.contains("price-input")) return;
+
+    const row = event.target.closest("tr");
+    const volume = parseFloat(row.querySelector(".volume-input").value) || 0;
+    const price = parseFloat(row.querySelector(".price-input").value) || 0;
+
+    // ✅ immediate JS update for responsiveness
+    const instantTotal = (volume * price).toFixed(2);
+    row.querySelector(".total-cell").textContent =
+      "Rp. " + parseFloat(instantTotal).toLocaleString("id-ID", { minimumFractionDigits: 2 });
+
+    updateGrandTotalFromRows();
+
+    // ✅ backend recomputation for accurate rounding
+    try {
+      const response = await fetch("/api/recompute_total_cost/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ volume, unit_price: price }),
+      });
+      const data = await response.json();
+      if (response.ok && data.total_cost) {
+        const precise = parseFloat(data.total_cost);
+        row.querySelector(".total-cell").textContent =
+          "Rp. " + precise.toLocaleString("id-ID", { minimumFractionDigits: 2 });
+        updateGrandTotalFromRows();
+      }
+    } catch (err) {
+      console.warn("Fetch error:", err);
+    }
+  });
+
+  // ---------- GRAND TOTAL UPDATER ----------
+  function updateGrandTotalFromRows() {
+    let grand = 0;
+    document.querySelectorAll(".total-cell").forEach(cell => {
+      let text = cell.textContent.replace(/[^\d,.-]/g, "").replace(/\./g, "").replace(",", ".");
+      const val = parseFloat(text) || 0;
+      grand += val;
+    });
+    updateGrandTotal(grand);
+  }
+
+  function updateGrandTotal(total) {
     document.getElementById("grandTotalBox").style.display = "block";
     document.getElementById("grandTotal").innerText = "Rp. " + total.toLocaleString();
     const ppn = total * 0.1;
     document.getElementById("ppn").innerText = "Rp. " + ppn.toLocaleString();
     document.getElementById("totalWithPpn").innerText = "Rp. " + (total + ppn).toLocaleString();
-    document.getElementById("terbilang").innerText = total === 0 ? "NOL RUPIAH" : numberToWords(total + ppn).toUpperCase();
+    document.getElementById("terbilang").innerText =
+      total === 0 ? "NOL RUPIAH" : numberToWords(total + ppn).toUpperCase();
   }
 
   function numberToWords(number) {
