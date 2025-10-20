@@ -7,6 +7,7 @@ import string
 
 from django.core.files.uploadedfile import UploadedFile
 from excel_parser.models import Project, RabEntry
+from .job_matcher import match_description
 
 import logging
 logger = logging.getLogger("excel_parser")
@@ -302,20 +303,33 @@ def preview_file(file: UploadedFile):
 
     from decimal import ROUND_HALF_UP
 
-    return [
-        {
-            "number": row.number,
-            "description": row.description,
-            "volume": str(row.volume.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)),
-            "unit": row.unit,
-            "analysis_code": row.analysis_code,
-            "price": str(row.price.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)),
-            "total_price": str(row.total_price.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)),
-            "is_section": row.is_section,
-            "index_kind": row.index_kind,
-            "section_letter": row.section_letter,
-            "section_roman": row.section_roman,
-            "section_type": row.section_type,
-        }
-        for row in parsed
-    ]
+    preview_rows = []
+    for row in parsed:
+        if row.is_section:
+            match_info = {"status": "skipped", "match": None}
+        else:
+            match_info = match_description(row.description)
+            if not isinstance(match_info, dict):  # defensive guard for unexpected returns
+                match_info = {"status": "error", "match": None, "error": "Unexpected match result"}
+
+        preview_rows.append(
+            {
+                "number": row.number,
+                "description": row.description,
+                "volume": str(row.volume.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)),
+                "unit": row.unit,
+                "analysis_code": row.analysis_code,
+                "price": str(row.price.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)),
+                "total_price": str(row.total_price.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)),
+                "is_section": row.is_section,
+                "index_kind": row.index_kind,
+                "section_letter": row.section_letter,
+                "section_roman": row.section_roman,
+                "section_type": row.section_type,
+                "job_match_status": match_info.get("status"),
+                "job_match": match_info.get("match"),
+                "job_match_error": match_info.get("error"),
+            }
+        )
+
+    return preview_rows

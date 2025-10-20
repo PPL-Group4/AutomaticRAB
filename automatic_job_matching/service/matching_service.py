@@ -74,3 +74,18 @@ class MatchingService:
             result = apply_fallback(description)
 
         return result
+
+    @staticmethod
+    def search_candidates(term: str, limit: int = 10):
+        logger.debug("search_candidates called term=%s limit=%d", term, limit)
+        repo = DbAhsRepository()
+        rows = repo.search(term, limit=limit)
+        return [
+            {
+                "source": "ahs",
+                "id": row.id,
+                "code": row.code,
+                "name": row.name,
+            }
+            for row in rows
+        ]
