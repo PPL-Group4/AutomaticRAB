@@ -1,6 +1,7 @@
 from io import BytesIO
 from decimal import Decimal
 import tempfile
+from unittest.mock import patch
 from django.core.exceptions import ValidationError
 from excel_parser.services.header_mapper import map_headers, find_header_row
 from excel_parser.services.validators import validate_excel_file
@@ -741,6 +742,7 @@ class PreviewFileTests(APITestCase):
                 # Check first row is section
                 self.assertTrue(rows[0]["is_section"])
                 self.assertEqual(rows[0]["description"], "PEKERJAAN PERSIAPAN")
+                self.assertEqual(rows[0]["job_match_status"], "skipped")
 
                 # Check second row is normal item
                 self.assertFalse(rows[1]["is_section"])
@@ -748,6 +750,29 @@ class PreviewFileTests(APITestCase):
                 self.assertAlmostEqual(float(rows[1]["volume"]), 1.0, places=2)
                 self.assertEqual(rows[1]["price"], "1000.00")
                 self.assertEqual(rows[1]["total_price"], "1000.00")
+
+    @patch("excel_parser.services.reader.match_description")
+    def test_preview_file_includes_job_matching_results(self, mock_match):
+        mock_match.return_value = {"status": "found", "match": {"code": "X.01", "name": "Dummy"}}
+
+        bio = BytesIO()
+        wb = Workbook()
+        ws = wb.active
+        ws.append(["No", "Uraian Pekerjaan", "Volume", "Satuan", "Harga Satuan", "Jumlah Harga"])
+        ws.append(["1", "Mobilisasi", "1", "Ls", "1000", "1000"])
+        wb.save(bio)
+
+        f = SimpleUploadedFile(
+            "match.xlsx",
+            bio.getvalue(),
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+
+        rows = preview_file(f)
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]["job_match_status"], "found")
+        self.assertEqual(rows[0]["job_match"].get("code"), "X.01")
+        mock_match.assert_called_once_with("Mobilisasi")
 
 
 

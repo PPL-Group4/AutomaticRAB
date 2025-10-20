@@ -47,3 +47,32 @@ class DbAhsRepositoryTests(SimpleTestCase):
         self.assertEqual(len(rows), 1)
         self.assertEqual(rows[0].name, "Pemadatan pasir")
         mock_filter.assert_called_once_with(name__istartswith="Pemadatan")
+
+    @patch("rencanakan_core.models.Ahs.objects.filter")
+    def test_search_returns_ordered_rows_filtered_by_term(self, mock_filter):
+        class FakeQS(list):
+            def order_by(self, *_args, **_kwargs):
+                return self
+
+            def __getitem__(self, key):
+                if isinstance(key, slice):
+                    return FakeQS(super().__getitem__(key))
+                return super().__getitem__(key)
+
+        mock_filter.return_value = FakeQS([
+            type("Obj", (), {"id": 11, "code": "B.1", "name": "Bata Merah"})(),
+            type("Obj", (), {"id": 12, "code": "B.2", "name": "Beton"})(),
+        ])
+
+        repo = DbAhsRepository()
+        results = repo.search("B", limit=5)
+
+        self.assertEqual(len(results), 2)
+        self.assertEqual(results[0].code, "B.1")
+        mock_filter.assert_called_once()
+
+    @patch("rencanakan_core.models.Ahs.objects.filter")
+    def test_search_returns_empty_list_for_blank_term(self, mock_filter):
+        repo = DbAhsRepository()
+        self.assertEqual(repo.search("   "), [])
+        mock_filter.assert_not_called()

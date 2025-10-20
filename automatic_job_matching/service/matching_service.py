@@ -114,8 +114,23 @@ class MatchingService:
             # 3. Try multiple matches
             if not result:
                 result = MatchingService.perform_multiple_match(description, limit, min_similarity_multiple)
-
             return result
         except Exception as e:
             logger.error("Error in perform_best_match: %s", str(e), exc_info=True)
             return None
+
+
+    @staticmethod
+    def search_candidates(term: str, limit: int = 10):
+        logger.debug("search_candidates called term=%s limit=%d", term, limit)
+        repo = DbAhsRepository()
+        rows = repo.search(term, limit=limit)
+        return [
+            {
+                "source": "ahs",
+                "id": row.id,
+                "code": row.code,
+                "name": row.name,
+            }
+            for row in rows
+        ]
