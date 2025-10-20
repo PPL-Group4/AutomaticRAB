@@ -16,10 +16,13 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import include, path
+from django.shortcuts import redirect
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path("api/", include("automatic_job_matching.urls")),
     path("excel_parser/", include("excel_parser.urls")),
+    path("pdf_parser/", include("pdf_parser.urls")),
+    path("", lambda request: redirect("job-matching")),
 ]
 

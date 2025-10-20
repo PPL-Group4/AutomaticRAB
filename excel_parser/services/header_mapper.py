@@ -1,12 +1,15 @@
 import re, unicodedata
 from typing import Dict, List, Tuple
+import logging
+
+logger = logging.getLogger("excel_parser")  
 
 def _normalize(s: str) -> str:
     if s is None: return ""
     s = str(s)
     s = unicodedata.normalize('NFKD', s).encode('ascii','ignore').decode('ascii')
     s = s.strip().lower()
-    s = re.sub(r'[\.\:\(\)\-/]', ' ', s)  # remove punctuation
+    s = re.sub(r'[\.\:\(\)\-/]', ' ', s)  
     s = re.sub(r'\s+', ' ', s).strip()
     return s
 
@@ -31,14 +34,27 @@ def map_headers(header_row: List[str]) -> Tuple[Dict[str,int], List[str], Dict[s
                 mapping[canon] = idx
                 originals[canon] = header_row[idx]
                 break
+
     missing = [k for k in REQUIRED if k not in mapping]
+
+    if missing:
+        logger.warning(
+            "Header mapping: missing_required=%s detected=%s raw_header=%s",
+            missing, list(mapping.keys()), header_row
+        )
+    else:
+        logger.debug("Header mapping ok: %s (raw=%s)", mapping, header_row)
+
     return mapping, missing, originals
 
 def find_header_row(rows: List[List[str]], scan_first: int = 200) -> int:
     best_idx, best_hits = -1, -1
-    for i, row in enumerate(rows[:scan_first]):
+    to_scan = rows[:scan_first]
+    for i, row in enumerate(to_scan):
         mapping, _, _ = map_headers([str(c or '') for c in row])
         hits = len(mapping)
         if hits > best_hits:
             best_idx, best_hits = i, hits
+    logger.debug("find_header_row: scanned=%d best_idx=%d best_hits=%d",
+                 len(to_scan), best_idx, best_hits)
     return best_idx
