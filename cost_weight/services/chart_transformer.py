@@ -9,12 +9,13 @@ def to_chart_data(
     decimal_places: int = 1,
     sort_desc: bool = False
 ) -> List[Dict[str, float]]:
-  
-    # change mapping {item_id: Decimal(weight_pct)} to list chart-ready: [{label: 'jobItemName 62.5}, ...]
+    """
+    Convert {id: Decimal(weight)} -> [{'label': <name>, 'value': float}]
+    """
     if not weights:
         return []
 
-    q = Decimal(1).scaleb(-decimal_places)  # 0.1 if 1 dp, 0.01 if 2
+    q = Decimal(1).scaleb(-decimal_places)
     names_by_id = names_by_id or {}
 
     rows = []
