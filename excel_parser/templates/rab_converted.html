@@ -44,7 +44,7 @@
 <script>
   {{ block.super }}
 
-  const SUGGEST_ENDPOINT = "/api/suggest/";
+  const MATCH_ENDPOINT = "{% url 'match-best' %}";
   const suggestionCache = new Map();
   const dropdownRequestState = new WeakMap();
   const MANUAL_SUGGESTION_LIMIT = 12;
@@ -274,7 +274,8 @@
     const fallbackMessages = matches.filter(match => !match || !match.code);
 
     if (!selectableMatches.length && !fallbackMessages.length) {
-      cell.textContent = "-";
+      // No suggestions from matching service — allow manual input so user can type AHSP kode
+      renderManualInput(cell, row, analysisCell, statusCell, "Needs Manual Input");
       return;
     }
 
@@ -577,39 +578,46 @@
     return Array.from(map.values());
   }
 
-  function fetchRemoteSuggestions(query, limit = MANUAL_SUGGESTION_LIMIT) {
+  function fetchRemoteSuggestions(row, query, limit = MANUAL_SUGGESTION_LIMIT) {
     const trimmedQuery = (query || "").trim();
+    const description = trimmedQuery || (row.description || "").trim();
 
-    if (!trimmedQuery) {
+    if (!description) {
       return Promise.resolve([]);
     }
 
-    const params = new URLSearchParams();
-    if (trimmedQuery) {
-      params.append("q", trimmedQuery);
-    }
-    params.append("limit", String(limit));
-
-    const key = params.toString();
-    if (suggestionCache.has(key)) {
-      return suggestionCache.get(key);
+    const cacheKey = `${description}|${limit}`;
+    if (suggestionCache.has(cacheKey)) {
+      return suggestionCache.get(cacheKey);
     }
 
-    const request = fetch(`${SUGGEST_ENDPOINT}?${key}`, {
+    const request = fetch(MATCH_ENDPOINT, {
+      method: "POST",
       headers: {
+        "Content-Type": "application/json",
         Accept: "application/json",
       },
+      body: JSON.stringify({ description }),
     })
-      .then(res => (res.ok ? res.json() : { results: [] }))
-      .then(data => (Array.isArray(data.results) ? data.results : []))
+      .then(res => (res.ok ? res.json() : { match: [] }))
+      .then(data => {
+        const { match } = data || {};
+        if (!match) {
+          return [];
+        }
+        if (Array.isArray(match)) {
+          return match;
+        }
+        return match.code ? [match] : [];
+      })
       .catch(() => []);
 
-    suggestionCache.set(key, request);
+    suggestionCache.set(cacheKey, request);
     return request;
   }
 
   function fetchAndStoreSuggestions(row, query) {
-    return fetchRemoteSuggestions(query).then(results => {
+    return fetchRemoteSuggestions(row, query).then(results => {
       updateRowLookup(row, results);
       return Array.from(getMatchLookup(row).values());
     });
