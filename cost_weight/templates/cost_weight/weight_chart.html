@@ -1,0 +1,93 @@
+{% load static %}
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Cost Weight Distribution (per Section)</title>
+  <style>
+    body {
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto;
+      background: #f9fafb;
+    }
+    .wrap {
+      max-width: 800px;
+      margin: 40px auto;
+      padding: 20px;
+      background: white;
+      border-radius: 14px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, .05);
+    }
+    h2 { margin-bottom: 4px; }
+    p { color: #374151; margin-bottom: 16px; }
+    .chart-container { position: relative; max-width: 500px; margin: 0 auto; }
+    canvas { width: 100% !important; height: 400px !important; }
+    .info-box {
+      margin-top: 20px; padding: 8px 16px; border-radius: 20px;
+      color: white; font-weight: 500; text-align: center;
+      font-size: 14px; width: fit-content; margin: 20px auto;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+    }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <h2>Cost Weight Distribution per Section</h2>
+  <p>Berikut persentase biaya per bagian pekerjaan (section).</p>
+
+  <div class="chart-container">
+    <canvas id="pie"></canvas>
+  </div>
+
+  <div id="infoBox" class="info-box">Belum ada data yang diproses.</div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
+<script>
+  async function fetchChartData() {
+    try {
+      const res = await fetch("/cost_weight/jobs/1/chart-data/");
+      if (!res.ok) throw new Error("Gagal memuat data chart.");
+      const payload = await res.json();
+      renderCharts(payload);
+    } catch (err) {
+      console.error(err);
+      alert("Gagal memuat data chart.");
+    }
+  }
+
+  function renderCharts(payload) {
+    const labels = payload.items.map(x => x.label);
+    const data = payload.items.map(x => parseFloat(x.value));
+    const colors = ['#3b82f6','#f97316','#10b981','#6366f1','#ef4444','#14b8a6'];
+
+    if (Chart.getChart("pie")) Chart.getChart("pie").destroy();
+
+    const pie = new Chart(document.getElementById('pie'), {
+      type: 'pie',
+      data: { labels, datasets: [{ data, backgroundColor: colors.slice(0, labels.length) }] },
+      options: {
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'bottom' },
+          datalabels: {
+            formatter: v => `${v.toFixed(1)}%`,
+            color: '#fff', font: { weight: 'bold', size: 13 }
+          }
+        }
+      },
+      plugins: [ChartDataLabels]
+    });
+
+    const infoBox = document.getElementById('infoBox');
+    if (data.length > 0) {
+      const maxIdx = data.indexOf(Math.max(...data));
+      infoBox.style.backgroundColor = colors[maxIdx];
+      infoBox.innerText = `${labels[maxIdx]} menyumbang ${data[maxIdx].toFixed(2)}% dari total biaya proyek.`;
+    }
+  }
+
+  fetchChartData();
+</script>
+</body>
+</html>
