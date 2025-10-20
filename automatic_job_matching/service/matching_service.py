@@ -1,6 +1,6 @@
 import logging
 
-from automatic_job_matching.repository.ahs_repo import DbAhsRepository
+from automatic_job_matching.repository.combined_ahs_repo import CombinedAhsRepository
 from automatic_job_matching.service.exact_matcher import ExactMatcher
 from automatic_job_matching.service.fuzzy_matcher import FuzzyMatcher
 from automatic_job_matching.service.scoring import FuzzyConfidenceScorer
@@ -19,7 +19,7 @@ class MatchingService:
         logger.info("perform_exact_match called (len=%d)", len(description))
 
         try:
-            matcher = ExactMatcher(DbAhsRepository())
+            matcher = ExactMatcher(CombinedAhsRepository())
             result = matcher.match(description)
             logger.debug("Exact match result: %s", result)
             return result
@@ -33,7 +33,7 @@ class MatchingService:
                     len(description), min_similarity)
         
         try:
-            matcher = FuzzyMatcher(DbAhsRepository(), min_similarity, scorer=FuzzyConfidenceScorer())
+            matcher = FuzzyMatcher(CombinedAhsRepository(), min_similarity, scorer=FuzzyConfidenceScorer())
             confidence_result = getattr(matcher, 'match_with_confidence', None)
             if callable(confidence_result):
                 result = confidence_result(description)
@@ -52,7 +52,7 @@ class MatchingService:
                     len(description), limit, min_similarity)
         
         try:
-            matcher = FuzzyMatcher(DbAhsRepository(), min_similarity, scorer=FuzzyConfidenceScorer())
+            matcher = FuzzyMatcher(CombinedAhsRepository(), min_similarity, scorer=FuzzyConfidenceScorer())
             confidence_multi = getattr(matcher, 'find_multiple_matches_with_confidence', None)
             
             if callable(confidence_multi):
@@ -123,7 +123,7 @@ class MatchingService:
     @staticmethod
     def search_candidates(term: str, limit: int = 10):
         logger.debug("search_candidates called term=%s limit=%d", term, limit)
-        repo = DbAhsRepository()
+        repo = CombinedAhsRepository()
         rows = repo.search(term, limit=limit)
         return [
             {
