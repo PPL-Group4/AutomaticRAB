@@ -124,7 +124,17 @@ class MatchingService:
     def search_candidates(term: str, limit: int = 10):
         logger.debug("search_candidates called term=%s limit=%d", term, limit)
         repo = DbAhsRepository()
-        rows = repo.search(term, limit=limit)
+        search_callable = getattr(repo, "search", None)
+
+        if callable(search_callable):
+            rows = search_callable(term, limit=limit)
+        else:
+            logger.warning("DbAhsRepository.search missing; falling back to by_name_candidates")
+            cleaned = (term or "").strip()
+            if not cleaned:
+                return []
+            rows = repo.by_name_candidates(cleaned)[:limit]
+
         return [
             {
                 "source": "ahs",

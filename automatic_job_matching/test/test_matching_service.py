@@ -414,3 +414,16 @@ class MatchingServiceSearchTests(TestCase):
         with self.assertRaises(RuntimeError):
             MatchingService.search_candidates("Cor")
         mock_search.assert_called_once_with("Cor", 10)
+
+    def test_search_candidates_falls_back_when_search_missing(self):
+        with patch("automatic_job_matching.service.matching_service.DbAhsRepository", autospec=True) as mock_repo_cls:
+            instance = mock_repo_cls.return_value
+            instance.search = None
+            instance.by_name_candidates.return_value = [
+                type("Row", (), {"id": 7, "code": "D.1", "name": "Dummy"})(),
+            ]
+
+            results = MatchingService.search_candidates("dummy", limit=1)
+
+        self.assertEqual(results[0]["code"], "D.1")
+        instance.by_name_candidates.assert_called_once_with("dummy")
