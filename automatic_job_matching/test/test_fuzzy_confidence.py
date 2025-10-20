@@ -1,6 +1,7 @@
 from django.test import SimpleTestCase
 from automatic_job_matching.service.fuzzy_matcher import FuzzyMatcher
 from automatic_job_matching.service.exact_matcher import AhsRow
+from automatic_job_matching.service.scoring import ConfidenceScorer
 
 class FuzzyMatcherConfidenceTDTests(SimpleTestCase):
     """TDD: Confidence scoring tests (should fail before implementation)."""
@@ -73,3 +74,23 @@ class FuzzyMatcherConfidenceTDTests(SimpleTestCase):
         partial = getattr(self.matcher, 'match_with_confidence', lambda *_: None)("galian tanah")
         if exact and partial:
             self.assertGreater(exact['confidence'], partial['confidence'])
+
+    # Edge cases
+    def test_confidence_only_punctuation_input(self):
+        result = self.matcher.match_with_confidence("!!! ???")
+        self.assertIsNone(result)
+
+    def test_confidence_multiple_limit_zero(self):
+        results = self.matcher.find_multiple_matches_with_confidence("pekerjaan", limit=0)
+        self.assertEqual(results, [])
+
+    def test_confidence_custom_scorer_rounding(self):
+        class StubScorer(ConfidenceScorer):
+            def score(self, norm_query, norm_candidate):
+                return 0.123456
+
+        matcher = FuzzyMatcher(self.repo, min_similarity=0.1, scorer=StubScorer())
+        result = matcher.match_with_confidence("pekerjaan galian tanah biasa")
+        self.assertIsNotNone(result)
+        self.assertIn('confidence', result)
+        self.assertEqual(result['confidence'], 0.1235)

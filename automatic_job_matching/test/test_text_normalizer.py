@@ -126,3 +126,22 @@ class TextNormalizationTestCase(TestCase):
 
 	def test_no_conversion_when_only_prefix_present(self):
 		self.assertEqual(self.normalize_text("AT"), "at")
+
+	def test_whitespace_only_input(self):
+		self.assertEqual(self.normalize_text(" \t \n \r "), "")
+
+	def test_preserve_codes_with_punctuation(self):
+		self.assertEqual(
+			self.normalize_text("(AT.19-1), [T.14.d]!"),
+			"AT.19-1 T.14.d",
+		)
+
+	def test_remove_stopwords_all_tokens(self):
+		self.assertEqual(
+			self.normalize_text(
+				"satu dua",
+				remove_stopwords=True,
+				stopwords={"satu", "dua"},
+			),
+			"",
+		)
