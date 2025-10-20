@@ -2,7 +2,7 @@ from decimal import Decimal, ROUND_HALF_UP
 from typing import Dict, Mapping, Union
 from cost_weight.services.normalization import _normalize_weights
 from cost_weight.services.zero_division_handler import handle_zero_division
-from cost_weight.services.validators import validate_cost_inputs
+from cost_weight.services.cost_validators import validate_cost_inputs
 
 NumberLike = Union[str, float, int, Decimal]
 

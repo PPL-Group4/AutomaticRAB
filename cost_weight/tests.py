@@ -293,3 +293,108 @@ class ChartEndpointTests(TestCase):
         payload = resp.json()
         self.assertIn("items", payload)
         self.assertTrue(all(set(r.keys()) == {"label","value"} for r in payload["items"]))
+
+
+class AutoFillIntegrationTests(TestCase):
+    # Simulate the Auto-Fill module writing unit prices/total costs into Item.cost (ITEM_COST_FIELD)
+    # Verify that cost weights update correctly in both single-save and bulk-update flows
+
+    def setUp(self):
+        from django.apps import apps
+        from cost_weight.services.recalc_orchestrator import (
+            ITEM_MODEL, JOB_MODEL, ITEM_COST_FIELD, ITEM_FK_TO_JOB
+        )
+        self.Item = apps.get_model(ITEM_MODEL)
+        self.Job  = apps.get_model(JOB_MODEL)
+        self.ITEM_COST_FIELD = ITEM_COST_FIELD
+        self.ITEM_FK_TO_JOB  = ITEM_FK_TO_JOB
+
+        self.job = self.Job.objects.create(name="AutoFill Job")
+        # Start with zero costs, like a job before Auto-Fill runs
+        self.a = self.Item.objects.create(**{self.ITEM_FK_TO_JOB: self.job, "name": "A", self.ITEM_COST_FIELD: 0})
+        self.b = self.Item.objects.create(**{self.ITEM_FK_TO_JOB: self.job, "name": "B", self.ITEM_COST_FIELD: 0})
+
+    def test_autofill_single_save_triggers_signals(self):
+        # Auto-Fill writes each item cost via .save(update_fields=[cost_field])
+        # Our post_save signal should detect cost_field in update_fields and recalc once per save
+        
+        # Act: Auto-Fill sets costs on each item individually
+        setattr(self.a, self.ITEM_COST_FIELD, Decimal("200"))
+        self.a.save(update_fields=[self.ITEM_COST_FIELD])
+
+        setattr(self.b, self.ITEM_COST_FIELD, Decimal("200"))
+        self.b.save(update_fields=[self.ITEM_COST_FIELD])
+
+        # assert
+        self.a.refresh_from_db(); self.b.refresh_from_db()
+        from cost_weight.services.recalc_orchestrator import ITEM_WEIGHT_FIELD
+        self.assertEqual(getattr(self.a, ITEM_WEIGHT_FIELD), Decimal("50.00"))
+        self.assertEqual(getattr(self.b, ITEM_WEIGHT_FIELD), Decimal("50.00"))
+
+    def test_autofill_bulk_update_requires_single_manual_recalc(self):
+        from cost_weight.services.recalc_orchestrator import (
+            recalc_weights_for_job, ITEM_WEIGHT_FIELD
+        )
+
+        # Act: simulate Auto-Fill setting costs in memory first
+        setattr(self.a, self.ITEM_COST_FIELD, Decimal("300"))
+        setattr(self.b, self.ITEM_COST_FIELD, Decimal("100"))
+        self.Item.objects.bulk_update([self.a, self.b], [self.ITEM_COST_FIELD])
+
+        updated_count = recalc_weights_for_job(self.job.pk)
+        self.assertEqual(updated_count, 2)
+
+        self.a.refresh_from_db(); self.b.refresh_from_db()
+        self.assertEqual(getattr(self.a, ITEM_WEIGHT_FIELD), Decimal("75.00"))
+        self.assertEqual(getattr(self.b, ITEM_WEIGHT_FIELD), Decimal("25.00"))
+
+    def test_autofill_zeroed_costs_result_all_zero(self):
+        # If Auto-Fill results in zero totals (e.g., missing prices), weights are all 0.00%
+        from cost_weight.services.recalc_orchestrator import (
+            recalc_weights_for_job, ITEM_WEIGHT_FIELD
+        )
+        # Zero both costs (bulk update style)
+        setattr(self.a, self.ITEM_COST_FIELD, 0)
+        setattr(self.b, self.ITEM_COST_FIELD, 0)
+        self.Item.objects.bulk_update([self.a, self.b], [self.ITEM_COST_FIELD])
+
+        recalc_weights_for_job(self.job.pk)
+        self.a.refresh_from_db(); self.b.refresh_from_db()
+        self.assertEqual(getattr(self.a, ITEM_WEIGHT_FIELD), Decimal("0.00"))
+        self.assertEqual(getattr(self.b, ITEM_WEIGHT_FIELD), Decimal("0.00"))
+
+    def test_recalc_is_idempotent(self):
+        from cost_weight.services.recalc_orchestrator import (
+            recalc_weights_for_job, ITEM_WEIGHT_FIELD
+        )
+        # Set costs
+        setattr(self.a, self.ITEM_COST_FIELD, Decimal("500"))
+        setattr(self.b, self.ITEM_COST_FIELD, Decimal("500"))
+        self.Item.objects.bulk_update([self.a, self.b], [self.ITEM_COST_FIELD])
+
+        # Recalc twice
+        recalc_weights_for_job(self.job.pk)
+        first_a, first_b = [
+            getattr(x, ITEM_WEIGHT_FIELD) for x in
+            [self.Item.objects.get(pk=self.a.pk), self.Item.objects.get(pk=self.b.pk)]
+        ]
+        recalc_weights_for_job(self.job.pk)
+        second_a, second_b = [
+            getattr(x, ITEM_WEIGHT_FIELD) for x in
+            [self.Item.objects.get(pk=self.a.pk), self.Item.objects.get(pk=self.b.pk)]
+        ]
+        self.assertEqual(first_a, second_a)
+        self.assertEqual(first_b, second_b)
+
+
+class OrchestratorEdgeCasesTests(TestCase):
+    def setUp(self):
+        from django.apps import apps
+        from cost_weight.services.recalc_orchestrator import ITEM_MODEL, JOB_MODEL
+        self.Item = apps.get_model(ITEM_MODEL)
+        self.Job  = apps.get_model(JOB_MODEL)
+
+    def test_recalc_when_no_items_returns_zero(self):
+        from cost_weight.services.recalc_orchestrator import recalc_weights_for_job
+        job = self.Job.objects.create(name="Empty")
+        self.assertEqual(recalc_weights_for_job(job.pk), 0)
