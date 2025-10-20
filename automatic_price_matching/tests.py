@@ -68,6 +68,14 @@ class AhspValidationTests(SimpleTestCase):
 
 		self.assertIn("code", ctx.exception.message_dict)
 
+	def test_rejects_null_code(self) -> None:
+		payload = {"code": None, "name": "Galian Tanah", "unit": "m3", "volume": 1}
+
+		with self.assertRaises(ValidationError) as ctx:
+			self.validate(payload)
+
+		self.assertIn("This field cannot be null.", ctx.exception.message_dict["code"])
+
 	def test_rejects_invalid_numeric_volume(self) -> None:
 		payload = {"code": "AT.01.001", "name": "Galian Tanah", "unit": "m3", "volume": "many"}
 
@@ -206,6 +214,20 @@ class AhspValidationTests(SimpleTestCase):
 		messages = ctx.exception.message_dict["components"]
 		self.assertTrue(any("Component at index 0 coefficient" in msg for msg in messages))
 
+	def test_component_coefficient_none_defaults_zero(self) -> None:
+		payload = {
+			"code": "AT.01.001",
+			"name": "Galian Tanah",
+			"unit": "m3",
+			"volume": 1,
+			"components": [
+				{"code": "M001", "coefficient": None},
+			],
+		}
+
+		cleaned = self.validate(payload)
+		self.assertEqual(cleaned["components"][0]["coefficient"], Decimal("0"))
+
 	# --- Successful scenarios ---------------------------------------------
 
 	def test_returns_clean_payload_on_success(self) -> None:
@@ -282,6 +304,19 @@ class AhspValidationTests(SimpleTestCase):
 		cleaned = self.validate(payload)
 		self.assertIsNone(cleaned["volume"])
 		self.assertIsNone(cleaned["total_cost"])
+
+	def test_unit_price_empty_string_treated_as_none(self) -> None:
+		payload = {
+			"code": "AT.06.006",
+			"name": "Pekerjaan Jalan",
+			"unit": "m2",
+			"volume": 1,
+			"unit_price": "",
+		}
+
+		cleaned = self.validate(payload)
+		self.assertIsNone(cleaned["unit_price"])
+		self.assertEqual(cleaned["total_cost"], Decimal("0"))
 
 
 class TotalCostCalculatorTests(SimpleTestCase):
