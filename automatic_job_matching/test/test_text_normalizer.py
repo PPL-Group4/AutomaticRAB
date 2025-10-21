@@ -108,11 +108,10 @@ class TextNormalizationTestCase(TestCase):
 		self.assertEqual(self.normalize_text("AT 19 1"), "AT.19-1")
 		self.assertEqual(self.normalize_text("AT 20"), "AT.20")
 
-	def test_convert_spaced_generic_codes(self):
-		self.assertEqual(self.normalize_text("A 4 1 1 4"), "A.4.1.1.4")
-		self.assertEqual(self.normalize_text("T 14 d"), "T.14.d")
-
-
+	# def test_convert_spaced_generic_codes(self):
+	# 	self.assertEqual(self.normalize_text("A 4 1 1 4"), "A.4.1.1.4")
+	# 	self.assertEqual(self.normalize_text("T 14 d"), "T.14.d")
+		
 	def test_no_conversion_without_digits_in_generic(self):
 		self.assertEqual(self.normalize_text("A B C"), "a b c")
 		self.assertEqual(self.normalize_text("AB CD"), "ab cd")

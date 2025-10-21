@@ -27,7 +27,7 @@ class DbAhsRepository:
         return rows
 
     def by_name_candidates(self, head_token: str) -> List[AhsRow]:
-        logger.debug("by_name_candidates called with head_token=%s", head_token)
+        logger.debug("DB:by_name_candidates called with head_token=%s", head_token)
 
         # Use prefix search (istartswith) so the B-tree index can be used.
         qs = (
@@ -40,9 +40,9 @@ class DbAhsRepository:
         return results
 
     def get_all_ahs(self) -> List[AhsRow]:
-        logger.debug("get_all_ahs called (limit 1000)")
+        logger.debug("get_all_ahs called")
         
-        qs = Ahs.objects.all()[:1000]
+        qs = Ahs.objects.all()[:5000]
         results = [AhsRow(id=a.id, code=(a.code or ""), name=(a.name or "")) for a in qs]
         
         logger.info("get_all_ahs returned %d rows", len(results))

@@ -53,17 +53,10 @@ class ExactMatcher:
                         "matched_on": "code",
                     }
 
-        ndesc = _norm_name(description)
-        if not ndesc:
-            logger.warning("Normalized description is empty")
-            return None
+        candidates = self.repo.by_name_candidates(description)
 
-        head = ndesc.split(" ", 1)[0]
-        logger.debug("Searching by name with head_token=%s", head)
-        for cand in self.repo.by_name_candidates(head):
-            logger.debug("Comparing normalized name=%s", cand.name)
-            if _norm_name(cand.name) == ndesc:
-                logger.info("Exact name match found: id=%s", cand.id)
+        for cand in candidates:
+            if _norm_name(cand.name) == _norm_name(description):
                 return {
                     "source": "ahs",
                     "id": cand.id,
