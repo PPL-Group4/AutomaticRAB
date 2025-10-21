@@ -5,34 +5,27 @@
   <meta charset="utf-8" />
   <title>Cost Weight Distribution (per Section)</title>
   <style>
-    body {
-      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto;
-      background: #f9fafb;
-    }
-    .wrap {
-      max-width: 800px;
-      margin: 40px auto;
-      padding: 20px;
-      background: white;
-      border-radius: 14px;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, .05);
-    }
+    body { font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto; background: #f9fafb; }
+    .wrap { max-width: 800px; margin: 40px auto; padding: 20px; background: white; border-radius: 14px; box-shadow: 0 2px 8px rgba(0,0,0,.05); }
     h2 { margin-bottom: 4px; }
     p { color: #374151; margin-bottom: 16px; }
     .chart-container { position: relative; max-width: 500px; margin: 0 auto; }
     canvas { width: 100% !important; height: 400px !important; }
-    .info-box {
-      margin-top: 20px; padding: 8px 16px; border-radius: 20px;
-      color: white; font-weight: 500; text-align: center;
-      font-size: 14px; width: fit-content; margin: 20px auto;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.08);
-    }
+    .info-box { margin-top: 20px; padding: 8px 16px; border-radius: 20px; color: white; font-weight: 500; text-align: center; font-size: 14px; width: fit-content; margin: 20px auto; box-shadow: 0 2px 6px rgba(0,0,0,0.08); }
+    .toolbar { display: flex; gap: 10px; justify-content: center; margin: 18px 0 8px; }
+    .btn { border: 0; border-radius: 10px; padding: 10px 14px; font-weight: 600; cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,0.07); background: #111827; color: white; }
+    .btn.secondary { background: #374151; }
   </style>
 </head>
 <body>
-<div class="wrap">
+<div class="wrap" data-job-id="1">
   <h2>Cost Weight Distribution per Section</h2>
   <p>Berikut persentase biaya per bagian pekerjaan (section).</p>
+
+  <div class="toolbar">
+    <button class="btn" onclick="downloadChart('png')">Download PNG</button>
+    <button class="btn secondary" onclick="downloadChart('pdf')">Download PDF</button>
+  </div>
 
   <div class="chart-container">
     <canvas id="pie"></canvas>
@@ -44,9 +37,13 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
 <script>
+  const WRAP = document.querySelector('.wrap');
+  const JOB_ID = WRAP.getAttribute('data-job-id') || '1';  // sementara 1
+  const DECIMAL_PLACES = 1;
+
   async function fetchChartData() {
     try {
-      const res = await fetch("/cost_weight/jobs/1/chart-data/");
+      const res = await fetch(`/cost_weight/jobs/${JOB_ID}/chart-data/?dp=${DECIMAL_PLACES}&sort=desc`);
       if (!res.ok) throw new Error("Gagal memuat data chart.");
       const payload = await res.json();
       renderCharts(payload);
@@ -63,7 +60,7 @@
 
     if (Chart.getChart("pie")) Chart.getChart("pie").destroy();
 
-    const pie = new Chart(document.getElementById('pie'), {
+    new Chart(document.getElementById('pie'), {
       type: 'pie',
       data: { labels, datasets: [{ data, backgroundColor: colors.slice(0, labels.length) }] },
       options: {
@@ -71,7 +68,7 @@
         plugins: {
           legend: { position: 'bottom' },
           datalabels: {
-            formatter: v => `${v.toFixed(1)}%`,
+            formatter: v => `${v.toFixed(DECIMAL_PLACES)}%`,
             color: '#fff', font: { weight: 'bold', size: 13 }
           }
         }
@@ -85,6 +82,12 @@
       infoBox.style.backgroundColor = colors[maxIdx];
       infoBox.innerText = `${labels[maxIdx]} menyumbang ${data[maxIdx].toFixed(2)}% dari total biaya proyek.`;
     }
+  }
+
+  function downloadChart(format) {
+    const dp = DECIMAL_PLACES;
+    const url = `/cost_weight/jobs/${JOB_ID}/chart-export/?format=${encodeURIComponent(format)}&dp=${dp}`;
+    window.open(url, '_blank');
   }
 
   fetchChartData();
