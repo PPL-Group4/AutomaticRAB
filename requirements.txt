@@ -31,5 +31,6 @@ deep-translator==1.11.4
 langdetect==1.0.9
 pytest
 pytest-django
+selenium>=4.25.0
 
 
