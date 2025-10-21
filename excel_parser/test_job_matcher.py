@@ -17,6 +17,12 @@ class DeriveStatusTests(TestCase):
     def test_returns_not_found_for_other_values(self):
         self.assertEqual(_derive_status(None), "not found")
 
+    def test_returns_not_found_for_empty_dict(self):
+        self.assertEqual(_derive_status({}), "not found")
+
+    def test_returns_not_found_for_empty_list(self):
+        self.assertEqual(_derive_status([]), "not found")
+
 
 class MatchDescriptionTests(TestCase):
     def test_returns_skipped_for_blank_description(self):
@@ -69,6 +75,17 @@ class MatchDescriptionTests(TestCase):
         result = match_description("Mobilisasi")
 
         self.assertEqual(result, {"status": "not found", "match": {}})
+
+    @patch("excel_parser.services.job_matcher.MatchingService.perform_best_match")
+    def test_returns_not_found_when_service_returns_empty_list(self, mock_match):
+        mock_match.return_value = []
+
+        result = match_description("Mobilisasi")
+
+        self.assertEqual(result, {"status": "not found", "match": []})
+
+    def test_returns_skipped_for_none_description(self):
+        self.assertEqual(match_description(None), {"status": "skipped", "match": None})
 
     @patch("excel_parser.services.job_matcher.logger")
     @patch("excel_parser.services.job_matcher.MatchingService.perform_best_match", side_effect=RuntimeError("boom"))

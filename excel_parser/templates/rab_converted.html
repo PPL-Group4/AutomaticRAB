@@ -5,7 +5,6 @@
 <div class="section-box position-relative">
   <h5 class="section-title">RAB Preview (Excel)</h5>
 
-  <!-- Upload form -->
   <form id="uploadForm" enctype="multipart/form-data" class="mb-3">
     <div class="input-group">
       <input type="file" name="file" id="fileInput" accept=".xls,.xlsx" class="form-control">
@@ -13,10 +12,7 @@
     </div>
   </form>
 
-  <!-- Error messages -->
   <div id="errorContainer"></div>
-
-  <!-- Spinner -->
   <div id="loadingSpinner" class="text-center py-4" style="display:none;">
     <div class="spinner-border text-primary" role="status">
       <span class="visually-hidden">Loading...</span>
@@ -24,10 +20,8 @@
     <p class="mt-2">Memproses file, mohon tunggu...</p>
   </div>
 
-  <!-- Tables will render here -->
   <div id="rabTables" class="mt-3"></div>
 
-  <!-- Grand total -->
   <div class="grand-total-box card mt-4 p-3 shadow-sm" id="grandTotalBox" style="display:none; max-width:400px;">
     <div class="d-flex justify-content-between"><span class="fw-bold">Total</span> <span id="grandTotal">Rp. 0</span></div>
     <div class="d-flex justify-content-between"><span class="fw-bold">PPN (10%)</span> <span id="ppn">Rp. 0</span></div>
@@ -44,7 +38,7 @@
 <script>
   {{ block.super }}
 
-  const SUGGEST_ENDPOINT = "/api/suggest/";
+  const MATCH_ENDPOINT = "{% url 'match-best' %}";
   const suggestionCache = new Map();
   const dropdownRequestState = new WeakMap();
   const MANUAL_SUGGESTION_LIMIT = 12;
@@ -52,20 +46,17 @@
   function showError(message) {
     const errorContainer = document.getElementById("errorContainer");
     errorContainer.innerHTML = `<div class="alert alert-danger">${message}</div>`;
-    setTimeout(() => {
-      errorContainer.innerHTML = "";
-    }, 5000);
+    setTimeout(() => (errorContainer.innerHTML = ""), 4000);
   }
 
   function showLoading() {
     document.getElementById("loadingSpinner").style.display = "block";
   }
-
   function hideLoading() {
     document.getElementById("loadingSpinner").style.display = "none";
   }
 
-  document.getElementById("uploadForm").addEventListener("submit", async function(e) {
+  document.getElementById("uploadForm").addEventListener("submit", async (e) => {
     e.preventDefault();
     const fileInput = document.getElementById("fileInput");
     if (!fileInput.files.length) {
@@ -76,25 +67,20 @@
     formData.append("file", fileInput.files[0]);
 
     try {
-      showLoading(); // spinner ON
-      const resp = await fetch("/excel_parser/preview_rows", {
-        method: "POST",
-        body: formData
-      });
+      showLoading();
+      const resp = await fetch("/excel_parser/preview_rows", { method: "POST", body: formData });
       const data = await resp.json();
-      hideLoading(); // spinner OFF
+      hideLoading();
 
-      if (data.rows) {
-        renderTables(data.rows);
-      } else {
-        showError("Gagal memproses file: " + (data.error || "Terjadi kesalahan yang tidak diketahui"));
-      }
+      if (data.rows) renderTables(data.rows);
+      else showError("Gagal memproses file: " + (data.error || "Terjadi kesalahan yang tidak diketahui"));
     } catch (err) {
       hideLoading();
       showError("Terjadi kesalahan saat mengunggah file: " + err.message);
     }
   });
 
+  // ---------- MAIN TABLE RENDER ----------
   function renderTables(rows) {
     const container = document.getElementById("rabTables");
     container.innerHTML = "";
@@ -144,6 +130,8 @@
       if (!currentTable || !tbody) {
         return;
       }
+
+      if (!currentTable) return;
 
       if (row.is_section && row.section_type === "CATEGORY") {
         const tr = document.createElement("tr");
@@ -230,7 +218,8 @@
     const ppn = total * 0.1;
     document.getElementById("ppn").innerText = "Rp. " + ppn.toLocaleString();
     document.getElementById("totalWithPpn").innerText = "Rp. " + (total + ppn).toLocaleString();
-    document.getElementById("terbilang").innerText = total === 0 ? "NOL RUPIAH" : numberToWords(total + ppn).toUpperCase();
+    document.getElementById("terbilang").innerText =
+      total === 0 ? "NOL RUPIAH" : numberToWords(total + ppn).toUpperCase();
   }
 
   function numberToWords(number) {
@@ -274,7 +263,8 @@
     const fallbackMessages = matches.filter(match => !match || !match.code);
 
     if (!selectableMatches.length && !fallbackMessages.length) {
-      cell.textContent = "-";
+      // No suggestions from matching service — allow manual input so user can type AHSP kode
+      renderManualInput(cell, row, analysisCell, statusCell, "Needs Manual Input");
       return;
     }
 
@@ -577,39 +567,46 @@
     return Array.from(map.values());
   }
 
-  function fetchRemoteSuggestions(query, limit = MANUAL_SUGGESTION_LIMIT) {
+  function fetchRemoteSuggestions(row, query, limit = MANUAL_SUGGESTION_LIMIT) {
     const trimmedQuery = (query || "").trim();
+    const description = trimmedQuery || (row.description || "").trim();
 
-    if (!trimmedQuery) {
+    if (!description) {
       return Promise.resolve([]);
     }
 
-    const params = new URLSearchParams();
-    if (trimmedQuery) {
-      params.append("q", trimmedQuery);
-    }
-    params.append("limit", String(limit));
-
-    const key = params.toString();
-    if (suggestionCache.has(key)) {
-      return suggestionCache.get(key);
+    const cacheKey = `${description}|${limit}`;
+    if (suggestionCache.has(cacheKey)) {
+      return suggestionCache.get(cacheKey);
     }
 
-    const request = fetch(`${SUGGEST_ENDPOINT}?${key}`, {
+    const request = fetch(MATCH_ENDPOINT, {
+      method: "POST",
       headers: {
+        "Content-Type": "application/json",
         Accept: "application/json",
       },
+      body: JSON.stringify({ description }),
     })
-      .then(res => (res.ok ? res.json() : { results: [] }))
-      .then(data => (Array.isArray(data.results) ? data.results : []))
+      .then(res => (res.ok ? res.json() : { match: [] }))
+      .then(data => {
+        const { match } = data || {};
+        if (!match) {
+          return [];
+        }
+        if (Array.isArray(match)) {
+          return match;
+        }
+        return match.code ? [match] : [];
+      })
       .catch(() => []);
 
-    suggestionCache.set(key, request);
+    suggestionCache.set(cacheKey, request);
     return request;
   }
 
   function fetchAndStoreSuggestions(row, query) {
-    return fetchRemoteSuggestions(query).then(results => {
+    return fetchRemoteSuggestions(row, query).then(results => {
       updateRowLookup(row, results);
       return Array.from(getMatchLookup(row).values());
     });
