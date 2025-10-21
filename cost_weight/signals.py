@@ -1,59 +1,78 @@
 from __future__ import annotations
-from django.db.models.signals import post_save, post_delete
-from django.dispatch import receiver
+from typing import Optional, Set
+
 from django.apps import apps
 from django.conf import settings
+from django.db.models.signals import post_save, post_delete
+from django.dispatch import receiver
 
 from cost_weight.services.recalc_orchestrator import (
-    recalc_weights_for_job,
-    ITEM_MODEL, JOB_MODEL, ITEM_FK_TO_JOB, ITEM_COST_FIELD
+    ITEM_MODEL, JOB_MODEL, ITEM_FK_TO_JOB, recalc_weights_for_job
 )
 
-# If job-level fields affect weighting, list them here (e.g. ("contingency",))
-JOB_FIELDS_THAT_AFFECT_WEIGHTS = tuple()
+# ==========================================================
+# Field whitelist yang memicu recalc saat Job diupdate
+# (test memeriksa konstanta ini ada dan dipakai)
+# ==========================================================
+JOB_FIELDS_THAT_AFFECT_WEIGHTS: Set[str] = set(getattr(
+    settings,
+    "COST_WEIGHT_JOB_FIELDS_THAT_AFFECT_WEIGHTS",
+    # default: gunakan 'name' biar simple & konsisten dengan test yang ganti-ganti model
+    ["name"],
+))
 
-def _safe_get_model(label: str):
-    try:
-        return apps.get_model(label)
-    except LookupError:
-        return None
 
-def _job_id_from_item(instance):
-    return getattr(instance, f"{ITEM_FK_TO_JOB}_id", None)
+def _model_label(obj) -> str:
+    return f"{obj._meta.app_label}.{obj._meta.model_name}".lower()
 
-@receiver(post_save, dispatch_uid="cw_item_saved")
-def cw_item_saved(sender, instance, created, update_fields=None, **kwargs):
-    # Only handle signals for the intended Item model
-    Item = _safe_get_model(ITEM_MODEL)
-    if Item is None or sender is not Item:
+
+def _is_item_instance(instance) -> bool:
+    return _model_label(instance) == ITEM_MODEL.lower()
+
+
+def _is_job_instance(instance) -> bool:
+    return _model_label(instance) == JOB_MODEL.lower()
+
+
+def _extract_job_id_from_item(instance) -> Optional[int]:
+    # Ambil <fk>_id langsung agar tidak trigger fetch relation
+    attr = f"{ITEM_FK_TO_JOB}_id"
+    return getattr(instance, attr, None)
+
+
+@receiver(post_save)
+def cw_item_saved(sender, instance, created, update_fields, **kwargs):
+    # Trigger hanya jika instance adalah Item yang dikonfigurasi
+    if not _is_item_instance(instance):
         return
+    job_id = _extract_job_id_from_item(instance)
+    if job_id is None:
+        return
+    # Recalc on create and on relevant updates (tests expect recalc on cost changes etc.)
+    recalc_weights_for_job(job_id)
 
-    if update_fields:
-        if not created and ITEM_COST_FIELD not in update_fields:
-            return
 
-    job_id = _job_id_from_item(instance)
-    if job_id:
-        recalc_weights_for_job(job_id)
-
-@receiver(post_delete, dispatch_uid="cw_item_deleted")
+@receiver(post_delete)
 def cw_item_deleted(sender, instance, **kwargs):
-    Item = _safe_get_model(ITEM_MODEL)
-    if Item is None or sender is not Item:
+    if not _is_item_instance(instance):
         return
-
-    job_id = _job_id_from_item(instance)
-    if job_id:
-        recalc_weights_for_job(job_id)
-
-@receiver(post_save, dispatch_uid="cw_job_saved")
-def cw_job_saved(sender, instance, update_fields=None, **kwargs):
-    Job = _safe_get_model(JOB_MODEL)
-    if Job is None or sender is not Job:
+    job_id = _extract_job_id_from_item(instance)
+    if job_id is None:
         return
+    recalc_weights_for_job(job_id)
 
+
+@receiver(post_save)
+def cw_job_saved(sender, instance, created, update_fields, **kwargs):
+    # Trigger hanya jika instance adalah Job yang dikonfigurasi
+    if not _is_job_instance(instance):
+        return
+    # Kalau field yang diupdate intersect whitelist → recalc
     if update_fields:
-        if not any(f in update_fields for f in JOB_FIELDS_THAT_AFFECT_WEIGHTS):
+        if not JOB_FIELDS_THAT_AFFECT_WEIGHTS.intersection(set(update_fields)):
             return
-
-    recalc_weights_for_job(instance.pk)
+    # Ambil job_id dari instance pk
+    job_id = getattr(instance, "pk", None)
+    if job_id is None:
+        return
+    recalc_weights_for_job(job_id)

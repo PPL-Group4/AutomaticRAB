@@ -1,50 +1,102 @@
 from __future__ import annotations
-from decimal import Decimal
+from contextlib import suppress
+from decimal import Decimal, ROUND_HALF_UP
 from typing import Dict, Iterable
-from django.db import transaction
+
 from django.apps import apps
 from django.conf import settings
-from cost_weight.services.cost_weight_calc import calculate_cost_weights
 
-# Configurable references to populating model 
 ITEM_MODEL = getattr(settings, "COST_WEIGHT_ITEM_MODEL", "estimator.JobItem")
-JOB_MODEL  = getattr(settings, "COST_WEIGHT_JOB_MODEL",  "estimator.Job")
-ITEM_COST_FIELD   = getattr(settings, "COST_WEIGHT_ITEM_COST_FIELD", "cost")
+JOB_MODEL = getattr(settings, "COST_WEIGHT_JOB_MODEL", "estimator.Job")
+ITEM_COST_FIELD = getattr(settings, "COST_WEIGHT_ITEM_COST_FIELD", "price")
 ITEM_WEIGHT_FIELD = getattr(settings, "COST_WEIGHT_ITEM_WEIGHT_FIELD", "weight_pct")
-ITEM_FK_TO_JOB    = getattr(settings, "COST_WEIGHT_ITEM_FK_TO_JOB", "job")
+ITEM_FK_TO_JOB = getattr(settings, "COST_WEIGHT_ITEM_FK_TO_JOB", "rab")
 
-def _get_models():
-    Item = apps.get_model(ITEM_MODEL)
-    Job = apps.get_model(JOB_MODEL)
-    return Item, Job
+class _ItemProxy:
+    @property
+    def objects(self):
+        return apps.get_model(ITEM_MODEL).objects
 
-def _items_for_job(job_id) -> Iterable:
-    Item, _ = _get_models()
-    return (
-        Item.objects
-        .select_for_update()
+Item = _ItemProxy()  
+
+
+def calculate_cost_weights(costs_by_id: Dict[str, Decimal], decimal_places: int = 1) -> Dict[str, Decimal]:
+    norm_costs: Dict[str, Decimal] = {}
+    total = Decimal("0")
+    for k, v in costs_by_id.items():
+        dv = Decimal(str(v or "0"))
+        norm_costs[k] = dv
+        total += dv
+
+    if total == 0:
+        q = Decimal("1." + "0" * decimal_places) if decimal_places > 0 else Decimal("1")
+        zero = Decimal("0").quantize(q)
+        return {k: zero for k in norm_costs}
+
+    raw = {k: (v / total) * Decimal("100") for k, v in norm_costs.items()}
+
+    q = Decimal("1." + "0" * decimal_places) if decimal_places > 0 else Decimal("1")
+    rounded = {k: r.quantize(q, rounding=ROUND_HALF_UP) for k, r in raw.items()}
+    target = Decimal("100").quantize(q)
+    sum_rounded = sum(rounded.values())
+
+    if sum_rounded == target:
+        return rounded
+
+    diff = target - sum_rounded
+    step = Decimal("1") / (Decimal(10) ** decimal_places)
+
+    def frac_part(d: Decimal) -> Decimal:
+        return (d - d.quantize(step, rounding=ROUND_HALF_UP)).copy_abs()
+
+    order_plus = sorted(raw.items(), key=lambda kv: (-frac_part(kv[1]), str(kv[0])))
+    order_minus = sorted(raw.items(), key=lambda kv: (frac_part(kv[1]), str(kv[0])))
+
+    if diff > 0:
+        i = 0
+        while diff > 0:
+            k = order_plus[i % len(order_plus)][0]
+            rounded[k] += step
+            diff -= step
+            i += 1
+    elif diff < 0:
+        i = 0
+        while diff < 0:
+            k = order_minus[i % len(order_minus)][0]
+            rounded[k] -= step
+            diff += step
+            i += 1
+
+    return rounded
+
+def _items_to_mapping(items: Iterable) -> Dict[str, Decimal]:
+    out: Dict[str, Decimal] = {}
+    for it in items:
+        with suppress(AttributeError):
+            cost_val = getattr(it, ITEM_COST_FIELD, None)
+        dv = Decimal(str(cost_val or "0"))
+        out[str(it.pk)] = dv
+    return out
+
+
+def recalc_weights_for_job(job_id) -> int:
+    ItemModel = apps.get_model(ITEM_MODEL)
+
+    items = list(
+        ItemModel.objects
         .filter(**{f"{ITEM_FK_TO_JOB}_id": job_id})
-        .order_by("pk")
+        .only("pk", ITEM_COST_FIELD)  
     )
 
-def _items_to_mapping(items) -> Dict[str, Decimal]:
-    return {str(it.pk): getattr(it, ITEM_COST_FIELD) or Decimal("0") for it in items}
-
-@transaction.atomic
-def recalc_weights_for_job(job_id: int, *, decimal_places: int = 2) -> int:
-    """
-    Recalculate & save cost weight (%) for all items in a given job.
-    Called automatically after population is complete.
-    """
-    Item, _ = _get_models()
-    items = list(_items_for_job(job_id))
     if not items:
         return 0
 
-    mapping = _items_to_mapping(items)
-    weights = calculate_cost_weights(mapping, decimal_places=decimal_places)
+    costs_map = _items_to_mapping(items)
+    weights = calculate_cost_weights(costs_map, decimal_places=1)
 
     for it in items:
-        setattr(it, ITEM_WEIGHT_FIELD, weights[str(it.pk)])
-    Item.objects.bulk_update(items, [ITEM_WEIGHT_FIELD])
+        setattr(it, ITEM_WEIGHT_FIELD, weights.get(str(it.pk), Decimal("0")))
+
+    ItemModel.objects.bulk_update(items, [ITEM_WEIGHT_FIELD])
+
     return len(items)
