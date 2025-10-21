@@ -58,8 +58,6 @@ _BASE_CONSTRUCTION_SYNONYMS = { # noun synonyms related to construction material
     "wasbak": ["wastafel", "sink"],
     
     # Electrical
-    "saklar": ["switch", "tombol"],
-    "switch": ["saklar", "tombol"],
     "tombol": ["saklar", "switch"],
     "stop": ["kontak", "colokan", "outlet"],
     "kontak": ["stop", "colokan", "outlet"],
