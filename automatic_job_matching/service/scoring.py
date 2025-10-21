@@ -35,6 +35,8 @@ class FuzzyConfidenceScorer(ConfidenceScorer):
       - Near-token similarity (substring / high per-token ratio)
       - Length balance (token count ratio)
     A mild bonus is applied when both sequence and jaccard are strong.
+    
+    ENHANCED: Multi-word query bonus for queries with 2+ significant matching words.
     """
 
     # Weight constants kept as class attributes to allow easy tuning / subclassing
@@ -47,9 +49,12 @@ class FuzzyConfidenceScorer(ConfidenceScorer):
     BONUS_THRESHOLD_SEQ = 0.75
     BONUS_THRESHOLD_JACCARD = 0.70
     BONUS_MULTIPLIER = 1.05
+    
+    # Multi-word matching bonus
+    MULTI_WORD_BONUS_BASE = 0.20  # Base bonus for matching multiple significant words
 
     def score(self, norm_query: str, norm_candidate: str) -> float:
-        """Compute similarity score in [0,1] with reduced branching complexity."""
+        """Compute similarity score in [0,1] with multi-word matching boost."""
         trivial = self._check_trivial(norm_query, norm_candidate)
         if trivial is not None:
             return trivial
@@ -63,6 +68,7 @@ class FuzzyConfidenceScorer(ConfidenceScorer):
         near = self._near_similarity(q_tokens, c_tokens)
         len_balance = self._length_balance(q_tokens, c_tokens)
 
+        # Base score calculation
         score = (
             seq * self.W_SEQ +
             jaccard * self.W_JACCARD +
@@ -71,8 +77,14 @@ class FuzzyConfidenceScorer(ConfidenceScorer):
             len_balance * self.W_LEN
         )
 
+        # Apply standard bonus for high sequence + jaccard
         if self._eligible_bonus(seq, jaccard):
             score = min(1.0, score * self.BONUS_MULTIPLIER)
+
+        multi_word_bonus = self._calculate_multi_word_bonus(q_tokens, c_tokens)
+        if multi_word_bonus > 0:
+            score = min(1.0, score + multi_word_bonus)
+
 
         return self._clamp(score)
 
@@ -129,6 +141,40 @@ class FuzzyConfidenceScorer(ConfidenceScorer):
     def _eligible_bonus(self, seq: float, jaccard: float) -> bool:
         return seq >= self.BONUS_THRESHOLD_SEQ and jaccard >= self.BONUS_THRESHOLD_JACCARD
 
+    def _calculate_multi_word_bonus(self, q_tokens: list[str], c_tokens: list[str]) -> float:
+        """Calculate bonus for queries with multiple significant words matching.
+        
+        Logic:
+        - Identify significant words (length >= 4, common stop words filtered)
+        - Count how many significant query words appear in candidate
+        - If 2+ significant words match, apply scaled bonus
+        
+        Returns:
+            Float bonus value (0.0 to MULTI_WORD_BONUS_BASE)
+        """
+        # Filter to significant words (length >= 4)
+        significant_query_words = [w for w in q_tokens if len(w) >= 4]
+        
+        # Need at least 2 significant words to qualify for bonus
+        if len(significant_query_words) < 2:
+            return 0.0
+        
+        c_set = set(c_tokens)
+        
+        # Count exact matches of significant words
+        matched_count = sum(1 for w in significant_query_words if w in c_set)
+        
+        # Bonus only applies if 2+ significant words matched
+        if matched_count < 2:
+            return 0.0
+        
+        # Scale bonus based on match percentage
+        # 100% match = full bonus, 50% match = half bonus
+        match_ratio = matched_count / len(significant_query_words)
+        bonus = self.MULTI_WORD_BONUS_BASE * match_ratio
+        
+        return bonus
+
     @staticmethod
     def _clamp(v: float) -> float:
         if v < 0.0:
@@ -136,7 +182,6 @@ class FuzzyConfidenceScorer(ConfidenceScorer):
         if v > 1.0:
             return 1.0
         return v
-
 
 class ExactConfidenceScorer(ConfidenceScorer):
     """Scorer for exact matches: full equality -> 1.0 else 0.0.
