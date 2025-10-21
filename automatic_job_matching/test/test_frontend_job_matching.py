@@ -1,12 +1,21 @@
 from django.contrib.staticfiles.testing import StaticLiveServerTestCase
 from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
-from selenium.webdriver.common.keys import Keys
+import tempfile
 import time
 
 class JobMatchingFrontEndTests(StaticLiveServerTestCase):
     def setUp(self):
-        self.browser = webdriver.Chrome()  # requires chromedriver installed
+        options = Options()
+        options.add_argument("--headless=new")  
+        options.add_argument("--no-sandbox")    
+        options.add_argument("--disable-dev-shm-usage") 
+        options.add_argument(f"--user-data-dir={tempfile.mkdtemp()}") 
+        options.add_argument("--disable-gpu")
+        options.add_argument("--window-size=1920,1080")
+
+        self.browser = webdriver.Chrome(options=options)
         self.browser.implicitly_wait(3)
 
     def tearDown(self):
