@@ -3,14 +3,30 @@
 
 {% block content %}
 <div class="section-box position-relative">
-  <h5 class="section-title">RAB Preview (Excel)</h5>
+  <h5 class="section-title">RAB Preview</h5>
 
-  <form id="uploadForm" enctype="multipart/form-data" class="mb-3">
-    <div class="input-group">
-      <input type="file" name="file" id="fileInput" accept=".xls,.xlsx" class="form-control">
-      <button type="submit" class="btn btn-primary" style="background-color:#00365a;">Upload & Preview</button>
+  <div class="row g-3 mb-3">
+    <div class="col-lg-6">
+      <form id="excelUploadForm" enctype="multipart/form-data" class="h-100 p-3 border rounded bg-light-subtle">
+        <label for="excelFileInput" class="form-label fw-semibold">Upload Excel</label>
+        <div class="input-group">
+          <input type="file" name="file" id="excelFileInput" accept=".xls,.xlsx" class="form-control">
+          <button type="submit" class="btn btn-primary" style="background-color:#00365a;">Upload & Preview Excel</button>
+        </div>
+        <small class="text-muted">Format didukung: .xls, .xlsx</small>
+      </form>
     </div>
-  </form>
+    <div class="col-lg-6">
+      <form id="pdfUploadForm" enctype="multipart/form-data" class="h-100 p-3 border rounded bg-light-subtle">
+        <label for="pdfFileInput" class="form-label fw-semibold">Upload PDF</label>
+        <div class="input-group">
+          <input type="file" name="pdf_file" id="pdfFileInput" accept=".pdf" class="form-control">
+          <button type="submit" class="btn btn-primary" style="background-color:#00365a;">Upload & Preview PDF</button>
+        </div>
+        <small class="text-muted">Format didukung: .pdf</small>
+      </form>
+    </div>
+  </div>
 
   <div id="errorContainer"></div>
   <div id="loadingSpinner" class="text-center py-4" style="display:none;">
@@ -40,6 +56,8 @@
 
   const MATCH_ENDPOINT = "{% url 'match-best' %}";
   const RECOMPUTE_ENDPOINT = "/api/recompute_total_cost/";
+  const EXCEL_UPLOAD_ENDPOINT = "{% url 'preview_rows' %}";
+  const PDF_UPLOAD_ENDPOINT = "{% url 'pdf_parser:rab_converted_pdf' %}";
   const suggestionCache = new Map();
   const dropdownRequestState = new WeakMap();
   const MANUAL_SUGGESTION_LIMIT = 12;
@@ -57,34 +75,95 @@
     document.getElementById("loadingSpinner").style.display = "none";
   }
 
-  document.getElementById("uploadForm").addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const fileInput = document.getElementById("fileInput");
-    if (!fileInput.files.length) {
-      showError("Silakan pilih file Excel terlebih dahulu");
-      return;
-    }
-    const formData = new FormData();
-    formData.append("file", fileInput.files[0]);
+  const excelUploadForm = document.getElementById("excelUploadForm");
+  const pdfUploadForm = document.getElementById("pdfUploadForm");
 
-    try {
-      showLoading();
-      const resp = await fetch("/excel_parser/preview_rows", { method: "POST", body: formData });
-      const data = await resp.json();
-      hideLoading();
+  if (excelUploadForm) {
+    excelUploadForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const fileInput = document.getElementById("excelFileInput");
+      if (!fileInput.files.length) {
+        showError("Silakan pilih file Excel terlebih dahulu");
+        return;
+      }
 
-      if (data.rows) renderTables(data.rows);
-      else showError("Gagal memproses file: " + (data.error || "Terjadi kesalahan yang tidak diketahui"));
-    } catch (err) {
-      hideLoading();
-      showError("Terjadi kesalahan saat mengunggah file: " + err.message);
-    }
-  });
+      const formData = new FormData();
+      formData.append("file", fileInput.files[0]);
+
+      try {
+        showLoading();
+        const response = await fetch(EXCEL_UPLOAD_ENDPOINT, { method: "POST", body: formData });
+        const data = await response.json();
+        hideLoading();
+
+        const rows = data.rows || data.excel_standard || data.excel_apendo;
+        if (rows) {
+          renderTables(rows, { sourceType: "excel" });
+          fileInput.value = "";
+        } else {
+          showError("Gagal memproses file: " + (data.error || "Terjadi kesalahan yang tidak diketahui"));
+        }
+      } catch (error) {
+        hideLoading();
+        showError("Terjadi kesalahan saat mengunggah file: " + error.message);
+      }
+    });
+  }
+
+  if (pdfUploadForm) {
+    pdfUploadForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const fileInput = document.getElementById("pdfFileInput");
+      if (!fileInput.files.length) {
+        showError("Silakan pilih file PDF terlebih dahulu");
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append("pdf_file", fileInput.files[0]);
+
+      try {
+        showLoading();
+        const response = await fetch(PDF_UPLOAD_ENDPOINT, { method: "POST", body: formData });
+        const data = await response.json();
+        hideLoading();
+
+        if (Array.isArray(data.rows) && data.rows.length) {
+          renderTables(data.rows, { sourceType: "pdf" });
+          fileInput.value = "";
+        } else {
+          showError("Gagal memproses file: " + (data.error || "Tidak ada baris yang ditemukan"));
+        }
+      } catch (error) {
+        hideLoading();
+        showError("Terjadi kesalahan saat mengunggah file: " + error.message);
+      }
+    });
+  }
 
   // ---------- MAIN TABLE RENDER ----------
-  function renderTables(rows) {
+  function renderTables(rows, options = {}) {
     const container = document.getElementById("rabTables");
     container.innerHTML = "";
+
+    if (!Array.isArray(rows) || !rows.length) {
+      document.getElementById("grandTotalBox").style.display = "none";
+      showError("Tidak ada baris yang dapat ditampilkan");
+      return;
+    }
+
+    const hasSections = rows.some(row => row && row.is_section);
+    if (hasSections) {
+      renderSectionedTables(rows, container);
+    } else {
+      renderFlatTable(rows, container);
+    }
+
+    document.getElementById("grandTotalBox").style.display = "block";
+    updateGrandTotalFromRows();
+  }
+
+  function renderSectionedTables(rows, container) {
     let total = 0;
     let currentTable = null;
     let tbody = null;
@@ -105,7 +184,6 @@
 
         const table = document.createElement("table");
         table.classList.add("table", "table-bordered", "table-sm", "align-middle", "mb-4");
-
         table.innerHTML = `
           <thead class="table-light">
             <tr>
@@ -168,75 +246,107 @@
         return;
       }
 
-  const tr = document.createElement("tr");
-  const rowKey = row.row_key || `row-${rowIndex}`;
-  tr.dataset.rowKey = rowKey;
-
-  const numberCell = document.createElement("td");
-  numberCell.textContent = "";
-  tr.appendChild(numberCell);
-
-  const descriptionCell = document.createElement("td");
-  descriptionCell.textContent = row.description || "";
-  tr.appendChild(descriptionCell);
-
-  const analysisCell = document.createElement("td");
-  analysisCell.classList.add("analysis-code-cell");
-  analysisCell.textContent = row.analysis_code || "";
-  analysisCell.dataset.rowKey = rowKey;
-  tr.appendChild(analysisCell);
-
-  const statusCell = document.createElement("td");
-  statusCell.textContent = formatMatchStatusText(row);
-  tr.appendChild(statusCell);
-
-  const matchCell = document.createElement("td");
-  populateMatchCell(matchCell, row, analysisCell, statusCell);
-  tr.appendChild(matchCell);
-
-  // Volume - Editable Input
-  const volumeCell = document.createElement("td");
-  const volumeInput = document.createElement("input");
-  volumeInput.type = "number";
-  volumeInput.className = "form-control form-control-sm volume-input";
-  volumeInput.value = parseCurrencyNumber(row.volume);
-  volumeInput.min = "0";
-  volumeInput.step = "0.01";
-  volumeInput.dataset.rowIndex = rowIndex;
-  volumeInput.dataset.rowKey = rowKey;
-  volumeCell.appendChild(volumeInput);
-  tr.appendChild(volumeCell);
-
-  const unitCell = document.createElement("td");
-  unitCell.textContent = row.unit || "";
-  tr.appendChild(unitCell);
-
-  // Price - Editable Input
-  const priceCell = document.createElement("td");
-  const priceInput = document.createElement("input");
-  priceInput.type = "number";
-  priceInput.className = "form-control form-control-sm price-input";
-  priceInput.value = parseCurrencyNumber(row.price);
-  priceInput.min = "0";
-  priceInput.step = "0.01";
-  priceInput.dataset.rowIndex = rowIndex;
-  priceInput.dataset.rowKey = rowKey;
-  priceCell.appendChild(priceInput);
-  tr.appendChild(priceCell);
-
-  // Total - Display Cell
-  const totalCell = document.createElement("td");
-  totalCell.classList.add("total-cell");
-  totalCell.textContent = "Rp. " + formatCurrencyValue(row.total_price);
-  tr.appendChild(totalCell);
-
-  tbody.appendChild(tr);
-
-  total += parseCurrencyNumber(row.total_price);
+      const tr = buildDataRow(row, rowIndex);
+      tbody.appendChild(tr);
+      total += parseCurrencyNumber(row.total_price);
     });
 
-    document.getElementById("grandTotalBox").style.display = "block";
     updateGrandTotal(total);
+  }
+
+  function renderFlatTable(rows, container) {
+    let total = 0;
+    const table = document.createElement("table");
+    table.classList.add("table", "table-bordered", "table-sm", "align-middle", "mb-4");
+    table.innerHTML = `
+      <thead class="table-light">
+        <tr>
+          <th>No.</th>
+          <th>Uraian Pekerjaan</th>
+          <th>Kode</th>
+          <th>Status Pencocokan</th>
+          <th>Hasil AHSP</th>
+          <th>Volume</th>
+          <th>SAT</th>
+          <th>Harga Sat (Rp.)</th>
+          <th>Jumlah (Rp.)</th>
+        </tr>
+      </thead>
+    `;
+    const tbody = document.createElement("tbody");
+    table.appendChild(tbody);
+    container.appendChild(table);
+
+    rows.forEach((row, rowIndex) => {
+      const tr = buildDataRow(row, rowIndex, { flatNumbering: true });
+      tbody.appendChild(tr);
+      total += parseCurrencyNumber(row.total_price);
+    });
+
+    updateGrandTotal(total);
+  }
+
+  function buildDataRow(row, rowIndex, options = {}) {
+    const tr = document.createElement("tr");
+    const rowKey = row.row_key || row.rowKey || `row-${rowIndex}`;
+    tr.dataset.rowKey = rowKey;
+
+    const numberCell = document.createElement("td");
+    numberCell.textContent = options.flatNumbering ? (row.number || rowIndex + 1) : (row.number || "");
+    tr.appendChild(numberCell);
+
+    const descriptionCell = document.createElement("td");
+    descriptionCell.textContent = row.description || "";
+    tr.appendChild(descriptionCell);
+
+    const analysisCell = document.createElement("td");
+    analysisCell.classList.add("analysis-code-cell");
+    analysisCell.textContent = row.analysis_code || row.analysisCode || row.code || "";
+    analysisCell.dataset.rowKey = rowKey;
+    tr.appendChild(analysisCell);
+
+    const statusCell = document.createElement("td");
+    statusCell.textContent = formatMatchStatusText(row);
+    tr.appendChild(statusCell);
+
+    const matchCell = document.createElement("td");
+    populateMatchCell(matchCell, row, analysisCell, statusCell);
+    tr.appendChild(matchCell);
+
+    const volumeCell = document.createElement("td");
+    const volumeInput = document.createElement("input");
+    volumeInput.type = "number";
+    volumeInput.className = "form-control form-control-sm volume-input";
+    volumeInput.value = parseCurrencyNumber(row.volume);
+    volumeInput.min = "0";
+    volumeInput.step = "0.01";
+    volumeInput.dataset.rowIndex = rowIndex;
+    volumeInput.dataset.rowKey = rowKey;
+    volumeCell.appendChild(volumeInput);
+    tr.appendChild(volumeCell);
+
+    const unitCell = document.createElement("td");
+    unitCell.textContent = row.unit || row.sat || "";
+    tr.appendChild(unitCell);
+
+    const priceCell = document.createElement("td");
+    const priceInput = document.createElement("input");
+    priceInput.type = "number";
+    priceInput.className = "form-control form-control-sm price-input";
+    priceInput.value = parseCurrencyNumber(row.price);
+    priceInput.min = "0";
+    priceInput.step = "0.01";
+    priceInput.dataset.rowIndex = rowIndex;
+    priceInput.dataset.rowKey = rowKey;
+    priceCell.appendChild(priceInput);
+    tr.appendChild(priceCell);
+
+    const totalCell = document.createElement("td");
+    totalCell.classList.add("total-cell");
+    totalCell.textContent = "Rp. " + formatCurrencyValue(row.total_price);
+    tr.appendChild(totalCell);
+
+    return tr;
   }
 
   // ---------- AUTO PRICE MATCHING LOGIC ----------
@@ -342,8 +452,16 @@
   }
 
   function populateMatchCell(cell, row, analysisCell, statusCell) {
+    cell.innerHTML = "";
+
     if (row.job_match_status === "error") {
-      cell.textContent = row.job_match_error ? `Error: ${row.job_match_error}` : "Error";
+      const errorNotice = document.createElement("div");
+      errorNotice.className = "text-danger small mb-2";
+      errorNotice.textContent = row.job_match_error ? `Error: ${row.job_match_error}` : "Error";
+      cell.appendChild(errorNotice);
+      renderManualInput(cell, row, analysisCell, statusCell, "Masukkan kode AHSP secara manual", {
+        noticeClass: "text-warning small mb-2"
+      });
       return;
     }
 
@@ -353,17 +471,17 @@
     const fallbackMessages = matches.filter(match => !match || !match.code);
 
     if (!selectableMatches.length && !fallbackMessages.length) {
-      renderManualInput(cell, row, analysisCell, statusCell, "Needs Manual Input");
+      renderManualInput(cell, row, analysisCell, statusCell, "Masukkan kode AHSP secara manual", {
+        noticeClass: "text-warning small mb-2"
+      });
       return;
     }
 
     if (selectableMatches.length) {
-      if (selectableMatches.length > 1) {
-        const helper = document.createElement("div");
-        helper.className = "text-muted small mb-1";
-        helper.textContent = "Pilih salah satu untuk mengisi kolom Kode.";
-        cell.appendChild(helper);
-      }
+      const helper = document.createElement("div");
+      helper.className = "fw-semibold small mb-2 text-dark";
+      helper.textContent = "Pilih kode yang sesuai atau gunakan input manual:";
+      cell.appendChild(helper);
 
       selectableMatches.forEach(match => {
         const button = document.createElement("button");
@@ -382,12 +500,13 @@
       });
     }
 
-    if (fallbackMessages.length) {
-      const message = fallbackMessages[0] && fallbackMessages[0].match_status
-        ? fallbackMessages[0].match_status
-        : "Needs Manual Input";
-      renderManualInput(cell, row, analysisCell, statusCell, message);
-    }
+    const manualLabel = fallbackMessages.length
+      ? (fallbackMessages[0] && fallbackMessages[0].match_status ? fallbackMessages[0].match_status : "Masukkan kode AHSP secara manual")
+      : "Masukkan kode AHSP secara manual";
+
+    renderManualInput(cell, row, analysisCell, statusCell, manualLabel, {
+      noticeClass: selectableMatches.length ? "text-muted small mb-2" : "text-warning small mb-2"
+    });
   }
 
   function normalizeMatches(matchData) {
@@ -440,20 +559,20 @@
     }
   }
 
-  function renderManualInput(cell, row, analysisCell, statusCell, label) {
+  function renderManualInput(cell, row, analysisCell, statusCell, label, options = {}) {
     cell.style.position = "relative";
     const notice = document.createElement("div");
-    notice.className = "text-warning small mb-2";
+    notice.className = options.noticeClass || "text-warning small mb-2";
     notice.textContent = label || "Needs Manual Input";
     cell.appendChild(notice);
 
     const group = document.createElement("div");
-    group.className = "input-group input-group-sm manual-match-group";
+    group.className = options.groupClass || "input-group input-group-sm manual-match-group";
 
     const input = document.createElement("input");
     input.type = "text";
     input.className = "form-control";
-    input.placeholder = "Masukkan kode AHSP";
+    input.placeholder = options.placeholder || "Masukkan kode AHSP";
     input.value = row.analysis_code || "";
     input.autocomplete = "off";
 
