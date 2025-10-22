@@ -1,6 +1,6 @@
 import logging
 
-from automatic_job_matching.repository.ahs_repo import DbAhsRepository
+from automatic_job_matching.repository.combined_ahs_repo import CombinedAhsRepository
 from automatic_job_matching.service.exact_matcher import ExactMatcher
 from automatic_job_matching.service.fuzzy_matcher import FuzzyMatcher
 from automatic_job_matching.service.scoring import FuzzyConfidenceScorer
@@ -19,7 +19,7 @@ class MatchingService:
         logger.info("perform_exact_match called (len=%d)", len(description))
 
         try:
-            matcher = ExactMatcher(DbAhsRepository())
+            matcher = ExactMatcher(CombinedAhsRepository())
             result = matcher.match(description)
             logger.debug("Exact match result: %s", result)
             return result
@@ -33,7 +33,7 @@ class MatchingService:
                     len(description), min_similarity)
         
         try:
-            matcher = FuzzyMatcher(DbAhsRepository(), min_similarity, scorer=FuzzyConfidenceScorer())
+            matcher = FuzzyMatcher(CombinedAhsRepository(), min_similarity, scorer=FuzzyConfidenceScorer())
             confidence_result = getattr(matcher, 'match_with_confidence', None)
             if callable(confidence_result):
                 result = confidence_result(description)
@@ -52,7 +52,7 @@ class MatchingService:
                     len(description), limit, min_similarity)
         
         try:
-            matcher = FuzzyMatcher(DbAhsRepository(), min_similarity, scorer=FuzzyConfidenceScorer())
+            matcher = FuzzyMatcher(CombinedAhsRepository(), min_similarity, scorer=FuzzyConfidenceScorer())
             confidence_multi = getattr(matcher, 'find_multiple_matches_with_confidence', None)
             
             if callable(confidence_multi):
@@ -100,9 +100,9 @@ class MatchingService:
                 return MatchingService.perform_multiple_match(description, limit, min_similarity)
             
             # Multi-word queries: return single best match
-            min_similarity_single = 0.6
-            min_similarity_multiple = 0.4
-            limit = 5
+            min_similarity_single = 0.9
+            min_similarity_multiple = 0.6
+            limit = 10
 
             # 1. Try exact
             result = MatchingService.perform_exact_match(description)
@@ -118,29 +118,3 @@ class MatchingService:
         except Exception as e:
             logger.error("Error in perform_best_match: %s", str(e), exc_info=True)
             return None
-
-
-    @staticmethod
-    def search_candidates(term: str, limit: int = 10):
-        logger.debug("search_candidates called term=%s limit=%d", term, limit)
-        repo = DbAhsRepository()
-        search_callable = getattr(repo, "search", None)
-
-        if callable(search_callable):
-            rows = search_callable(term, limit=limit)
-        else:
-            logger.warning("DbAhsRepository.search missing; falling back to by_name_candidates")
-            cleaned = (term or "").strip()
-            if not cleaned:
-                return []
-            rows = repo.by_name_candidates(cleaned)[:limit]
-
-        return [
-            {
-                "source": "ahs",
-                "id": row.id,
-                "code": row.code,
-                "name": row.name,
-            }
-            for row in rows
-        ]

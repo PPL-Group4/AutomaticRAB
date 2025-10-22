@@ -1,8 +1,20 @@
 from decimal import Decimal
-
+import json
 from django.core.exceptions import ValidationError
 from django.test import SimpleTestCase
+from automatic_price_matching.ahs_cache import AhsCache
+from automatic_job_matching.service.exact_matcher import AhsRow
+from automatic_price_matching.price_retrieval import AhspPriceRetriever, MockAhspSource
+from automatic_price_matching.total_cost import TotalCostCalculator
+from unittest.mock import patch
+from automatic_job_matching.repository.ahs_repo import DbAhsRepository
+from rencanakan_core.models import Ahs
+from django.test import TestCase, Client, override_settings
+from django.urls import reverse
+from automatic_price_matching.service import AutomaticPriceMatchingService
 class AhspValidationTests(SimpleTestCase):
+
+
 	"""Expectations for AHSP payload validation (TDD coverage)."""
 
 	def setUp(self) -> None:
@@ -218,6 +230,7 @@ class AhspValidationTests(SimpleTestCase):
 		self.assertIsInstance(cleaned["volume"], Decimal)
 		self.assertEqual(cleaned["volume"], Decimal("1.5"))
 		self.assertEqual(cleaned["unit_price"], Decimal("250000.00"))
+		self.assertEqual(cleaned["total_cost"], Decimal("375000.00"))
 		self.assertEqual(cleaned["components"][0]["coefficient"], Decimal("0.75"))
 
 	def test_accepts_decimal_inputs(self) -> None:
@@ -233,6 +246,66 @@ class AhspValidationTests(SimpleTestCase):
 
 		self.assertEqual(cleaned["volume"], Decimal("2.5"))
 		self.assertEqual(cleaned["unit_price"], Decimal("123.45"))
+		self.assertEqual(cleaned["total_cost"], Decimal("308.63"))
+
+	def test_total_cost_rounding(self) -> None:
+		payload = {
+			"code": "AT.03.003",
+			"name": "Beton",
+			"unit": "m3",
+			"volume": Decimal("2.333"),
+			"unit_price": Decimal("123.456"),
+		}
+
+		cleaned = self.validate(payload)
+		self.assertEqual(cleaned["total_cost"], Decimal("288.02"))
+
+	def test_total_cost_none_when_unit_price_missing(self) -> None:
+		payload = {
+			"code": "AT.04.004",
+			"name": "Tanah",
+			"unit": "m3",
+			"volume": Decimal("5"),
+		}
+
+		cleaned = self.validate(payload)
+		self.assertIsNone(cleaned["unit_price"])
+		self.assertIsNone(cleaned["total_cost"])
+
+	def test_total_cost_none_when_volume_missing(self) -> None:
+		payload = {
+			"code": "AT.05.005",
+			"name": "Pasir",
+			"unit": "m3",
+			"volume": None,
+			"unit_price": Decimal("111.11"),
+		}
+
+		cleaned = self.validate(payload)
+		self.assertIsNone(cleaned["volume"])
+		self.assertIsNone(cleaned["total_cost"])
+
+
+class TotalCostCalculatorTests(SimpleTestCase):
+	def test_calculates_when_both_decimals(self) -> None:
+		result = TotalCostCalculator.calculate(Decimal("10"), Decimal("3.333"))
+		self.assertEqual(result, Decimal("33.33"))
+
+	def test_returns_none_when_missing_inputs(self) -> None:
+		self.assertIsNone(TotalCostCalculator.calculate(None, Decimal("5")))
+		self.assertIsNone(TotalCostCalculator.calculate(Decimal("5"), None))
+
+	def test_rounds_half_up(self) -> None:
+		result = TotalCostCalculator.calculate(Decimal("1.005"), Decimal("1"))
+		self.assertEqual(result, Decimal("1.01"))
+
+	def test_handles_negative_values(self) -> None:
+		result = TotalCostCalculator.calculate(Decimal("-2"), Decimal("3.5"))
+		self.assertEqual(result, Decimal("-7.00"))
+
+	def test_returns_none_for_non_decimal_inputs(self) -> None:
+		self.assertIsNone(TotalCostCalculator.calculate(Decimal("2"), 3))
+		self.assertIsNone(TotalCostCalculator.calculate("2", Decimal("3")))
 class FallbackValidatorTests(SimpleTestCase):
     """Expectations for fallback behaviour when AHSP match is not found."""
 
@@ -324,3 +397,200 @@ class FallbackValidatorTests(SimpleTestCase):
         self.assertEqual(result["total_price"], Decimal("0"))
         self.assertEqual(result["match_status"], "Needs Manual Input")
         self.assertTrue(result["is_editable"])
+
+
+class AhsCacheTests(SimpleTestCase):
+    """Expectations for AHSP in-memory caching behavior (unit-level)."""
+
+    def setUp(self):
+        self.cache = AhsCache()
+        self.sample_rows = [AhsRow(id=1, code="AT.01.001", name="Galian Tanah")]
+
+    # ✅ NEGATIVE test: triggers DB lookup when cache miss
+    def test_cache_miss_triggers_db_lookup(self):
+        repo = DbAhsRepository()
+
+        with patch("rencanakan_core.models.Ahs.objects.filter") as mock_filter:
+            mock_filter.return_value = Ahs.objects.none()
+
+            # Nothing cached yet → must hit DB
+            repo.by_code_like("NON_EXISTENT_CODE")
+            self.assertGreater(mock_filter.call_count, 0)
+
+    # ✅ POSITIVE tests
+    def test_cache_stores_and_retrieves_by_code(self):
+        self.cache.set_by_code("AT.01.001", self.sample_rows)
+        cached = self.cache.get_by_code("AT.01.001")
+        self.assertEqual(cached, self.sample_rows)
+
+    def test_cache_miss_returns_none(self):
+        self.assertIsNone(self.cache.get_by_code("unknown"))
+
+    def test_cache_stores_by_name_token(self):
+        self.cache.set_by_name("galian", self.sample_rows)
+        cached = self.cache.get_by_name("galian")
+        self.assertEqual(cached[0].name, "Galian Tanah")
+
+    def test_cache_stores_full_list(self):
+        self.cache.set_all(self.sample_rows)
+        cached_all = self.cache.get_all()
+        self.assertEqual(len(cached_all), 1)
+
+    # ✅ EDGE CASES
+    def test_cache_handles_empty_or_none_key(self):
+        """Edge case: Ensure cache handles empty or None keys gracefully."""
+        # Empty key should still store and retrieve fine
+        self.cache.set_by_code("", self.sample_rows)
+        cached_empty = self.cache.get_by_code("")
+        self.assertEqual(cached_empty, self.sample_rows)
+
+        # None key → should return None, not crash
+        cached_none = self.cache.get_by_code(None)
+        self.assertIsNone(cached_none)
+
+
+class AhsRepositoryCacheIntegrationTests(SimpleTestCase):
+    """Integration-level verification for repository caching."""
+
+    def test_uses_cache_after_first_call(self):
+        repo = DbAhsRepository()
+
+        with patch("rencanakan_core.models.Ahs.objects.filter") as mock_filter:
+            mock_filter.return_value = Ahs.objects.none()
+
+            # First run → will hit DB once per variant (expected)
+            repo.by_code_like("AT.01.001")
+            first_call_count = mock_filter.call_count
+
+            # Second run → should not call DB at all (cache hit)
+            repo.by_code_like("AT.01.001")
+            second_call_count = mock_filter.call_count
+
+            # ✅ Assert total calls unchanged → cache prevents new lookups
+            self.assertEqual(first_call_count, second_call_count)
+SQLITE_DB_SETTINGS = {
+	"default": {
+		"ENGINE": "django.db.backends.sqlite3",
+		"NAME": ":memory:",
+	}
+}
+
+
+@override_settings(DATABASES=SQLITE_DB_SETTINGS)
+class RecomputeTotalCostTDDTests(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.url = reverse("recompute_total_cost")
+
+    # ---------- RED TEST CASES ----------
+    def test_invalid_input_should_fail(self):
+        """🔴 Should return error when given invalid input."""
+        payload = {"volume": "abc", "unit_price": "xyz"}
+        response = self.client.post(self.url, json.dumps(payload), content_type="application/json")
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("error", response.json())
+
+    def test_missing_fields_should_default_to_zero(self):
+        """🔴 Should still work when one field is missing."""
+        payload = {"volume": 3.5}
+        response = self.client.post(self.url, json.dumps(payload), content_type="application/json")
+        data = response.json()
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(Decimal(data["total_cost"]), Decimal("0"))
+
+    def test_malformed_json_returns_error(self):
+        """🔴 Should safely handle malformed JSON input."""
+        response = self.client.post(self.url, "not-a-json", content_type="application/json")
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("error", response.json())
+
+    # ---------- GREEN TEST CASES ----------
+    def test_valid_computation_matches_calculator(self):
+        """🟢 Should compute correct total using TotalCostCalculator."""
+        payload = {"volume": "2.5", "unit_price": "1500000"}
+        response = self.client.post(self.url, json.dumps(payload), content_type="application/json")
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        expected = TotalCostCalculator.calculate(Decimal("2.5"), Decimal("1500000"))
+        self.assertEqual(Decimal(data["total_cost"]), expected)
+
+    def test_zero_values_returns_zero(self):
+        """🟢 Should return 0 total when volume or price is zero."""
+        for case in [{"volume": 0, "unit_price": 1000}, {"volume": 2, "unit_price": 0}]:
+            response = self.client.post(self.url, json.dumps(case), content_type="application/json")
+            self.assertEqual(response.status_code, 200)
+            data = response.json()
+            self.assertEqual(Decimal(data["total_cost"]), Decimal("0"))
+
+    def test_persists_override_when_row_key_supplied(self):
+        payload = {
+            "row_key": "row-001",
+            "code": "AT.01.001",
+            "analysis_code": "AT.01.001",
+            "volume": "2.50",
+            "unit_price": "1000",
+        }
+        response = self.client.post(self.url, json.dumps(payload), content_type="application/json")
+        self.assertEqual(response.status_code, 200)
+
+        session = self.client.session
+        overrides = session.get("rab_overrides")
+        self.assertIsNotNone(overrides)
+        stored = overrides.get("row-001")
+        self.assertIsNotNone(stored)
+        self.assertEqual(stored.get("unit_price"), "1000.00")
+        self.assertEqual(stored.get("total_price"), "2500.00")
+        self.assertEqual(stored.get("volume"), "2.50")
+
+
+def test_auto_fill_unit_price_after_matching(self):
+    svc = AutomaticPriceMatchingService(
+        price_retriever=AhspPriceRetriever(MockAhspSource({"AB.01": Decimal("1000")}))
+    )
+    result = svc.match_one({"code": "AB.01", "volume": Decimal("2")})
+    assert result["unit_price"] == Decimal("1000")
+    assert result["total_cost"] == Decimal("2000.00")
+    assert result["match_status"] == "Matched"
+
+
+def test_user_override_recalculates_total(self):
+    svc = AutomaticPriceMatchingService(
+        price_retriever=AhspPriceRetriever(MockAhspSource({"AB.01": Decimal("1000")}))
+    )
+
+    # User overrides matched price (was 1000)
+    result = svc.match_one({"code": "AB.01", "volume": Decimal("3"), "unit_price": Decimal("1200")})
+    assert result["unit_price"] == Decimal("1200")
+    assert result["total_cost"] == Decimal("3600.00")
+    assert result["match_status"] == "Overridden"
+    assert result["is_editable"] is True
+
+def test_user_provided_price_without_match(self):
+    svc = AutomaticPriceMatchingService()
+    result = svc.match_one({"code": "XX.99", "volume": Decimal("5"), "unit_price": Decimal("1500")})
+    assert result["total_cost"] == Decimal("7500.00")
+    assert result["match_status"] == "Provided"
+
+def test_override_ignores_old_matched_price(self):
+    svc = AutomaticPriceMatchingService(
+        price_retriever=AhspPriceRetriever(MockAhspSource({"AB.01": Decimal("1000")}))
+    )
+    svc.cache.set_by_code("AB.01", Decimal("1000"))
+    result = svc.match_one({"code": "AB.01", "volume": Decimal("2"), "unit_price": Decimal("1500")})
+    assert result["total_cost"] == Decimal("3000.00")
+    assert result["match_status"] == "Overridden"
+
+def test_invalid_unit_price_gracefully_handled(self):
+    svc = AutomaticPriceMatchingService()
+
+    result = svc.match_one({"code": "AB.01", "volume": Decimal("3"), "unit_price": "invalid"})
+    # Expect fallback because unit_price isn't valid Decimal
+    assert result["total_cost"] == Decimal("0")
+    assert result["match_status"] in ("Needs Manual Input", "Provided", "Overridden")
+
+def test_missing_volume_and_price_triggers_fallback(self):
+    svc = AutomaticPriceMatchingService()
+    result = svc.match_one({"code": "AB.01"})
+    assert result["unit_price"] is None
+    assert result["total_cost"] == Decimal("0")
+    assert result["match_status"] == "Needs Manual Input"

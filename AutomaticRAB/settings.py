@@ -47,6 +47,9 @@ INSTALLED_APPS = [
     'rest_framework',
     'automatic_job_matching',
     'rencanakan_core',
+    'automatic_price_matching',
+    'cost_weight',
+    
 ]
 
 MIDDLEWARE = [

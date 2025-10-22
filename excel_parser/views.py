@@ -77,20 +77,27 @@ def preview_rows(request):
 
     try:
         results = {}
+        session_overrides = request.session.get("rab_overrides", {})
 
         # === Legacy path ===
         if legacy_file:
             validate_excel_file(legacy_file)
-            results["rows"] = preview_file(legacy_file)
+            rows = preview_file(legacy_file)
+            _apply_preview_overrides(rows, session_overrides)
+            results["rows"] = rows
 
         # === Extended path ===
         if excel_standard:
             validate_excel_file(excel_standard)
-            results["excel_standard"] = preview_file(excel_standard)
+            excel_rows = preview_file(excel_standard)
+            _apply_preview_overrides(excel_rows, session_overrides)
+            results["excel_standard"] = excel_rows
 
         if excel_apendo:
             validate_excel_file(excel_apendo)
-            results["excel_apendo"] = preview_file(excel_apendo)
+            apendo_rows = preview_file(excel_apendo)
+            _apply_preview_overrides(apendo_rows, session_overrides)
+            results["excel_apendo"] = apendo_rows
 
         if pdf_file:
             validate_pdf_file(pdf_file)
@@ -153,3 +160,27 @@ def rab_converted(request):
     This will hit the preview_rows endpoint via AJAX/fetch.
     """
     return render(request, "rab_converted.html")
+
+
+def _apply_preview_overrides(rows, overrides):
+    if not overrides:
+        return
+    for row in rows:
+        row_key = row.get("row_key")
+        if not row_key:
+            continue
+        data = overrides.get(row_key)
+        if not data:
+            continue
+        volume = data.get("volume")
+        if volume is not None:
+            row["volume"] = volume
+        analysis_code = data.get("analysis_code")
+        if analysis_code is not None:
+            row["analysis_code"] = analysis_code
+        unit_price = data.get("unit_price") or data.get("price")
+        if unit_price is not None:
+            row["price"] = unit_price
+        total_price = data.get("total_price")
+        if total_price is not None:
+            row["total_price"] = total_price

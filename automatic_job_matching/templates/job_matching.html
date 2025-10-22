@@ -132,13 +132,16 @@
     const container = document.getElementById("suggestions-container");
     container.innerHTML = "";
 
-    if (matches && matches.length > 0) {
-      matches.forEach((m, idx) => {
+    // Normalize to array
+    const matchList = Array.isArray(matches) ? matches : (matches ? [matches] : []);
+
+    if (matchList.length > 0) {
+      matchList.forEach((m, idx) => {
         container.innerHTML += `
           <div class="form-check">
             <input class="form-check-input" type="radio" name="matchChoice" id="match${idx}" value="${m.code}">
             <label class="form-check-label" for="match${idx}">
-              <strong>${m.code}</strong> — ${m.name}
+              <strong>${m.code}</strong> — ${m.name || "Tanpa nama"} (${Math.round((m.confidence || 0) * 100)}%)
             </label>
           </div>
         `;
@@ -150,6 +153,7 @@
     document.getElementById("manualCode").value = "";
     reviewModal.show();
   }
+
 
   // Save review
   document.getElementById("saveReview").addEventListener("click", () => {

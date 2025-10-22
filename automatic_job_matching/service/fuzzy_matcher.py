@@ -407,7 +407,7 @@ class CandidateProvider:
         """Check if a word matches through exact, synonym, or fuzzy matching."""
         # Check exact match
         if sig_word in name_words_set:
-            logger.debug("EXACT MATCH: '%s' found in '%s'", sig_word, candidate_name)
+            # logger.debug("EXACT MATCH: '%s' found in '%s'", sig_word, candidate_name)
             return True
         
         # Check synonyms (ONLY for action words, NOT materials)
@@ -432,8 +432,8 @@ class CandidateProvider:
         
         for syn in get_synonyms(sig_word):
             if ' ' not in syn and syn in name_words_set:
-                logger.debug("SYNONYM MATCH: '%s' (for '%s') found in '%s'", 
-                           syn, sig_word, candidate_name)
+                # logger.debug("SYNONYM MATCH: '%s' (for '%s') found in '%s'", 
+                #            syn, sig_word, candidate_name)
                 return True
         
         return False
@@ -452,8 +452,8 @@ class CandidateProvider:
             if len(name_word) >= 4:
                 similarity = difflib.SequenceMatcher(None, sig_word, name_word).ratio()
                 if similarity >= 0.85:  # Stricter threshold
-                    logger.debug("FUZZY MATCH: '%s' ≈ '%s' (%.2f) in '%s'", 
-                               sig_word, name_word, similarity, candidate_name)
+                    # logger.debug("FUZZY MATCH: '%s' ≈ '%s' (%.2f) in '%s'", 
+                    #            sig_word, name_word, similarity, candidate_name)
                     return True
         
         return False
@@ -470,8 +470,9 @@ class CandidateProvider:
         
         # Fallback ONLY if query has material words (not for generic action-only queries)
         if not has_material:
-            logger.info("No appropriate fallback available, returning empty candidates")
-            return []
+            logger.info("No material words found, falling back to ANY-word filter...")
+            return self._filter_candidates_any_material(all_candidates, significant_words, detected_compounds)
+
         
         logger.debug("Material query detected, trying ANY-material fallback...")
         filtered = self._filter_candidates_any_material(
@@ -769,8 +770,8 @@ class FuzzyMatcher:
             conf_expanded = self.scorer.score(expanded_query, norm_cand) if expanded_query != normalized_query else 0.0
             conf = max(conf_original, conf_expanded)
             
-            logger.debug("Confidence vs %r: orig=%.4f, expanded=%.4f, final=%.4f", 
-                        cand.name, conf_original, conf_expanded, conf)
+            # logger.debug("Confidence vs %r: orig=%.4f, expanded=%.4f, final=%.4f", 
+            #             cand.name, conf_original, conf_expanded, conf)
             
             if conf >= self.min_similarity and conf > best_conf:
                 best_conf = conf
@@ -807,8 +808,8 @@ class FuzzyMatcher:
             conf_expanded = self.scorer.score(expanded_query, norm_cand) if expanded_query != normalized_query else 0.0
             conf = max(conf_original, conf_expanded)
             
-            logger.debug("Confidence vs %r: orig=%.4f, expanded=%.4f, final=%.4f", 
-                        cand.name, conf_original, conf_expanded, conf)
+            # logger.debug("Confidence vs %r: orig=%.4f, expanded=%.4f, final=%.4f", 
+            #             cand.name, conf_original, conf_expanded, conf)
             
             if conf >= self.min_similarity:
                 results.append((conf, {"source": "ahs", "id": cand.id, "code": cand.code, "name": cand.name, "matched_on": "name", "confidence": round(conf, 4)}))

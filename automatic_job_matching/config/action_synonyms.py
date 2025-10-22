@@ -46,6 +46,10 @@ _BASE_CONSTRUCTION_SYNONYMS = { # noun synonyms related to construction material
     "bekisting": ["cetakan", "formwork"],
     "cetakan": ["bekisting", "formwork"],
     "formwork": ["bekisting", "cetakan"],
+    "bubungan": ["bubung"],
+    "bubung": ["bubungan"],
+    "plafond": ["plafon"],
+    "proteksi": ["penangkal"],
 
     # Plumbing
     "pipa": ["plumbing", "instalasi"],
@@ -58,8 +62,6 @@ _BASE_CONSTRUCTION_SYNONYMS = { # noun synonyms related to construction material
     "wasbak": ["wastafel", "sink"],
     
     # Electrical
-    "saklar": ["switch", "tombol"],
-    "switch": ["saklar", "tombol"],
     "tombol": ["saklar", "switch"],
     "stop": ["kontak", "colokan", "outlet"],
     "kontak": ["stop", "colokan", "outlet"],

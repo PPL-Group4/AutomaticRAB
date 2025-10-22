@@ -1,8 +1,9 @@
 from __future__ import annotations
 from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
+import hashlib
 import re
-from typing import List, Dict, Iterable, Tuple
+from typing import List, Dict, Iterable, Tuple, Optional
 import string
 
 from django.core.files.uploadedfile import UploadedFile
@@ -304,16 +305,27 @@ def preview_file(file: UploadedFile):
     from decimal import ROUND_HALF_UP
 
     preview_rows = []
-    for row in parsed:
+    for idx, row in enumerate(parsed):
         if row.is_section:
             match_info = {"status": "skipped", "match": None}
+        elif row.analysis_code:
+            code = row.analysis_code.strip()
+            if code and any(ch.isdigit() for ch in code):
+                match_info = {
+                    "status": "found",
+                    "match": {"code": code, "confidence": 1.0}
+                }
+            else:
+                match_info = match_description(row.description)
         else:
             match_info = match_description(row.description)
             if not isinstance(match_info, dict):  # defensive guard for unexpected returns
                 match_info = {"status": "error", "match": None, "error": "Unexpected match result"}
 
+        row_key = _build_preview_row_key(row.description, row.number, idx)
         preview_rows.append(
             {
+                "row_key": row_key,
                 "number": row.number,
                 "description": row.description,
                 "volume": str(row.volume.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)),
@@ -333,3 +345,12 @@ def preview_file(file: UploadedFile):
         )
 
     return preview_rows
+
+
+def _build_preview_row_key(description: Optional[str], number: Optional[str], index: int) -> str:
+    """Create a stable key for a preview row used for override persistence."""
+    normalized_desc = (description or "").strip().lower()
+    normalized_num = (number or "").strip().lower()
+    digest_source = f"{normalized_desc}|{normalized_num}".encode("utf-8", "ignore")
+    digest = hashlib.sha1(digest_source).hexdigest()[:12]
+    return f"{index:04d}-{digest}"
