@@ -111,15 +111,17 @@
 
     rows.forEach((row, idx) => {
       const tr = document.createElement("tr");
+      const rowKey = row.row_key || `row-${idx}`;
+      tr.dataset.rowKey = rowKey;
       tr.innerHTML = `
         <td>${idx + 1}</td>
         <td>${row.description || ""}</td>
         <td class="analysis-code-cell">${row.analysis_code || ""}</td>
         <td>${formatMatchStatusText(row)}</td>
         <td class="match-cell"></td>
-        <td><input type="number" class="form-control form-control-sm volume-input" value="${row.volume || 0}" min="0" step="0.01"></td>
+        <td><input type="number" class="form-control form-control-sm volume-input" data-row-key="${rowKey}" value="${row.volume || 0}" min="0" step="0.01"></td>
         <td>${row.unit || ""}</td>
-        <td><input type="number" class="form-control form-control-sm price-input" value="${row.price || 0}" min="0" step="0.01"></td>
+        <td><input type="number" class="form-control form-control-sm price-input" data-row-key="${rowKey}" value="${row.price || 0}" min="0" step="0.01"></td>
         <td class="total-cell">Rp. ${formatCurrencyValue(row.total_price)}</td>
       `;
       tbody.appendChild(tr);
@@ -127,6 +129,11 @@
       const matchCell = tr.querySelector(".match-cell");
       const analysisCell = tr.querySelector(".analysis-code-cell");
       const statusCell = tr.children[3];
+      analysisCell.dataset.rowKey = rowKey;
+      const volumeInput = tr.querySelector(".volume-input");
+      volumeInput.value = parseCurrencyNumber(row.volume);
+      const priceInput = tr.querySelector(".price-input");
+      priceInput.value = parseCurrencyNumber(row.price);
       populateMatchCell(matchCell, row, analysisCell, statusCell);
 
       total += parseCurrencyNumber(row.total_price);
@@ -292,8 +299,13 @@
     if (!event.target.classList.contains("volume-input") && !event.target.classList.contains("price-input")) return;
 
     const row = event.target.closest("tr");
-    const volume = parseFloat(row.querySelector(".volume-input").value) || 0;
-    const price = parseFloat(row.querySelector(".price-input").value) || 0;
+    const volumeInputEl = row.querySelector(".volume-input");
+    const priceInputEl = row.querySelector(".price-input");
+    const analysisCell = row.querySelector(".analysis-code-cell");
+    const volume = parseFloat(volumeInputEl.value) || 0;
+    const price = parseFloat(priceInputEl.value) || 0;
+    const code = analysisCell ? analysisCell.textContent.trim() : "";
+    const rowKey = row.dataset.rowKey || null;
 
     // Instant UI update
     const total = volume * price;
@@ -307,13 +319,21 @@
       const response = await fetch("/api/recompute_total_cost/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ volume, unit_price: price }),
+        body: JSON.stringify({ row_key: rowKey, volume, unit_price: price, code, analysis_code: code }),
       });
       const data = await response.json();
       if (response.ok && data.total_cost) {
         const precise = parseFloat(data.total_cost);
-        row.querySelector(".total-cell").textContent =
-          "Rp. " + precise.toLocaleString("id-ID", { minimumFractionDigits: 2 });
+        if (!Number.isNaN(precise)) {
+          row.querySelector(".total-cell").textContent =
+            "Rp. " + precise.toLocaleString("id-ID", { minimumFractionDigits: 2 });
+        }
+        if (data.unit_price !== undefined && data.unit_price !== null) {
+          const resolvedUnit = parseFloat(data.unit_price);
+          if (!Number.isNaN(resolvedUnit)) {
+            priceInputEl.value = resolvedUnit;
+          }
+        }
         updateGrandTotalFromRows();
       }
     } catch (err) {

@@ -168,66 +168,71 @@
         return;
       }
 
-      const tr = document.createElement("tr");
+  const tr = document.createElement("tr");
+  const rowKey = row.row_key || `row-${rowIndex}`;
+  tr.dataset.rowKey = rowKey;
 
-      const numberCell = document.createElement("td");
-      numberCell.textContent = "";
-      tr.appendChild(numberCell);
+  const numberCell = document.createElement("td");
+  numberCell.textContent = "";
+  tr.appendChild(numberCell);
 
-      const descriptionCell = document.createElement("td");
-      descriptionCell.textContent = row.description || "";
-      tr.appendChild(descriptionCell);
+  const descriptionCell = document.createElement("td");
+  descriptionCell.textContent = row.description || "";
+  tr.appendChild(descriptionCell);
 
-      const analysisCell = document.createElement("td");
-      analysisCell.classList.add("analysis-code-cell");
-      analysisCell.textContent = row.analysis_code || "";
-      tr.appendChild(analysisCell);
+  const analysisCell = document.createElement("td");
+  analysisCell.classList.add("analysis-code-cell");
+  analysisCell.textContent = row.analysis_code || "";
+  analysisCell.dataset.rowKey = rowKey;
+  tr.appendChild(analysisCell);
 
-      const statusCell = document.createElement("td");
-      statusCell.textContent = formatMatchStatusText(row);
-      tr.appendChild(statusCell);
+  const statusCell = document.createElement("td");
+  statusCell.textContent = formatMatchStatusText(row);
+  tr.appendChild(statusCell);
 
-      const matchCell = document.createElement("td");
-      populateMatchCell(matchCell, row, analysisCell, statusCell);
-      tr.appendChild(matchCell);
+  const matchCell = document.createElement("td");
+  populateMatchCell(matchCell, row, analysisCell, statusCell);
+  tr.appendChild(matchCell);
 
-      // Volume - Editable Input
-      const volumeCell = document.createElement("td");
-      const volumeInput = document.createElement("input");
-      volumeInput.type = "number";
-      volumeInput.className = "form-control form-control-sm volume-input";
-      volumeInput.value = row.volume || 0;
-      volumeInput.min = "0";
-      volumeInput.step = "0.01";
-      volumeInput.dataset.rowIndex = rowIndex;
-      volumeCell.appendChild(volumeInput);
-      tr.appendChild(volumeCell);
+  // Volume - Editable Input
+  const volumeCell = document.createElement("td");
+  const volumeInput = document.createElement("input");
+  volumeInput.type = "number";
+  volumeInput.className = "form-control form-control-sm volume-input";
+  volumeInput.value = parseCurrencyNumber(row.volume);
+  volumeInput.min = "0";
+  volumeInput.step = "0.01";
+  volumeInput.dataset.rowIndex = rowIndex;
+  volumeInput.dataset.rowKey = rowKey;
+  volumeCell.appendChild(volumeInput);
+  tr.appendChild(volumeCell);
 
-      const unitCell = document.createElement("td");
-      unitCell.textContent = row.unit || "";
-      tr.appendChild(unitCell);
+  const unitCell = document.createElement("td");
+  unitCell.textContent = row.unit || "";
+  tr.appendChild(unitCell);
 
-      // Price - Editable Input
-      const priceCell = document.createElement("td");
-      const priceInput = document.createElement("input");
-      priceInput.type = "number";
-      priceInput.className = "form-control form-control-sm price-input";
-      priceInput.value = parseCurrencyNumber(row.price);
-      priceInput.min = "0";
-      priceInput.step = "0.01";
-      priceInput.dataset.rowIndex = rowIndex;
-      priceCell.appendChild(priceInput);
-      tr.appendChild(priceCell);
+  // Price - Editable Input
+  const priceCell = document.createElement("td");
+  const priceInput = document.createElement("input");
+  priceInput.type = "number";
+  priceInput.className = "form-control form-control-sm price-input";
+  priceInput.value = parseCurrencyNumber(row.price);
+  priceInput.min = "0";
+  priceInput.step = "0.01";
+  priceInput.dataset.rowIndex = rowIndex;
+  priceInput.dataset.rowKey = rowKey;
+  priceCell.appendChild(priceInput);
+  tr.appendChild(priceCell);
 
-      // Total - Display Cell
-      const totalCell = document.createElement("td");
-      totalCell.classList.add("total-cell");
-      totalCell.textContent = "Rp. " + formatCurrencyValue(row.total_price);
-      tr.appendChild(totalCell);
+  // Total - Display Cell
+  const totalCell = document.createElement("td");
+  totalCell.classList.add("total-cell");
+  totalCell.textContent = "Rp. " + formatCurrencyValue(row.total_price);
+  tr.appendChild(totalCell);
 
-      tbody.appendChild(tr);
+  tbody.appendChild(tr);
 
-      total += parseCurrencyNumber(row.total_price);
+  total += parseCurrencyNumber(row.total_price);
     });
 
     document.getElementById("grandTotalBox").style.display = "block";
@@ -252,17 +257,34 @@
 
     updateGrandTotalFromRows();
 
-    // Backend recomputation (precise rounding)
+    // Backend recomputation (precise rounding & persistence)
     try {
+      const analysisCell = row.querySelector(".analysis-code-cell");
+      const code = analysisCell ? analysisCell.textContent.trim() : "";
+      const rowKey = row.dataset.rowKey || null;
+      const payload = { row_key: rowKey, volume, unit_price: price };
+      if (code) {
+        payload.code = code;
+        payload.analysis_code = code;
+      }
+
       const response = await fetch(RECOMPUTE_ENDPOINT, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ volume, unit_price: price }),
+        body: JSON.stringify(payload),
       });
       const data = await response.json();
-      if (response.ok && data.total_cost) {
+      if (response.ok && data.total_cost !== undefined && data.total_cost !== null) {
         const precise = parseFloat(data.total_cost);
-        totalCell.textContent = "Rp. " + precise.toLocaleString("id-ID", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        if (!Number.isNaN(precise)) {
+          totalCell.textContent = "Rp. " + precise.toLocaleString("id-ID", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+        if (data.unit_price !== undefined && data.unit_price !== null) {
+          const resolvedUnit = parseFloat(data.unit_price);
+          if (!Number.isNaN(resolvedUnit)) {
+            priceInput.value = resolvedUnit;
+          }
+        }
         updateGrandTotalFromRows();
       }
     } catch (err) {
@@ -349,6 +371,9 @@
         button.className = "btn btn-sm btn-outline-primary w-100 text-start match-option mb-1";
         const label = buildMatchLabel(match);
         button.dataset.label = label;
+        if (match.code) {
+          button.dataset.code = match.code;
+        }
         button.textContent = label;
         button.addEventListener("click", () => {
           handleMatchSelection(match, row, analysisCell, statusCell, cell, button);
@@ -741,12 +766,17 @@
     if (!code) return;
 
     const volume = volumeInput ? (parseFloat(volumeInput.value) || 0) : 0;
+    const rowKey = tr.dataset.rowKey || null;
+    const payload = { code, volume, row_key: rowKey };
+    if (code) {
+      payload.analysis_code = code;
+    }
 
     try {
       const resp = await fetch(RECOMPUTE_ENDPOINT, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code, volume }),
+        body: JSON.stringify(payload),
       });
       if (!resp.ok) {
         return;
