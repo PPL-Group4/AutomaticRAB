@@ -7,10 +7,16 @@ from django.apps import apps
 from django.conf import settings
 
 ITEM_MODEL = getattr(settings, "COST_WEIGHT_ITEM_MODEL", "estimator.JobItem")
-JOB_MODEL = getattr(settings, "COST_WEIGHT_JOB_MODEL", "estimator.Job")
-ITEM_COST_FIELD = getattr(settings, "COST_WEIGHT_ITEM_COST_FIELD", "price")
+JOB_MODEL  = getattr(settings, "COST_WEIGHT_JOB_MODEL",  "estimator.Job")
+ITEM_COST_FIELD = getattr(settings, "COST_WEIGHT_ITEM_COST_FIELD", "total_cost")  # ← was "price"
 ITEM_WEIGHT_FIELD = getattr(settings, "COST_WEIGHT_ITEM_WEIGHT_FIELD", "weight_pct")
-ITEM_FK_TO_JOB = getattr(settings, "COST_WEIGHT_ITEM_FK_TO_JOB", "rab")
+ITEM_FK_TO_JOB = getattr(settings, "COST_WEIGHT_ITEM_FK_TO_JOB", "job")           # ← was "rab"
+
+ITEM_COST_FALLBACKS = getattr(
+    settings,
+    "COST_WEIGHT_ITEM_COST_FALLBACKS",
+    ("total_cost", "cost", "price"),
+)
 
 class _ItemProxy:
     @property
@@ -72,12 +78,18 @@ def calculate_cost_weights(costs_by_id: Dict[str, Decimal], decimal_places: int 
 def _items_to_mapping(items: Iterable) -> Dict[str, Decimal]:
     out: Dict[str, Decimal] = {}
     for it in items:
-        with suppress(AttributeError):
-            cost_val = getattr(it, ITEM_COST_FIELD, None)
-        dv = Decimal(str(cost_val or "0"))
+        val = getattr(it, ITEM_COST_FIELD, None)
+        if val in (None, ""):
+            for alt in ITEM_COST_FALLBACKS:
+                if alt == ITEM_COST_FIELD:
+                    continue
+                if hasattr(it, alt):
+                    val = getattr(it, alt)
+                    if val not in (None, ""):
+                        break
+        dv = Decimal(str(val or "0"))
         out[str(it.pk)] = dv
     return out
-
 
 def recalc_weights_for_job(job_id) -> int:
     ItemModel = apps.get_model(ITEM_MODEL)

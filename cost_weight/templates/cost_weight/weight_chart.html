@@ -1,96 +1,163 @@
 {% load static %}
 <!doctype html>
-<html>
+<html lang="id">
 <head>
   <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Cost Weight Distribution (per Section)</title>
   <style>
-    body { font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto; background: #f9fafb; }
-    .wrap { max-width: 800px; margin: 40px auto; padding: 20px; background: white; border-radius: 14px; box-shadow: 0 2px 8px rgba(0,0,0,.05); }
-    h2 { margin-bottom: 4px; }
-    p { color: #374151; margin-bottom: 16px; }
-    .chart-container { position: relative; max-width: 500px; margin: 0 auto; }
-    canvas { width: 100% !important; height: 400px !important; }
-    .info-box { margin-top: 20px; padding: 8px 16px; border-radius: 20px; color: white; font-weight: 500; text-align: center; font-size: 14px; width: fit-content; margin: 20px auto; box-shadow: 0 2px 6px rgba(0,0,0,0.08); }
-    .toolbar { display: flex; gap: 10px; justify-content: center; margin: 18px 0 8px; }
-    .btn { border: 0; border-radius: 10px; padding: 10px 14px; font-weight: 600; cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,0.07); background: #111827; color: white; }
+    :root { --ink:#111827; --muted:#374151; --bg:#f9fafb; --card:#ffffff; }
+    * { box-sizing: border-box; }
+    body { font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif; background: var(--bg); color: var(--ink); margin: 0; }
+    .wrap { max-width: 920px; margin: 40px auto; padding: 24px; background: var(--card);
+            border-radius: 16px; box-shadow: 0 2px 10px rgba(0,0,0,.06); }
+    h2 { margin: 0 0 6px; font-size: 1.25rem; }
+    p.desc { color: var(--muted); margin: 0 0 16px; }
+    .toolbar { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin: 18px 0 10px; }
+    .btn { border: 0; border-radius: 10px; padding: 10px 14px; font-weight: 600; cursor: pointer;
+           box-shadow: 0 2px 6px rgba(0,0,0,0.07); background: #111827; color: #fff; transition: transform .05s ease; }
     .btn.secondary { background: #374151; }
+    .btn:active { transform: translateY(1px); }
+    .chart-card { position: relative; max-width: 560px; margin: 0 auto; }
+    canvas { width: 100% !important; height: 420px !important; }
+    .info-box { margin-top: 18px; padding: 10px 16px; border-radius: 20px; color: white; font-weight: 600;
+                text-align: center; font-size: 14px; width: fit-content; margin-left: auto; margin-right: auto;
+                box-shadow: 0 2px 6px rgba(0,0,0,0.08); }
+    .muted { color: var(--muted); }
+    .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); border:0; }
   </style>
 </head>
 <body>
-<div class="wrap" data-job-id="1">
+<div class="wrap" data-job-id="{{ job_id|default:'' }}">
   <h2>Cost Weight Distribution per Section</h2>
-  <p>Berikut persentase biaya per bagian pekerjaan (section).</p>
+  <p class="desc">Persentase kontribusi biaya per item pekerjaan terhadap total proyek.</p>
 
-  <div class="toolbar">
+  <div class="toolbar" role="group" aria-label="Download chart">
     <button class="btn" onclick="downloadChart('png')">Download PNG</button>
     <button class="btn secondary" onclick="downloadChart('pdf')">Download PDF</button>
+    <button class="btn secondary" onclick="downloadChart('svg')">Download SVG</button>
   </div>
 
-  <div class="chart-container">
-    <canvas id="pie"></canvas>
+  <div class="chart-card">
+    <canvas id="pie" aria-label="Pie chart of cost weights" role="img"></canvas>
+    <div id="emptyState" class="muted" style="text-align:center; margin-top:10px; display:none;">
+      Tidak ada data bobot biaya untuk ditampilkan.
+    </div>
   </div>
 
-  <div id="infoBox" class="info-box">Belum ada data yang diproses.</div>
+  <div id="infoBox" class="info-box" aria-live="polite" style="display:none;"></div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
-<script>
-  const WRAP = document.querySelector('.wrap');
-  const JOB_ID = WRAP.getAttribute('data-job-id') || '1';  // sementara 1
-  const DECIMAL_PLACES = 1;
+<!-- Chart.js & plugin -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
 
-  async function fetchChartData() {
-    try {
-      const res = await fetch(`/cost_weight/jobs/${JOB_ID}/chart-data/?dp=${DECIMAL_PLACES}&sort=desc`);
-      if (!res.ok) throw new Error("Gagal memuat data chart.");
-      const payload = await res.json();
-      renderCharts(payload);
-    } catch (err) {
-      console.error(err);
-      alert("Gagal memuat data chart.");
-    }
+<script>
+(function() {
+  // ---- Config ----
+  const WRAP = document.querySelector('.wrap');
+  const JOB_ID = WRAP?.getAttribute('data-job-id');
+  const DECIMAL_PLACES = 1;
+  const COLORS = ['#3b82f6','#f97316','#10b981','#6366f1','#ef4444','#14b8a6','#8b5cf6','#f59e0b','#22d3ee'];
+
+  if (!JOB_ID) {
+    console.error('job_id tidak tersedia di konteks template.');
   }
 
+  // Build URLs via Django reversing (avoids hardcoded paths)
+  const urlData = "{% url 'cost_weight:cw-job-chart-data' job_id=0 %}".replace("0", JOB_ID || "0");
+  const urlExportBase = "{% url 'cost_weight:cw-job-chart-export' job_id=0 %}".replace("0", JOB_ID || "0");
+
+  // Chart instance holder
+  let chart;
+
   function renderCharts(payload) {
-    const labels = payload.items.map(x => x.label);
-    const data = payload.items.map(x => parseFloat(x.value));
-    const colors = ['#3b82f6','#f97316','#10b981','#6366f1','#ef4444','#14b8a6'];
+    const labels = (payload.items || []).map(x => x.label);
+    const data   = (payload.items || []).map(x => parseFloat(x.value));
 
-    if (Chart.getChart("pie")) Chart.getChart("pie").destroy();
+    const emptyState = document.getElementById('emptyState');
+    const infoBox = document.getElementById('infoBox');
 
-    new Chart(document.getElementById('pie'), {
+    // Destroy old chart if exists
+    const existing = Chart.getChart('pie');
+    if (existing) existing.destroy();
+
+    if (!data.length) {
+      emptyState.style.display = 'block';
+      infoBox.style.display = 'none';
+      return;
+    } else {
+      emptyState.style.display = 'none';
+    }
+
+    chart = new Chart(document.getElementById('pie'), {
       type: 'pie',
-      data: { labels, datasets: [{ data, backgroundColor: colors.slice(0, labels.length) }] },
+      data: {
+        labels,
+        datasets: [{
+          data,
+          backgroundColor: COLORS.slice(0, labels.length),
+          borderColor: '#ffffff',
+          borderWidth: 0.5
+        }]
+      },
       options: {
         maintainAspectRatio: false,
         plugins: {
           legend: { position: 'bottom' },
           datalabels: {
-            formatter: v => `${v.toFixed(DECIMAL_PLACES)}%`,
-            color: '#fff', font: { weight: 'bold', size: 13 }
+            formatter: v => `${Number(v).toFixed(DECIMAL_PLACES)}%`,
+            color: '#fff',
+            font: { weight: 'bold', size: 13 },
+            textStrokeColor: 'rgba(0,0,0,.25)',
+            textStrokeWidth: 2
+          },
+          tooltip: {
+            callbacks: {
+              label: ctx => {
+                const val = ctx.parsed;
+                return ` ${ctx.label}: ${Number(val).toFixed(DECIMAL_PLACES)}%`;
+              }
+            }
           }
         }
       },
       plugins: [ChartDataLabels]
     });
 
-    const infoBox = document.getElementById('infoBox');
-    if (data.length > 0) {
-      const maxIdx = data.indexOf(Math.max(...data));
-      infoBox.style.backgroundColor = colors[maxIdx];
-      infoBox.innerText = `${labels[maxIdx]} menyumbang ${data[maxIdx].toFixed(2)}% dari total biaya proyek.`;
+    // Highlight biggest slice in info box
+    const maxIdx = data.indexOf(Math.max(...data));
+    infoBox.style.display = 'inline-block';
+    infoBox.style.backgroundColor = COLORS[maxIdx] || '#111827';
+    infoBox.innerText = `${labels[maxIdx]} menyumbang ${data[maxIdx].toFixed(2)}% dari total biaya proyek.`;
+  }
+
+  async function fetchChartData() {
+    try {
+      const res = await fetch(`${urlData}?dp=${DECIMAL_PLACES}&sort=desc`, { headers: { 'Accept': 'application/json' }});
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const payload = await res.json();
+      renderCharts(payload);
+    } catch (err) {
+      console.error('Gagal memuat data chart:', err);
+      const emptyState = document.getElementById('emptyState');
+      emptyState.textContent = 'Gagal memuat data chart.';
+      emptyState.style.display = 'block';
     }
   }
 
-  function downloadChart(format) {
+  // Public (buttons)
+  window.downloadChart = function(format) {
+    const f = String(format || 'png').toLowerCase();
+    if (!['png','pdf','svg'].includes(f)) return;
     const dp = DECIMAL_PLACES;
-    const url = `/cost_weight/jobs/${JOB_ID}/chart-export/?format=${encodeURIComponent(format)}&dp=${dp}`;
+    const url = `${urlExportBase}?format=${encodeURIComponent(f)}&dp=${dp}`;
     window.open(url, '_blank');
-  }
+  };
 
+  // init
   fetchChartData();
+})();
 </script>
 </body>
 </html>

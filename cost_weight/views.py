@@ -11,6 +11,8 @@ from django.views.decorators.http import require_GET
 
 from cost_weight.services.chart_transformer import to_chart_data
 from cost_weight.services.chart_render import render_chart_bytes
+from django.views.decorators.http import require_POST
+from django.utils.decorators import method_decorator
 
 from cost_weight.services.recalc_orchestrator import (
     ITEM_MODEL, JOB_MODEL, ITEM_COST_FIELD, ITEM_WEIGHT_FIELD, ITEM_FK_TO_JOB
@@ -18,15 +20,22 @@ from cost_weight.services.recalc_orchestrator import (
 from cost_weight.services.chart_transformer import to_chart_data
 
 
+@require_POST
+def recalc_job_weights(request, job_id: int):
+    from cost_weight.services.recalc_orchestrator import recalc_weights_for_job
+    try:
+        updated = recalc_weights_for_job(job_id)
+        return JsonResponse({"jobId": job_id, "updated": updated})
+    except Exception:
+        return JsonResponse({"error": "recalc failed"}, status=500)
+
 def _get_models():
     Item = apps.get_model(ITEM_MODEL)
     Job = apps.get_model(JOB_MODEL)
     return Item, Job
 
-
-def chart_page(request):
-    return render(request, "cost_weight/weight_chart.html")
-
+def chart_page(request, job_id: int):
+    return render(request, "cost_weight/weight_chart.html", {"job_id": job_id})
 
 class JobItemsChartDataView(View):
     def get(self, request, job_id: int):
