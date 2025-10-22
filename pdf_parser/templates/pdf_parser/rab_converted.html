@@ -13,7 +13,6 @@
   </form>
 
   <div id="errorContainer"></div>
-
   <div id="loadingSpinner" class="text-center py-4" style="display:none;">
     <div class="spinner-border text-primary" role="status">
       <span class="visually-hidden">Loading...</span>
@@ -35,8 +34,20 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
   {{ block.super }}
+
+  const MATCH_ENDPOINT = "{% url 'match-best' %}";
+  const suggestionCache = new Map();
+  const dropdownRequestState = new WeakMap();
+  const MANUAL_SUGGESTION_LIMIT = 12;
+
+  function showError(message) {
+    const container = document.getElementById("errorContainer");
+    container.innerHTML = `<div class="alert alert-danger">${message}</div>`;
+    setTimeout(() => (container.innerHTML = ""), 4000);
+  }
 
   function showLoading() {
     document.getElementById("loadingSpinner").style.display = "block";
@@ -45,13 +56,15 @@
     document.getElementById("loadingSpinner").style.display = "none";
   }
 
-  document.getElementById("uploadForm").addEventListener("submit", async function(e) {
+  // ---------- UPLOAD HANDLER ----------
+  document.getElementById("uploadForm").addEventListener("submit", async (e) => {
     e.preventDefault();
     const fileInput = document.getElementById("fileInput");
     if (!fileInput.files.length) {
-      alert("Silakan pilih file PDF terlebih dahulu");
+      showError("Silakan pilih file PDF terlebih dahulu");
       return;
     }
+
     const formData = new FormData();
     formData.append("pdf_file", fileInput.files[0]);
 
@@ -61,16 +74,16 @@
       const data = await resp.json();
       hideLoading();
 
-      if (data.rows) renderTable(data.rows);
-      else alert("Gagal memproses file: " + (data.error || "Terjadi kesalahan tidak diketahui"));
+      if (data.rows) renderTables(data.rows);
+      else showError("Gagal memproses file: " + (data.error || "Terjadi kesalahan yang tidak diketahui"));
     } catch (err) {
       hideLoading();
-      alert("Error: " + err.message);
+      showError("Terjadi kesalahan saat mengunggah file: " + err.message);
     }
   });
 
-  // ---------- Render Editable Table ----------
-  function renderTable(rows) {
+  // ---------- TABLE RENDER ----------
+  function renderTables(rows) {
     const container = document.getElementById("rabTables");
     container.innerHTML = "";
     let total = 0;
@@ -83,42 +96,216 @@
           <th>No.</th>
           <th>Uraian Pekerjaan</th>
           <th>Kode</th>
+          <th>Status Pencocokan</th>
+          <th>Hasil AHSP</th>
           <th>Volume</th>
           <th>SAT</th>
           <th>Harga Sat (Rp.)</th>
           <th>Jumlah (Rp.)</th>
         </tr>
       </thead>
-      <tbody></tbody>
     `;
-    const tbody = table.querySelector("tbody");
+    const tbody = document.createElement("tbody");
+    table.appendChild(tbody);
+    container.appendChild(table);
 
-    rows.forEach(row => {
+    rows.forEach((row, idx) => {
       const tr = document.createElement("tr");
+      const rowKey = row.row_key || `row-${idx}`;
+      tr.dataset.rowKey = rowKey;
       tr.innerHTML = `
-        <td>${row.number || ""}</td>
+        <td>${idx + 1}</td>
         <td>${row.description || ""}</td>
-        <td>${row.analysis_code || ""}</td>
-        <td><input type="number" class="form-control form-control-sm volume-input" value="${row.volume || 0}" min="0" step="0.01"></td>
+        <td class="analysis-code-cell">${row.analysis_code || ""}</td>
+        <td>${formatMatchStatusText(row)}</td>
+        <td class="match-cell"></td>
+        <td><input type="number" class="form-control form-control-sm volume-input" data-row-key="${rowKey}" value="${row.volume || 0}" min="0" step="0.01"></td>
         <td>${row.unit || ""}</td>
-        <td><input type="number" class="form-control form-control-sm price-input" value="${row.price || 0}" min="0" step="0.01"></td>
-        <td class="total-cell">Rp. ${(row.total_price || 0).toLocaleString("id-ID", { minimumFractionDigits: 2 })}</td>
+        <td><input type="number" class="form-control form-control-sm price-input" data-row-key="${rowKey}" value="${row.price || 0}" min="0" step="0.01"></td>
+        <td class="total-cell">Rp. ${formatCurrencyValue(row.total_price)}</td>
       `;
       tbody.appendChild(tr);
-      total += row.total_price || 0;
+
+      const matchCell = tr.querySelector(".match-cell");
+      const analysisCell = tr.querySelector(".analysis-code-cell");
+      const statusCell = tr.children[3];
+      analysisCell.dataset.rowKey = rowKey;
+      const volumeInput = tr.querySelector(".volume-input");
+      volumeInput.value = parseCurrencyNumber(row.volume);
+      const priceInput = tr.querySelector(".price-input");
+      priceInput.value = parseCurrencyNumber(row.price);
+      populateMatchCell(matchCell, row, analysisCell, statusCell);
+
+      total += parseCurrencyNumber(row.total_price);
     });
 
-    container.appendChild(table);
-    updateGrandTotalFromRows();
+    updateGrandTotal(total);
   }
 
-  // ---------- Listen for Input Changes ----------
+  // ---------- MATCHING LOGIC ----------
+  function formatMatchStatusText(row) {
+    if (row.job_match_selected) {
+      if (row.job_match_selected.match_status === "Manual" || row.job_match_status === "manual") return "Manual";
+      return "Dipilih";
+    }
+    if (!row.job_match_status || row.job_match_status === "skipped") return "Skipped";
+    if (row.job_match_status === "error") return "Error";
+    const matches = normalizeMatches(row.job_match);
+    const fallback = matches.find(entry => entry && entry.match_status && !entry.code);
+    return fallback ? fallback.match_status : row.job_match_status.replace(/(^|\s)\w/g, c => c.toUpperCase());
+  }
+
+  function populateMatchCell(cell, row, analysisCell, statusCell) {
+    if (row.job_match_status === "error") {
+      cell.textContent = row.job_match_error || "Error";
+      return;
+    }
+
+    const matches = normalizeMatches(row.job_match);
+    updateRowLookup(row, matches);
+    const selectable = matches.filter(m => m && m.code);
+    const fallback = matches.filter(m => !m || !m.code);
+    
+    if (row.job_match_status === "found" && selectable.length === 1) {
+      const match = selectable[0];
+      row.job_match_selected = match;
+      row.analysis_code = match.code;
+      analysisCell.textContent = match.code;
+      statusCell.textContent = "Dipilih";
+      statusCell.classList.add("text-success");
+
+      const span = document.createElement("span");
+      span.className = "text-success fw-semibold";
+      span.textContent = buildMatchLabel(match);
+      cell.appendChild(span);
+      return;
+    }
+
+    if (!selectable.length && !fallback.length) {
+      renderManualInput(cell, row, analysisCell, statusCell);
+      return;
+    }
+
+    if (selectable.length) {
+    // Add header text before buttons
+    const header = document.createElement("div");
+    header.className = "fw-semibold small mb-2 text-dark";
+    header.textContent = "Pilih kode yang sesuai atau masukkan manual:";
+    cell.appendChild(header);
+
+    // Create the button options (same style as before)
+    selectable.forEach(match => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "btn btn-sm btn-outline-primary w-100 text-start match-option mb-1";
+      const label = buildMatchLabel(match);
+      btn.dataset.label = label;
+      btn.textContent = label;
+      btn.onclick = () => handleMatchSelection(match, row, analysisCell, statusCell, cell, btn);
+      cell.appendChild(btn);
+    });
+
+    // Always show manual input after the buttons
+    renderManualInput(cell, row, analysisCell, statusCell);
+  }
+
+
+
+    if (fallback.length) renderManualInput(cell, row, analysisCell, statusCell, "Needs Manual Input");
+  }
+
+  function buildMatchLabel(match) {
+    const parts = [];
+    if (match.code) parts.push(match.code);
+    if (match.name) parts.push(match.name);
+    if (typeof match.confidence === "number") parts.push(Math.round(match.confidence * 100) + "%");
+    return parts.join(" — ");
+  }
+
+  function handleMatchSelection(match, row, analysisCell, statusCell, cell, btn) {
+    row.job_match_selected = match;
+    row.analysis_code = match.code;
+    updateRowLookup(row, [match]);
+    analysisCell.textContent = match.code;
+    statusCell.textContent = "Dipilih";
+    statusCell.classList.add("text-success");
+
+    cell.querySelectorAll("button.match-option").forEach(b => {
+      b.classList.remove("btn-success");
+      b.classList.add("btn-outline-primary");
+      b.textContent = b.dataset.label;
+    });
+    btn.classList.remove("btn-outline-primary");
+    btn.classList.add("btn-success");
+    btn.textContent = "Dipilih: " + btn.dataset.label;
+  }
+
+  // ---------- MANUAL INPUT ----------
+  function renderManualInput(cell, row, analysisCell, statusCell, label) {
+    const notice = document.createElement("div");
+    notice.className = "text-warning small mb-2";
+    notice.textContent = label;
+    cell.appendChild(notice);
+
+    const group = document.createElement("div");
+    group.className = "input-group input-group-sm";
+
+    const input = document.createElement("input");
+    input.type = "text";
+    input.className = "form-control";
+    input.placeholder = "Masukkan kode AHSP secara manual";
+    input.value = row.analysis_code || "";
+
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "btn btn-primary";
+    button.textContent = "Gunakan";
+    button.onclick = () => {
+      const val = input.value.trim();
+      if (!val) return input.focus();
+      row.analysis_code = val;
+      row.job_match_selected = { code: val, match_status: "Manual" };
+      row.job_match_status = "manual";
+      analysisCell.textContent = val;
+      statusCell.textContent = "Manual";
+      statusCell.classList.add("text-success");
+      button.classList.remove("btn-primary");
+      button.classList.add("btn-success");
+      button.textContent = "Dipakai";
+    };
+
+    group.appendChild(input);
+    group.appendChild(button);
+    cell.appendChild(group);
+  }
+
+  // ---------- HELPER FUNCTIONS ----------
+  function normalizeMatches(m) { return Array.isArray(m) ? m : (m ? [m] : []); }
+  function updateRowLookup(row, matches) {
+    row._matchLookup = row._matchLookup || new Map();
+    matches.forEach(m => m && m.code && row._matchLookup.set(m.code.toLowerCase(), m));
+  }
+  function parseCurrencyNumber(v) {
+    if (typeof v === "number") return v;
+    const n = parseFloat(String(v).replace(/[^0-9.-]/g, ""));
+    return Number.isFinite(n) ? n : 0;
+  }
+  function formatCurrencyValue(v) {
+    return parseCurrencyNumber(v).toLocaleString("id-ID", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  // ---------- PRICE & TOTAL UPDATE ----------
   document.addEventListener("input", async (event) => {
     if (!event.target.classList.contains("volume-input") && !event.target.classList.contains("price-input")) return;
 
     const row = event.target.closest("tr");
-    const volume = parseFloat(row.querySelector(".volume-input").value) || 0;
-    const price = parseFloat(row.querySelector(".price-input").value) || 0;
+    const volumeInputEl = row.querySelector(".volume-input");
+    const priceInputEl = row.querySelector(".price-input");
+    const analysisCell = row.querySelector(".analysis-code-cell");
+    const volume = parseFloat(volumeInputEl.value) || 0;
+    const price = parseFloat(priceInputEl.value) || 0;
+    const code = analysisCell ? analysisCell.textContent.trim() : "";
+    const rowKey = row.dataset.rowKey || null;
 
     // Instant UI update
     const total = volume * price;
@@ -127,31 +314,37 @@
 
     updateGrandTotalFromRows();
 
-    // Backend recomputation (precise rounding)
+    // Backend recomputation
     try {
       const response = await fetch("/api/recompute_total_cost/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ volume, unit_price: price }),
+        body: JSON.stringify({ row_key: rowKey, volume, unit_price: price, code, analysis_code: code }),
       });
       const data = await response.json();
       if (response.ok && data.total_cost) {
         const precise = parseFloat(data.total_cost);
-        row.querySelector(".total-cell").textContent =
-          "Rp. " + precise.toLocaleString("id-ID", { minimumFractionDigits: 2 });
+        if (!Number.isNaN(precise)) {
+          row.querySelector(".total-cell").textContent =
+            "Rp. " + precise.toLocaleString("id-ID", { minimumFractionDigits: 2 });
+        }
+        if (data.unit_price !== undefined && data.unit_price !== null) {
+          const resolvedUnit = parseFloat(data.unit_price);
+          if (!Number.isNaN(resolvedUnit)) {
+            priceInputEl.value = resolvedUnit;
+          }
+        }
         updateGrandTotalFromRows();
       }
     } catch (err) {
-      console.warn("Fetch error:", err);
+      console.warn("Recompute error:", err);
     }
   });
 
-  // ---------- Grand Total ----------
   function updateGrandTotalFromRows() {
     let grand = 0;
-    document.querySelectorAll(".total-cell").forEach(cell => {
-      let text = cell.textContent.replace(/[^\d,.-]/g, "").replace(/\./g, "").replace(",", ".");
-      const val = parseFloat(text) || 0;
+    document.querySelectorAll(".total-cell").forEach((cell) => {
+      const val = parseFloat(cell.textContent.replace(/[^\d,.-]/g, "").replace(/\./g, "").replace(",", ".")) || 0;
       grand += val;
     });
     updateGrandTotal(grand);

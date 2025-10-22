@@ -8,7 +8,7 @@ from automatic_price_matching.total_cost import TotalCostCalculator
 from unittest.mock import patch
 from automatic_job_matching.repository.ahs_repo import DbAhsRepository
 from rencanakan_core.models import Ahs
-from django.test import TestCase, Client
+from django.test import TestCase, Client, override_settings
 from django.urls import reverse
 class AhspValidationTests(SimpleTestCase):
 
@@ -466,6 +466,15 @@ class AhsRepositoryCacheIntegrationTests(SimpleTestCase):
 
             # ✅ Assert total calls unchanged → cache prevents new lookups
             self.assertEqual(first_call_count, second_call_count)
+SQLITE_DB_SETTINGS = {
+	"default": {
+		"ENGINE": "django.db.backends.sqlite3",
+		"NAME": ":memory:",
+	}
+}
+
+
+@override_settings(DATABASES=SQLITE_DB_SETTINGS)
 class RecomputeTotalCostTDDTests(TestCase):
     def setUp(self):
         self.client = Client()
@@ -510,3 +519,23 @@ class RecomputeTotalCostTDDTests(TestCase):
             self.assertEqual(response.status_code, 200)
             data = response.json()
             self.assertEqual(Decimal(data["total_cost"]), Decimal("0"))
+
+    def test_persists_override_when_row_key_supplied(self):
+        payload = {
+            "row_key": "row-001",
+            "code": "AT.01.001",
+            "analysis_code": "AT.01.001",
+            "volume": "2.50",
+            "unit_price": "1000",
+        }
+        response = self.client.post(self.url, json.dumps(payload), content_type="application/json")
+        self.assertEqual(response.status_code, 200)
+
+        session = self.client.session
+        overrides = session.get("rab_overrides")
+        self.assertIsNotNone(overrides)
+        stored = overrides.get("row-001")
+        self.assertIsNotNone(stored)
+        self.assertEqual(stored.get("unit_price"), "1000.00")
+        self.assertEqual(stored.get("total_price"), "2500.00")
+        self.assertEqual(stored.get("volume"), "2.50")

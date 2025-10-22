@@ -1,10 +1,13 @@
 # pdf_parser/services/pipeline.py
 from typing import List, Dict, Any
-import re
+import re, logging
+from decimal import Decimal
 from pdf_parser.services.pdfreader import PdfReader
 from pdf_parser.services.row_parser import PdfRowParser
 from pdf_parser.services.normalizer import PdfRowNormalizer
+from pdf_parser.services.job_matcher import match_description  
 
+logger = logging.getLogger(__name__)
 
 def is_url_or_link(text: str) -> bool:
     """Check if text is a URL or contains URL-like patterns."""
@@ -23,9 +26,6 @@ def is_url_or_link(text: str) -> bool:
     ]
     return any(re.search(pattern, text_lower) for pattern in url_patterns)
 
-
-
-
 def filter_url_rows(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     """Remove rows that are URLs or links."""
     filtered = []
@@ -35,7 +35,6 @@ def filter_url_rows(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         if not is_url_or_link(desc):
             filtered.append(row)
     return filtered
-
 
 def merge_broken_rows(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     """
@@ -80,25 +79,45 @@ def parse_pdf_to_dtos(path: str) -> List[Dict[str, Any]]:
     3. Normalize into clean DTO dicts (PdfRowNormalizer).
     4. Merge broken rows.
     5. Filter out URL/link rows.
+    6. Run automatic job matching on each description.
     """
-    # 1. Read fragments from file
     reader = PdfReader()
     fragments = reader.extract(path)
 
     if not fragments:
         return []
 
-    # 2. Parse rows
     row_parser = PdfRowParser()
     parsed_rows, *boundaries = row_parser.parse(fragments)
 
-    # 3. Normalize rows
     normalized = [PdfRowNormalizer.normalize(r.values) for r in parsed_rows]
-
-    # 4. Merge broken rows
     normalized = merge_broken_rows(normalized)
-
-    # 5. Filter out URL and footer rows
     normalized = filter_url_rows(normalized)
 
-    return normalized
+    # 🆕 Step 6: perform automatic job matching
+    enriched_rows = []
+    for row in normalized:
+        desc = row.get("description") or ""
+        match_info = match_description(desc)
+
+        try:
+            volume = Decimal(str(row.get("volume") or "0"))
+            price = Decimal(str(row.get("harga satuan") or row.get("price") or "0"))
+            total_price = volume * price
+        except Exception:
+            volume = Decimal("0")
+            price = Decimal("0")
+            total_price = Decimal("0")
+
+        enriched_rows.append({
+            **row,
+            "volume": float(volume),
+            "price": float(price),
+            "total_price": float(total_price),
+            "job_match_status": match_info.get("status"),
+            "job_match": match_info.get("match"),
+            "job_match_error": match_info.get("error"),
+        })
+
+    logger.info("Parsed %d rows with job matching from %s", len(enriched_rows), path)
+    return enriched_rows

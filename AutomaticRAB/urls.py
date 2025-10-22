@@ -18,6 +18,8 @@ from django.contrib import admin
 from django.urls import include, path
 from django.shortcuts import redirect
 
+from automatic_price_matching.views import recompute_total_cost
+
 urlpatterns = [
     path('admin/', admin.site.urls),
     path("api/", include("automatic_job_matching.urls")),
@@ -25,6 +27,6 @@ urlpatterns = [
     path("pdf_parser/", include("pdf_parser.urls")),
     path("", lambda request: redirect("job-matching")),
     path('automatic_price_matching/', include('automatic_price_matching.urls')),
-
+    path("api/recompute_total_cost/", recompute_total_cost),
 ]
 

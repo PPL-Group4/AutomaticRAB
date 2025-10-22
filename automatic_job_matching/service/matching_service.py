@@ -118,19 +118,3 @@ class MatchingService:
         except Exception as e:
             logger.error("Error in perform_best_match: %s", str(e), exc_info=True)
             return None
-
-
-    @staticmethod
-    def search_candidates(term: str, limit: int = 10):
-        logger.debug("search_candidates called term=%s limit=%d", term, limit)
-        repo = CombinedAhsRepository()
-        rows = repo.search(term, limit=limit)
-        return [
-            {
-                "source": "ahs",
-                "id": row.id,
-                "code": row.code,
-                "name": row.name,
-            }
-            for row in rows
-        ]

@@ -271,36 +271,3 @@ class MatchingServiceEdgeCaseTests(TestCase):
             mock_logger.warning.return_value = result
             out = MatchingService.perform_best_match("unknown desc")
             self.assertTrue(out is None or isinstance(out, (dict, list)))
-
-class MatchingServiceSearchTests(TestCase):
-    @patch("automatic_job_matching.service.matching_service.CombinedAhsRepository")
-    def test_search_candidates_returns_serialised_rows(self, mock_repo_cls):
-        mock_instance = mock_repo_cls.return_value
-        mock_instance.search.return_value = [
-            type("Row", (), {"id": 5, "code": "C.1", "name": "Cor"})(),
-            type("Row", (), {"id": 6, "code": "C.2", "name": "Cor Beton"})(),
-        ]
-
-        results = MatchingService.search_candidates("Cor", limit=3)
-        self.assertEqual(len(results), 2)
-        self.assertEqual(results[0]["code"], "C.1")
-        mock_instance.search.assert_called_once_with("Cor", limit=3)
-
-    @patch("automatic_job_matching.service.matching_service.CombinedAhsRepository")
-    def test_search_candidates_handles_empty_results(self, mock_repo_cls):
-        mock_instance = mock_repo_cls.return_value
-        mock_instance.search.return_value = []
-
-        results = MatchingService.search_candidates("", limit=2)
-        self.assertEqual(results, [])
-        mock_instance.search.assert_called_once_with("", limit=2)
-
-    @patch("automatic_job_matching.service.matching_service.CombinedAhsRepository")
-    def test_search_candidates_raises_when_repo_fails(self, mock_repo_cls):
-        mock_instance = mock_repo_cls.return_value
-        mock_instance.search.side_effect = RuntimeError("boom")
-
-        with self.assertRaises(RuntimeError):
-            MatchingService.search_candidates("Cor")
-
-        mock_instance.search.assert_called_once_with("Cor", limit=10)
