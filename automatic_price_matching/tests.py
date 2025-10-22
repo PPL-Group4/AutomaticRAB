@@ -4,12 +4,14 @@ from django.core.exceptions import ValidationError
 from django.test import SimpleTestCase
 from automatic_price_matching.ahs_cache import AhsCache
 from automatic_job_matching.service.exact_matcher import AhsRow
+from automatic_price_matching.price_retrieval import AhspPriceRetriever, MockAhspSource
 from automatic_price_matching.total_cost import TotalCostCalculator
 from unittest.mock import patch
 from automatic_job_matching.repository.ahs_repo import DbAhsRepository
 from rencanakan_core.models import Ahs
 from django.test import TestCase, Client, override_settings
 from django.urls import reverse
+from automatic_price_matching.service import AutomaticPriceMatchingService
 class AhspValidationTests(SimpleTestCase):
 
 
@@ -539,3 +541,56 @@ class RecomputeTotalCostTDDTests(TestCase):
         self.assertEqual(stored.get("unit_price"), "1000.00")
         self.assertEqual(stored.get("total_price"), "2500.00")
         self.assertEqual(stored.get("volume"), "2.50")
+
+
+def test_auto_fill_unit_price_after_matching(self):
+    svc = AutomaticPriceMatchingService(
+        price_retriever=AhspPriceRetriever(MockAhspSource({"AB.01": Decimal("1000")}))
+    )
+    result = svc.match_one({"code": "AB.01", "volume": Decimal("2")})
+    assert result["unit_price"] == Decimal("1000")
+    assert result["total_cost"] == Decimal("2000.00")
+    assert result["match_status"] == "Matched"
+
+
+def test_user_override_recalculates_total(self):
+    svc = AutomaticPriceMatchingService(
+        price_retriever=AhspPriceRetriever(MockAhspSource({"AB.01": Decimal("1000")}))
+    )
+
+    # User overrides matched price (was 1000)
+    result = svc.match_one({"code": "AB.01", "volume": Decimal("3"), "unit_price": Decimal("1200")})
+    assert result["unit_price"] == Decimal("1200")
+    assert result["total_cost"] == Decimal("3600.00")
+    assert result["match_status"] == "Overridden"
+    assert result["is_editable"] is True
+
+def test_user_provided_price_without_match(self):
+    svc = AutomaticPriceMatchingService()
+    result = svc.match_one({"code": "XX.99", "volume": Decimal("5"), "unit_price": Decimal("1500")})
+    assert result["total_cost"] == Decimal("7500.00")
+    assert result["match_status"] == "Provided"
+
+def test_override_ignores_old_matched_price(self):
+    svc = AutomaticPriceMatchingService(
+        price_retriever=AhspPriceRetriever(MockAhspSource({"AB.01": Decimal("1000")}))
+    )
+    svc.cache.set_by_code("AB.01", Decimal("1000"))
+    result = svc.match_one({"code": "AB.01", "volume": Decimal("2"), "unit_price": Decimal("1500")})
+    assert result["total_cost"] == Decimal("3000.00")
+    assert result["match_status"] == "Overridden"
+
+def test_invalid_unit_price_gracefully_handled(self):
+    svc = AutomaticPriceMatchingService()
+
+    result = svc.match_one({"code": "AB.01", "volume": Decimal("3"), "unit_price": "invalid"})
+    # Expect fallback because unit_price isn't valid Decimal
+    assert result["total_cost"] == Decimal("0")
+    assert result["match_status"] in ("Needs Manual Input", "Provided", "Overridden")
+
+def test_missing_volume_and_price_triggers_fallback(self):
+    svc = AutomaticPriceMatchingService()
+    result = svc.match_one({"code": "AB.01"})
+    assert result["unit_price"] is None
+    assert result["total_cost"] == Decimal("0")
+    assert result["match_status"] == "Needs Manual Input"

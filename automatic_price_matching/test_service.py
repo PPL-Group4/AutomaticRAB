@@ -29,7 +29,7 @@ class AutomaticPriceMatchingServiceTests(SimpleTestCase):
             out = self.svc.match_one({"irrelevant": "payload"})
         self.assertEqual(out["unit_price"], Decimal("100.50"))
         self.assertEqual(out["total_cost"], Decimal("201.00"))
-        self.assertEqual(out["match_status"], "Provided")
+        self.assertEqual(out["match_status"], "Overridden")
         self.assertTrue(out["is_editable"])
 
     def test_match_one_finds_price_from_ahsp_and_marks_not_editable(self):
