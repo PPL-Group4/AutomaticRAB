@@ -27,7 +27,7 @@ class AhspCiptaKaryaRepository:
              .replace("“", '"')
         )
 
-        s = re.sub(r"[^a-z0-9\s\.\-']", " ", s)
+        s = re.sub(r"[^a-z0-9\s\.\-']", " ", s.replace("/", " "))
         s = re.sub(r"\s+", " ", s)
         return s.strip()
 
