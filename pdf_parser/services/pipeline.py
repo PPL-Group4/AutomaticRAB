@@ -98,7 +98,20 @@ def parse_pdf_to_dtos(path: str) -> List[Dict[str, Any]]:
     enriched_rows = []
     for row in normalized:
         desc = row.get("description") or ""
-        match_info = match_description(desc)
+        analysis_code = row.get("analysis_code") or row.get("kode") or row.get("analysis code") or ""
+        if analysis_code:
+            code = analysis_code.strip()
+            if code and any(ch.isdigit() for ch in code):  
+                match_info = {
+                    "status": "found",
+                    "match": {"code": code, "confidence": 1.0}
+                }
+                logger.debug("Skipping auto-match: valid code detected (%s)", code)
+            else:
+                match_info = match_description(desc)
+        else:
+            match_info = match_description(desc)
+
 
         try:
             volume = Decimal(str(row.get("volume") or "0"))

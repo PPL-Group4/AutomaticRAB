@@ -308,6 +308,15 @@ def preview_file(file: UploadedFile):
     for idx, row in enumerate(parsed):
         if row.is_section:
             match_info = {"status": "skipped", "match": None}
+        elif row.analysis_code:
+            code = row.analysis_code.strip()
+            if code and any(ch.isdigit() for ch in code):
+                match_info = {
+                    "status": "found",
+                    "match": {"code": code, "confidence": 1.0}
+                }
+            else:
+                match_info = match_description(row.description)
         else:
             match_info = match_description(row.description)
             if not isinstance(match_info, dict):  # defensive guard for unexpected returns

@@ -770,8 +770,8 @@ class FuzzyMatcher:
             conf_expanded = self.scorer.score(expanded_query, norm_cand) if expanded_query != normalized_query else 0.0
             conf = max(conf_original, conf_expanded)
             
-            logger.debug("Confidence vs %r: orig=%.4f, expanded=%.4f, final=%.4f", 
-                        cand.name, conf_original, conf_expanded, conf)
+            # logger.debug("Confidence vs %r: orig=%.4f, expanded=%.4f, final=%.4f", 
+            #             cand.name, conf_original, conf_expanded, conf)
             
             if conf >= self.min_similarity and conf > best_conf:
                 best_conf = conf
@@ -808,8 +808,8 @@ class FuzzyMatcher:
             conf_expanded = self.scorer.score(expanded_query, norm_cand) if expanded_query != normalized_query else 0.0
             conf = max(conf_original, conf_expanded)
             
-            logger.debug("Confidence vs %r: orig=%.4f, expanded=%.4f, final=%.4f", 
-                        cand.name, conf_original, conf_expanded, conf)
+            # logger.debug("Confidence vs %r: orig=%.4f, expanded=%.4f, final=%.4f", 
+            #             cand.name, conf_original, conf_expanded, conf)
             
             if conf >= self.min_similarity:
                 results.append((conf, {"source": "ahs", "id": cand.id, "code": cand.code, "name": cand.name, "matched_on": "name", "confidence": round(conf, 4)}))
