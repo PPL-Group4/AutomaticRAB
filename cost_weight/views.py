@@ -18,6 +18,7 @@ from cost_weight.services.recalc_orchestrator import (
     ITEM_MODEL, JOB_MODEL, ITEM_COST_FIELD, ITEM_WEIGHT_FIELD, ITEM_FK_TO_JOB
 )
 from cost_weight.services.chart_transformer import to_chart_data
+from cost_weight.models import TestJob, TestItem
 
 
 @require_POST
@@ -28,6 +29,63 @@ def recalc_job_weights(request, job_id: int):
         return JsonResponse({"jobId": job_id, "updated": updated})
     except Exception:
         return JsonResponse({"error": "recalc failed"}, status=500)
+
+
+def upload_excel_view(request):
+    """View to upload and parse Excel RAB file"""
+    if request.method == 'POST' and request.FILES.get('excel_file'):
+        from cost_weight.services.excel_parser import create_job_from_excel
+        
+        excel_file = request.FILES['excel_file']
+        job_name = request.POST.get('job_name', '')
+        
+        try:
+            # Parse and create job
+            job = create_job_from_excel(excel_file, job_name)
+            
+            # Redirect to analysis page
+            return JsonResponse({
+                'success': True,
+                'job_id': job.id,
+                'redirect_url': f'/cost_weight/analysis/{job.id}/'
+            })
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'error': str(e)
+            }, status=400)
+    
+    return render(request, 'cost_weight/upload_excel.html')
+
+
+def cost_weight_analysis_view(request, job_id: int):
+    """View to display cost weight analysis with pie chart"""
+    try:
+        job = TestJob.objects.prefetch_related('items').get(id=job_id)
+        items = job.items.all().order_by('-cost')
+        
+        # Prepare chart data
+        chart_data = {
+            'labels': [item.name for item in items],
+            'costs': [float(item.cost) for item in items],
+            'weights': [float(item.weight_pct) for item in items],
+            'colors': [
+                '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', 
+                '#9966FF', '#FF9F40', '#FF6384', '#C9CBCF',
+                '#E7E9ED', '#FFA1B5'
+            ]
+        }
+        
+        context = {
+            'job': job,
+            'items': items,
+            'chart_data': chart_data,
+            'total_items': items.count()
+        }
+        
+        return render(request, 'cost_weight/analysis.html', context)
+    except TestJob.DoesNotExist:
+        return HttpResponse('Job not found', status=404)
 
 def _get_models():
     Item = apps.get_model(ITEM_MODEL)
