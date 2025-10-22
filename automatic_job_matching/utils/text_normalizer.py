@@ -49,6 +49,7 @@ _CHARACTER_SUBSTITUTIONS = [
     ("]", " "),
     ("{", " "),
     ("}", " "),
+    ("'", " "),
 ]
 
 def _strip_diacritics(text: str) -> str:
@@ -125,7 +126,7 @@ def normalize_text(
         return ""
 
     normalized_text = _convert_at_codes(text)
-    normalized_text = _convert_generic_codes(normalized_text)
+    # normalized_text = _convert_generic_codes(normalized_text)
 
     normalized_text, code_map = _protect_codes(normalized_text)
 

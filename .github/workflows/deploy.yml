@@ -1,0 +1,65 @@
+name: Deploy Django to Staging
+
+on:
+  push:
+    branches:
+      - staging
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Checkout code
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      # 2. Docker Hub login
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
+
+      # 3. Build and push Docker image
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          push: true
+          tags: ${{ secrets.DOCKER_HUB_USERNAME }}/automatic-rab:staging
+
+      # 4. Deploy to EC2
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            # Stop & remove old container
+            docker stop automaticrab || true
+            docker rm automaticrab || true
+            
+            # Remove only the old image for this app
+            docker rmi ${{ secrets.DOCKER_HUB_USERNAME }}/automatic-rab:staging || true
+            
+            # Docker Hub login on server
+            docker login -u ${{ secrets.DOCKER_HUB_USERNAME }} -p ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
+            
+            # Pull latest staging image
+            docker pull ${{ secrets.DOCKER_HUB_USERNAME }}/automatic-rab:staging
+            
+            # Run new container with GitHub Secrets
+            docker run -d --restart unless-stopped \
+              --name automaticrab \
+              -e PRODUCTION="${{ secrets.PRODUCTION }}" \
+              -e SECRET_KEY="${{ secrets.SECRET_KEY }}" \
+              -e DEBUG="${{ secrets.DEBUG }}" \
+              -e ALLOWED_HOSTS="${{ secrets.ALLOWED_HOSTS }}" \
+              -e MYSQL_NAME="${{ secrets.MYSQL_NAME }}" \
+              -e MYSQL_USER="${{ secrets.MYSQL_USER }}" \
+              -e MYSQL_PASSWORD="${{ secrets.MYSQL_PASSWORD }}" \
+              -e MYSQL_HOST="${{ secrets.MYSQL_HOST }}" \
+              -e MYSQL_PORT="${{ secrets.MYSQL_PORT }}" \
+              -p 8000:8000 \
+              ${{ secrets.DOCKER_HUB_USERNAME }}/automatic-rab:staging

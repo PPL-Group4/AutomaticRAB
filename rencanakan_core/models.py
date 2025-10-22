@@ -32,6 +32,7 @@ class Ahs(models.Model):
     reference_group_id = models.BigIntegerField(null=True)
     code = models.CharField(max_length=50, null=True)
     name = models.CharField(max_length=500, null=True)
+    unit_price = models.DecimalField(max_digits=20, decimal_places=2, null=True)
 
     class Meta:
         db_table = "ahs"
