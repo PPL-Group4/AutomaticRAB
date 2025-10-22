@@ -21,13 +21,17 @@ def match_best_view(request):
     result = MatchingService.perform_best_match(description)
 
     if isinstance(result, dict) and result:
-        status = "found"
+        if result.get("confidence", 1.0) == 1.0:
+            status = "found"
+        else:
+            status = "similar"
     elif isinstance(result, list) and len(result) == 1:
         status = "similar"
     elif isinstance(result, list) and len(result) > 1:
         status = f"found {len(result)} similar"
     else:
         status = "not found"
+
 
     return JsonResponse({"status": status, "match": result}, status=200)
 

@@ -6,7 +6,10 @@ logger = logging.getLogger(__name__)
 
 def _derive_status(match: Any) -> str:
     if isinstance(match, dict) and match:
-        return "found"
+        if match.get("confidence") == 1.0:
+            return "found"
+        return "similar"
+
     if isinstance(match, list):
         if len(match) == 1:
             return "similar"

@@ -175,22 +175,34 @@
     }
 
     if (!selectable.length && !fallback.length) {
-      renderManualInput(cell, row, analysisCell, statusCell, "Needs Manual Input");
+      renderManualInput(cell, row, analysisCell, statusCell);
       return;
     }
 
     if (selectable.length) {
-      selectable.forEach(match => {
-        const btn = document.createElement("button");
-        btn.type = "button";
-        btn.className = "btn btn-sm btn-outline-primary w-100 text-start match-option mb-1";
-        const label = buildMatchLabel(match);
-        btn.dataset.label = label;
-        btn.textContent = label;
-        btn.onclick = () => handleMatchSelection(match, row, analysisCell, statusCell, cell, btn);
-        cell.appendChild(btn);
-      });
-    }
+    // Add header text before buttons
+    const header = document.createElement("div");
+    header.className = "fw-semibold small mb-2 text-dark";
+    header.textContent = "Pilih kode yang sesuai atau masukkan manual:";
+    cell.appendChild(header);
+
+    // Create the button options (same style as before)
+    selectable.forEach(match => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "btn btn-sm btn-outline-primary w-100 text-start match-option mb-1";
+      const label = buildMatchLabel(match);
+      btn.dataset.label = label;
+      btn.textContent = label;
+      btn.onclick = () => handleMatchSelection(match, row, analysisCell, statusCell, cell, btn);
+      cell.appendChild(btn);
+    });
+
+    // Always show manual input after the buttons
+    renderManualInput(cell, row, analysisCell, statusCell);
+  }
+
+
 
     if (fallback.length) renderManualInput(cell, row, analysisCell, statusCell, "Needs Manual Input");
   }
@@ -234,7 +246,7 @@
     const input = document.createElement("input");
     input.type = "text";
     input.className = "form-control";
-    input.placeholder = "Masukkan kode AHSP";
+    input.placeholder = "Masukkan kode AHSP secara manual";
     input.value = row.analysis_code || "";
 
     const button = document.createElement("button");
