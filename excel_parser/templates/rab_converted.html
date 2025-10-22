@@ -69,14 +69,32 @@
     <div class="d-flex justify-content-between"><span class="fw-bold">Terbilang</span> <span id="terbilang">NOL RUPIAH</span></div>
   </div>
 
+  <!-- Cost Weight Analysis Chart -->
+  <div class="card mt-4 p-4 shadow-sm" id="costWeightChartBox" style="display:none;">
+    <h5 class="mb-3">📊 Cost Weight Analysis</h5>
+    <div class="row">
+      <div class="col-lg-7">
+        <canvas id="costWeightPieChart" style="max-height: 400px;"></canvas>
+      </div>
+      <div class="col-lg-5">
+        <div id="costWeightLegend" style="max-height: 400px; overflow-y: auto;"></div>
+      </div>
+    </div>
+  </div>
+
   <a href="#" class="btn btn-outline-primary mt-3">+ Tambah Kategori Pekerjaan / Pilih Referensi RAB</a>
 </div>
 {% endblock %}
 
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script>
   {{ block.super }}
+
+  // Debug: Check if Chart.js is loaded
+  console.log("Chart.js loaded:", typeof Chart !== 'undefined');
+  console.log("Cost Weight Chart Box element:", document.getElementById("costWeightChartBox"));
 
   const MATCH_ENDPOINT = "{% url 'match-best' %}";
   const RECOMPUTE_ENDPOINT = "/api/recompute_total_cost/";
@@ -502,6 +520,8 @@
   });
 
   // ---------- AUTO PRICE MATCHING LOGIC ----------
+  let backendRecomputeTimeout = null;
+  
   document.addEventListener("input", async (event) => {
     if (!event.target.classList.contains("volume-input") && !event.target.classList.contains("price-input")) return;
 
@@ -523,57 +543,81 @@
     const volume = parseFloat(volumeInput.value) || 0;
     const price = parseFloat(priceInput.value) || 0;
 
-    // Instant UI update
+    // Instant UI update (no delay)
     const total = volume * price;
     totalCell.textContent = "Rp. " + total.toLocaleString("id-ID", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
+    // Update grand total immediately
     updateGrandTotalFromRows();
 
-    // Backend recomputation (precise rounding & persistence)
-    try {
-      const analysisCell = row.querySelector(".analysis-code-cell");
-      const code = analysisCell ? analysisCell.textContent.trim() : "";
-      const rowKey = row.dataset.rowKey || null;
-      const payload = { row_key: rowKey, volume, unit_price: price };
-      if (code) {
-        payload.code = code;
-        payload.analysis_code = code;
-      }
-
-      const response = await fetch(RECOMPUTE_ENDPOINT, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      const data = await response.json();
-      if (response.ok && data.total_cost !== undefined && data.total_cost !== null) {
-        const precise = parseFloat(data.total_cost);
-        if (!Number.isNaN(precise)) {
-          totalCell.textContent = "Rp. " + precise.toLocaleString("id-ID", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-        }
-        if (data.unit_price !== undefined && data.unit_price !== null) {
-          const resolvedUnit = parseFloat(data.unit_price);
-          if (!Number.isNaN(resolvedUnit)) {
-            priceInput.value = resolvedUnit;
-            priceInput.dataset.previousValue = priceInput.value;
-          }
-        }
-        updateGrandTotalFromRows();
-      }
-    } catch (err) {
-      console.warn("Fetch error:", err);
+    // Debounce backend recomputation: wait 800ms after last keystroke
+    if (backendRecomputeTimeout) {
+      clearTimeout(backendRecomputeTimeout);
     }
+    
+    backendRecomputeTimeout = setTimeout(async () => {
+      // Backend recomputation (precise rounding & persistence)
+      try {
+        const analysisCell = row.querySelector(".analysis-code-cell");
+        const code = analysisCell ? analysisCell.textContent.trim() : "";
+        const rowKey = row.dataset.rowKey || null;
+        const payload = { row_key: rowKey, volume, unit_price: price };
+        if (code) {
+          payload.code = code;
+          payload.analysis_code = code;
+        }
+
+        const response = await fetch(RECOMPUTE_ENDPOINT, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        const data = await response.json();
+        if (response.ok && data.total_cost !== undefined && data.total_cost !== null) {
+          const precise = parseFloat(data.total_cost);
+          if (!Number.isNaN(precise)) {
+            totalCell.textContent = "Rp. " + precise.toLocaleString("id-ID", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+          }
+          if (data.unit_price !== undefined && data.unit_price !== null) {
+            const resolvedUnit = parseFloat(data.unit_price);
+            if (!Number.isNaN(resolvedUnit)) {
+              priceInput.value = resolvedUnit;
+              priceInput.dataset.previousValue = priceInput.value;
+            }
+          }
+          // Update grand total but don't reset pie chart timer
+          updateGrandTotalFromRows(false);
+        }
+      } catch (err) {
+        console.warn("Fetch error:", err);
+      }
+    }, 800); // Wait 800ms before backend call
   });
 
   // ---------- Grand Total Update ----------
-  function updateGrandTotalFromRows() {
+  let costWeightChart = null;
+  let chartUpdateTimeout = null;
+
+  function updateGrandTotalFromRows(shouldUpdateChart = true) {
     let grand = 0;
     document.querySelectorAll(".total-cell").forEach(cell => {
       let text = cell.textContent.replace(/[^\d,.-]/g, "").replace(/\./g, "").replace(",", ".");
       const val = parseFloat(text) || 0;
       grand += val;
     });
+    
+    // Update Grand Total immediately (no delay)
     updateGrandTotal(grand);
+    
+    // Only reset pie chart timer if triggered by user input (not backend callback)
+    if (shouldUpdateChart) {
+      if (chartUpdateTimeout) {
+        clearTimeout(chartUpdateTimeout);
+      }
+      chartUpdateTimeout = setTimeout(() => {
+        updateCostWeightChart();
+      }, 2000); // Wait 2 seconds before updating chart
+    }
   }
 
   function updateGrandTotal(total) {
@@ -583,6 +627,145 @@
     document.getElementById("totalWithPpn").innerText = "Rp. " + (total + ppn).toLocaleString();
     document.getElementById("terbilang").innerText =
       total === 0 ? "NOL RUPIAH" : numberToWords(total + ppn).toUpperCase();
+  }
+
+  function updateCostWeightChart() {
+    // Collect all items with their costs
+    const items = [];
+    const tables = document.querySelectorAll("#rabTables table");
+    
+    tables.forEach(table => {
+      const rows = table.querySelectorAll("tbody tr");
+      rows.forEach(row => {
+        // Get description from second td (index 1)
+        const cells = row.querySelectorAll("td");
+        if (cells.length < 9) return; // Skip if not enough cells
+        
+        const descCell = cells[1]; // Uraian Pekerjaan
+        const totalCell = row.querySelector(".total-cell");
+        
+        if (descCell && totalCell) {
+          const description = descCell.textContent.trim();
+          const totalText = totalCell.textContent.replace(/[^\d,.-]/g, "").replace(/\./g, "").replace(",", ".");
+          const cost = parseFloat(totalText) || 0;
+          
+          if (cost > 0 && description && description !== "") {
+            items.push({ name: description, cost: cost });
+          }
+        }
+      });
+    });
+
+    console.log("Cost Weight Chart - Items found:", items.length, items);
+
+    if (items.length === 0) {
+      document.getElementById("costWeightChartBox").style.display = "none";
+      return;
+    }
+
+    // Calculate total and weights
+    const totalCost = items.reduce((sum, item) => sum + item.cost, 0);
+    items.forEach(item => {
+      item.weight = (item.cost / totalCost) * 100;
+    });
+
+    // Sort by cost descending
+    items.sort((a, b) => b.cost - a.cost);
+
+    // Take top 10 items for clarity
+    const topItems = items.slice(0, 10);
+    if (items.length > 10) {
+      const othersTotal = items.slice(10).reduce((sum, item) => sum + item.cost, 0);
+      topItems.push({ 
+        name: `Others (${items.length - 10} items)`, 
+        cost: othersTotal,
+        weight: (othersTotal / totalCost) * 100
+      });
+    }
+
+    // Prepare chart data
+    const labels = topItems.map(item => item.name);
+    const costs = topItems.map(item => item.cost);
+    const weights = topItems.map(item => item.weight);
+    const colors = [
+      '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', 
+      '#9966FF', '#FF9F40', '#FF6384', '#C9CBCF',
+      '#E7E9ED', '#FFA1B5', '#8DD3C7'
+    ];
+
+    // Show chart box
+    document.getElementById("costWeightChartBox").style.display = "block";
+
+    // Render chart
+    const ctx = document.getElementById("costWeightPieChart");
+    
+    if (costWeightChart) {
+      costWeightChart.destroy();
+    }
+
+    costWeightChart = new Chart(ctx, {
+      type: 'pie',
+      data: {
+        labels: labels,
+        datasets: [{
+          data: costs,
+          backgroundColor: colors,
+          borderWidth: 2,
+          borderColor: '#fff'
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            display: false
+          },
+          title: {
+            display: true,
+            text: 'Cost Distribution by Item',
+            font: {
+              size: 16,
+              weight: 'bold'
+            }
+          },
+          tooltip: {
+            callbacks: {
+              label: function(context) {
+                const label = context.label || '';
+                const value = context.parsed;
+                const weight = weights[context.dataIndex];
+                return `${label}: Rp ${value.toLocaleString('id-ID')} (${weight.toFixed(2)}%)`;
+              }
+            }
+          }
+        }
+      }
+    });
+
+    // Render custom legend
+    const legendContainer = document.getElementById("costWeightLegend");
+    legendContainer.innerHTML = '<h6 class="mb-3">Items Breakdown</h6>';
+    
+    topItems.forEach((item, index) => {
+      const legendItem = document.createElement('div');
+      legendItem.className = 'd-flex align-items-center mb-2 p-2 rounded';
+      legendItem.style.cursor = 'pointer';
+      legendItem.innerHTML = `
+        <div style="width: 20px; height: 20px; background: ${colors[index]}; border-radius: 4px; margin-right: 10px; flex-shrink: 0;"></div>
+        <div style="flex-grow: 1; font-size: 0.85rem;">
+          <div style="font-weight: 600; color: #333;">${item.name}</div>
+          <div style="font-size: 0.75rem; color: #666;">Rp ${item.cost.toLocaleString('id-ID')} (${item.weight.toFixed(2)}%)</div>
+        </div>
+      `;
+      legendItem.addEventListener('mouseenter', () => {
+        legendItem.style.background = '#f8f9fa';
+      });
+      legendItem.addEventListener('mouseleave', () => {
+        legendItem.style.background = 'transparent';
+      });
+      legendContainer.appendChild(legendItem);
+    });
   }
 
   function numberToWords(number) {
@@ -1103,7 +1286,7 @@
           if (data.total_cost !== undefined && totalCell) {
             const precise = parseFloat(data.total_cost) || 0;
             totalCell.textContent = "Rp. " + precise.toLocaleString("id-ID", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-            updateGrandTotalFromRows();
+            updateGrandTotalFromRows(false); // Don't reset chart timer from backend callback
           }
         }
       }

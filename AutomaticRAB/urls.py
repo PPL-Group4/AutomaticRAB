@@ -27,6 +27,7 @@ urlpatterns = [
     path("pdf_parser/", include("pdf_parser.urls")),
     path("", lambda request: redirect("job-matching")),
     path('automatic_price_matching/', include('automatic_price_matching.urls')),
+    path("cost_weight/", include("cost_weight.urls")),
     path("api/recompute_total_cost/", recompute_total_cost),
 ]
 
