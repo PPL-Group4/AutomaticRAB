@@ -62,6 +62,11 @@ def recompute_total_cost(request: HttpRequest):
 
     volume = _safe_decimal(volume_raw) or Decimal("0")
     unit_price = _safe_decimal(unit_price_raw)
+    # Reject invalid numeric input early
+    if (volume_raw not in (None, "", 0) and _safe_decimal(volume_raw) is None) or (
+            unit_price_raw not in (None, "", 0) and _safe_decimal(unit_price_raw) is None
+    ):
+        return JsonResponse({"error": "Invalid numeric input"}, status=400)
 
     logger.debug("recompute_total_cost called with payload=%s", payload)
 

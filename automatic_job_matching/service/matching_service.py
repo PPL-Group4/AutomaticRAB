@@ -101,7 +101,7 @@ class MatchingService:
             
             # Multi-word queries: return single best match
             min_similarity_single = 0.9
-            min_similarity_multiple = 0.5
+            min_similarity_multiple = 0.6
             limit = 10
 
             # 1. Try exact

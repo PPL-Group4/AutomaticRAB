@@ -2,6 +2,30 @@
 {% load static %}
 
 {% block content %}
+<style>
+  .price-origin-wrapper {
+    width: 100%;
+  }
+
+  .price-origin-wrapper .price-input {
+    width: 100%;
+  }
+
+  .price-origin-badge {
+    font-size: 0.7rem;
+    letter-spacing: 0.02em;
+  }
+
+  .price-input-auto {
+    background-color: #e7f1ff;
+    border-color: rgba(13, 110, 253, 0.35);
+  }
+
+  .price-input-manual {
+    background-color: #fff5e6;
+    border-color: rgba(255, 193, 7, 0.45);
+  }
+</style>
 <div class="section-box position-relative">
   <h5 class="section-title">RAB Preview</h5>
 
@@ -61,6 +85,7 @@
   const suggestionCache = new Map();
   const dropdownRequestState = new WeakMap();
   const MANUAL_SUGGESTION_LIMIT = 12;
+  const PRICE_OVERRIDE_CONFIRM_MESSAGE = "Harga ini diisi otomatis oleh sistem. Apakah Anda yakin ingin menimpa nilai tersebut secara manual?";
 
   function showError(message) {
     const errorContainer = document.getElementById("errorContainer");
@@ -330,6 +355,9 @@
     tr.appendChild(unitCell);
 
     const priceCell = document.createElement("td");
+    const priceWrapper = document.createElement("div");
+    priceWrapper.className = "price-origin-wrapper d-flex flex-column align-items-start gap-1";
+
     const priceInput = document.createElement("input");
     priceInput.type = "number";
     priceInput.className = "form-control form-control-sm price-input";
@@ -338,8 +366,18 @@
     priceInput.step = "0.01";
     priceInput.dataset.rowIndex = rowIndex;
     priceInput.dataset.rowKey = rowKey;
-    priceCell.appendChild(priceInput);
+    priceWrapper.appendChild(priceInput);
+
+    const badge = document.createElement("span");
+    badge.className = "price-origin-badge badge rounded-pill";
+    badge.textContent = "Manual";
+    priceWrapper.appendChild(badge);
+
+    priceCell.appendChild(priceWrapper);
     tr.appendChild(priceCell);
+
+    const initialOrigin = ((row.price_origin || row.priceOrigin || "").toLowerCase() === "auto") ? "auto" : "manual";
+    decoratePriceInput(priceInput, { initialOrigin });
 
     const totalCell = document.createElement("td");
     totalCell.classList.add("total-cell");
@@ -349,11 +387,135 @@
     return tr;
   }
 
+  function refreshTooltip(element) {
+    if (!element || typeof window === "undefined" || !window.bootstrap || !bootstrap.Tooltip) {
+      return;
+    }
+    const existing = bootstrap.Tooltip.getInstance(element);
+    if (existing) {
+      existing.dispose();
+    }
+    if (element.getAttribute("title")) {
+      new bootstrap.Tooltip(element);
+    }
+  }
+
+  function updatePriceOriginUI(priceInput, origin, options = {}) {
+    if (!priceInput) {
+      return;
+    }
+
+    const normalizedOrigin = origin === "auto" ? "auto" : "manual";
+    priceInput.dataset.origin = normalizedOrigin;
+    priceInput.classList.remove("price-input-auto", "price-input-manual");
+    priceInput.classList.add(normalizedOrigin === "auto" ? "price-input-auto" : "price-input-manual");
+
+    const wrapper = priceInput.closest(".price-origin-wrapper");
+    if (wrapper) {
+      let badge = wrapper.querySelector(".price-origin-badge");
+      if (!badge) {
+        badge = document.createElement("span");
+        badge.className = "price-origin-badge badge rounded-pill";
+        badge.textContent = "";
+        wrapper.appendChild(badge);
+      }
+      const baseClass = "price-origin-badge badge rounded-pill";
+      if (normalizedOrigin === "auto") {
+        badge.className = `${baseClass} bg-info-subtle text-info-emphasis`;
+        badge.textContent = "Auto";
+      } else {
+        badge.className = `${baseClass} bg-warning-subtle text-warning-emphasis`;
+        badge.textContent = "Manual";
+      }
+    }
+
+    const tooltipText = normalizedOrigin === "auto"
+      ? "Harga ini berasal dari referensi otomatis sistem."
+      : "Harga ini saat ini merupakan nilai manual.";
+    priceInput.setAttribute("data-bs-toggle", "tooltip");
+    priceInput.setAttribute("data-bs-placement", "top");
+    priceInput.setAttribute("title", tooltipText);
+
+    if (!options.skipTooltipRefresh) {
+      refreshTooltip(priceInput);
+    }
+  }
+
+  function decoratePriceInput(priceInput, { initialOrigin = "manual" } = {}) {
+    if (!priceInput) {
+      return;
+    }
+
+    const wrapper = priceInput.closest(".price-origin-wrapper");
+    if (wrapper && !wrapper.querySelector(".price-origin-badge")) {
+      const badge = document.createElement("span");
+      badge.className = "price-origin-badge badge rounded-pill";
+      badge.textContent = "Manual";
+      wrapper.appendChild(badge);
+    }
+
+    const normalizedOrigin = initialOrigin === "auto" ? "auto" : "manual";
+    priceInput.dataset.overrideMessage = PRICE_OVERRIDE_CONFIRM_MESSAGE;
+    priceInput.dataset.origin = normalizedOrigin;
+    priceInput.dataset.manualConfirmed = normalizedOrigin === "auto" ? "false" : "true";
+    priceInput.dataset.previousValue = priceInput.value;
+
+    updatePriceOriginUI(priceInput, normalizedOrigin);
+  }
+
+  function shouldProceedWithPriceChange(priceInput, event) {
+    if (!priceInput) {
+      return true;
+    }
+
+    if (!event.isTrusted) {
+      priceInput.dataset.previousValue = priceInput.value;
+      return true;
+    }
+
+    const origin = priceInput.dataset.origin || "manual";
+    const isConfirmedManual = priceInput.dataset.manualConfirmed === "true";
+
+    if (origin === "auto" && !isConfirmedManual) {
+      const message = priceInput.dataset.overrideMessage || PRICE_OVERRIDE_CONFIRM_MESSAGE;
+      const confirmed = window.confirm(message);
+      if (!confirmed) {
+        const revertValue = priceInput.dataset.previousValue !== undefined ? priceInput.dataset.previousValue : "";
+        priceInput.value = revertValue;
+        updatePriceOriginUI(priceInput, "auto");
+        priceInput.dataset.manualConfirmed = "false";
+        refreshTooltip(priceInput);
+        return false;
+      }
+    }
+
+    updatePriceOriginUI(priceInput, "manual");
+    priceInput.dataset.manualConfirmed = "true";
+    priceInput.dataset.previousValue = priceInput.value;
+    return true;
+  }
+
+  document.addEventListener("focusin", (event) => {
+    if (event.target && event.target.classList && event.target.classList.contains("price-input")) {
+      event.target.dataset.previousValue = event.target.value;
+    }
+  });
+
   // ---------- AUTO PRICE MATCHING LOGIC ----------
   document.addEventListener("input", async (event) => {
     if (!event.target.classList.contains("volume-input") && !event.target.classList.contains("price-input")) return;
 
+    if (event.target.classList.contains("price-input")) {
+      const proceed = shouldProceedWithPriceChange(event.target, event);
+      if (!proceed) {
+        return;
+      }
+    }
+
     const row = event.target.closest("tr");
+    if (!row) {
+      return;
+    }
     const volumeInput = row.querySelector(".volume-input");
     const priceInput = row.querySelector(".price-input");
     const totalCell = row.querySelector(".total-cell");
@@ -393,6 +555,7 @@
           const resolvedUnit = parseFloat(data.unit_price);
           if (!Number.isNaN(resolvedUnit)) {
             priceInput.value = resolvedUnit;
+            priceInput.dataset.previousValue = priceInput.value;
           }
         }
         updateGrandTotalFromRows();
@@ -469,6 +632,27 @@
     const lookup = updateRowLookup(row, matches);
     const selectableMatches = matches.filter(match => match && match.code);
     const fallbackMessages = matches.filter(match => !match || !match.code);
+
+    if (row.job_match_status === "found" && selectableMatches.length === 1) {
+      const match = selectableMatches[0];
+      row.job_match_selected = match;
+      row.analysis_code = match.code;
+      analysisCell.textContent = match.code;
+      statusCell.textContent = "Dipilih";
+      statusCell.classList.add("text-success");
+
+      const span = document.createElement("span");
+      span.className = "text-success fw-semibold";
+      span.textContent = buildMatchLabel(match);
+      cell.appendChild(span);
+
+      const tr = analysisCell.closest("tr");
+      if (tr) {
+        setTimeout(() => setPriceForRow(match, tr), 0);
+      }
+
+      return;
+    }
 
     if (!selectableMatches.length && !fallbackMessages.length) {
       renderManualInput(cell, row, analysisCell, statusCell, "Masukkan kode AHSP secara manual", {
@@ -875,6 +1059,9 @@
       const num = parseFloat(String(possiblePrice).replace(/[^0-9.-]/g, ""));
       if (!Number.isNaN(num)) {
         priceInput.value = num;
+        priceInput.dataset.previousValue = priceInput.value;
+        priceInput.dataset.manualConfirmed = "false";
+        updatePriceOriginUI(priceInput, "auto");
         priceInput.dispatchEvent(new Event("input", { bubbles: true }));
         return;
       }
@@ -906,6 +1093,9 @@
         const num = parseFloat(String(serverUnit).replace(/[^0-9.-]/g, ""));
         if (!Number.isNaN(num)) {
           priceInput.value = num;
+          priceInput.dataset.previousValue = priceInput.value;
+          priceInput.dataset.manualConfirmed = "false";
+          updatePriceOriginUI(priceInput, "auto");
           // trigger existing input handler to recalc totals & backend rounding
           priceInput.dispatchEvent(new Event("input", { bubbles: true }));
 

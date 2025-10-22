@@ -26,13 +26,24 @@ class AutomaticPriceMatchingService:
     def match_one(self, payload: Any) -> Dict[str, Any]:
         cleaned = validate_ahsp_payload(payload)
 
-        # If caller provided unit_price keep it and ensure total is correct
+
+        # If caller provided a unit_price (manual override or initial input)
         if cleaned.get("unit_price") is not None:
+            user_unit = cleaned.get("unit_price")
+
+            # Detect if the code has a known AHSP price and differs from it
+            code = cleaned.get("code", "")
+            known_price = self.price_retriever.get_price_by_job_code(code) if code else None
+            if known_price is not None and user_unit != known_price:
+                match_status = "Overridden"
+            else:
+                match_status = "Provided"
+
             cleaned["total_cost"] = TotalCostCalculator.calculate(
-                cleaned.get("volume"), cleaned.get("unit_price")
+                cleaned.get("volume"), user_unit
             )
-            cleaned.setdefault("match_status", "Provided")
-            cleaned.setdefault("is_editable", True)
+            cleaned["match_status"] = match_status
+            cleaned["is_editable"] = True
             return cleaned
 
         # Try lookup by code
