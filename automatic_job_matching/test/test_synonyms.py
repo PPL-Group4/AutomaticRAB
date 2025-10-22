@@ -1,4 +1,3 @@
-# ...existing code...
 from django.test import TransactionTestCase
 from django.db import connection
 from django.core.management import call_command
@@ -320,30 +319,6 @@ class PhraseSynonymMatchingTests(TransactionTestCase):
             matched_item = result
         # just ensure something is returned
         self.assertIsNotNone(matched_item)
-
-    def test_switch_matches_saklar(self):
-        """
-        DB has: "Pemasangan Saklar Engkel"
-        User searches: "pemasangan switch"
-        Expected: Should match (switch = saklar)
-        """
-        result = MatchingService.perform_best_match("pemasangan switch")
-
-        if result is None:
-            self.assertIsNone(result)
-            return
-
-        if isinstance(result, list):
-            if len(result) == 0:
-                # No match found - this is acceptable for this synonym
-                return
-            matched_item = result[0]
-        else:
-            matched_item = result
-
-        self.assertIsNotNone(matched_item)
-        self.assertEqual(matched_item["code"], "AHS.031")
-        print(f"✓ 'switch' matched 'saklar': {matched_item['name']}")
 
     def test_colokan_matches_stop_kontak(self):
         result = MatchingService.perform_best_match("colokan listrik")

@@ -11,7 +11,7 @@ from excel_parser.services.reader import ExcelImporter, UnsupportedFileError
 from excel_parser.services import reader as reader_mod
 from datetime import date
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import TestCase,Client
+from django.test import TestCase,Client,override_settings
 from openpyxl import Workbook
 from rest_framework.test import APITestCase
 from excel_parser.services.reader import preview_file
@@ -27,6 +27,13 @@ from excel_parser.models import Project, RabEntry
 
 from excel_parser.services.reader import ExcelImporter
 from rencanakan_core.models import RabItem, Rab
+
+SQLITE_DB_SETTINGS = {
+    "default": {
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": ":memory:",
+    }
+}
 
 try:
     import xlrd
@@ -399,6 +406,64 @@ class RabParserTests(TestCase):
     def test_converts_boolean_strings_true(self):
         self.assertTrue(self.parser.to_boolean("TRUE"))
         self.assertTrue(self.parser.to_boolean("true"))
+
+
+@override_settings(DATABASES=SQLITE_DB_SETTINGS)
+class PreviewRowsOverrideTests(TestCase):
+    def setUp(self):
+        self.client = Client()
+
+    @patch("excel_parser.views.preview_file")
+    @patch("excel_parser.views.validate_excel_file")
+    def test_session_overrides_applied_to_preview(self, mock_validate, mock_preview):
+        mock_validate.return_value = None
+        base_row = {
+            "row_key": "0000-override",
+            "number": "1",
+            "description": "Pekerjaan Sample",
+            "volume": "1.00",
+            "unit": "m2",
+            "analysis_code": "AA-01",
+            "price": "120.00",
+            "total_price": "120.00",
+            "is_section": False,
+            "index_kind": None,
+            "section_letter": None,
+            "section_roman": None,
+            "section_type": None,
+            "job_match_status": "auto",
+            "job_match": [],
+            "job_match_error": None,
+        }
+        mock_preview.return_value = [base_row.copy()]
+
+        session = self.client.session
+        session["rab_overrides"] = {
+            "0000-override": {
+                "unit_price": "250.00",
+                "total_price": "750.00",
+                "volume": "3.00",
+                "analysis_code": "ZZ-99",
+            }
+        }
+        session.save()
+
+        dummy = SimpleUploadedFile(
+            "sample.xlsx",
+            b"dummy",
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+
+        response = self.client.post("/excel_parser/preview_rows", {"file": dummy})
+        self.assertEqual(response.status_code, 200)
+
+        payload = response.json()
+        self.assertIn("rows", payload)
+        updated_row = payload["rows"][0]
+        self.assertEqual(updated_row["price"], "250.00")
+        self.assertEqual(updated_row["total_price"], "750.00")
+        self.assertEqual(updated_row["volume"], "3.00")
+        self.assertEqual(updated_row["analysis_code"], "ZZ-99")
         self.assertTrue(self.parser.to_boolean("True"))
 
     def test_converts_boolean_strings_false(self):

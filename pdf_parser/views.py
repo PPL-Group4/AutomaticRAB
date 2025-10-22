@@ -20,7 +20,7 @@ def _convert_decimals(obj):
 @csrf_exempt
 def rab_converted_pdf(request):
     if request.method == "GET":
-        return render(request, "pdf_parser/rab_converted.html")
+        return render(request, "rab_converted.html")
 
     if request.method == "POST":
         file = request.FILES.get("pdf_file")
