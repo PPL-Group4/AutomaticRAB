@@ -470,6 +470,27 @@
     const selectableMatches = matches.filter(match => match && match.code);
     const fallbackMessages = matches.filter(match => !match || !match.code);
 
+    if (row.job_match_status === "found" && selectableMatches.length === 1) {
+      const match = selectableMatches[0];
+      row.job_match_selected = match;
+      row.analysis_code = match.code;
+      analysisCell.textContent = match.code;
+      statusCell.textContent = "Dipilih";
+      statusCell.classList.add("text-success");
+
+      const span = document.createElement("span");
+      span.className = "text-success fw-semibold";
+      span.textContent = buildMatchLabel(match);
+      cell.appendChild(span);
+
+      const tr = analysisCell.closest("tr");
+      if (tr) {
+        setTimeout(() => setPriceForRow(match, tr), 0);
+      }
+
+      return;
+    }
+
     if (!selectableMatches.length && !fallbackMessages.length) {
       renderManualInput(cell, row, analysisCell, statusCell, "Masukkan kode AHSP secara manual", {
         noticeClass: "text-warning small mb-2"
