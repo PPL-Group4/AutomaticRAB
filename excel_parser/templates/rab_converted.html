@@ -25,6 +25,14 @@
     background-color: #fff5e6;
     border-color: rgba(255, 193, 7, 0.45);
   }
+
+  table th:nth-child(8),
+  table td:nth-child(8) {
+    width: 100px;          /* adjust to fit your layout */
+    max-width: 100px;
+    min-width: 100px;
+    text-align: justify;     /* keeps prices neatly aligned */
+  }
 </style>
 <div class="section-box position-relative">
   <h5 class="section-title">RAB Preview</h5>
@@ -237,8 +245,8 @@
               <th>Hasil AHSP</th>
               <th>Volume</th>
               <th>SAT</th>
-              <th>Harga Sat (Rp.)</th>
-              <th>Jumlah (Rp.)</th>
+              <th>Harga Satuan (Rp.)</th>
+              <th>Jumlah </th>
             </tr>
           </thead>
         `;
@@ -312,7 +320,7 @@
           <th>Volume</th>
           <th>SAT</th>
           <th>Harga Sat (Rp.)</th>
-          <th>Jumlah (Rp.)</th>
+          <th>Jumlah </th>
         </tr>
       </thead>
     `;
@@ -928,10 +936,6 @@
 
   function renderManualInput(cell, row, analysisCell, statusCell, label, options = {}) {
     cell.style.position = "relative";
-    const notice = document.createElement("div");
-    notice.className = options.noticeClass || "text-warning small mb-2";
-    notice.textContent = label || "Needs Manual Input";
-    cell.appendChild(notice);
 
     const group = document.createElement("div");
     group.className = options.groupClass || "input-group input-group-sm manual-match-group";
@@ -1229,6 +1233,15 @@
     });
   }
 
+  function showMatchingSpinner(priceCell) {
+    priceCell.innerHTML = `
+      <div class="d-flex align-items-center justify-content-center text-secondary" style="gap:6px; font-size: 0.85rem;">
+        <div class="spinner-border spinner-border-sm text-secondary" role="status" style="width: 0.9rem; height: 0.9rem;"></div>
+        <span>Matching...</span>
+      </div>
+    `;
+  }
+
   // ---------------- NEW: setPriceForRow helper ----------------
   async function setPriceForRow(match, tr) {
     const volumeInput = tr.querySelector(".volume-input");
@@ -1254,6 +1267,11 @@
     const code = match && match.code ? match.code : "";
     if (!code) return;
 
+    const priceCell = priceInput.closest("td");
+    if (priceCell) {
+      showMatchingSpinner(priceCell);
+    }
+
     const volume = volumeInput ? (parseFloat(volumeInput.value) || 0) : 0;
     const rowKey = tr.dataset.rowKey || null;
     const payload = { code, volume, row_key: rowKey };
@@ -1267,6 +1285,12 @@
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
+
+      if (priceCell) {
+        priceCell.innerHTML = "";
+        priceCell.appendChild(priceInput.closest(".price-origin-wrapper"));
+      }
+
       if (!resp.ok) {
         return;
       }
@@ -1292,6 +1316,10 @@
       }
     } catch (err) {
       console.warn("Failed to fetch unit price for code:", code, err);
+      if (priceCell) {
+        priceCell.innerHTML = "";
+        priceCell.appendChild(priceInput.closest(".price-origin-wrapper"));
+      }
     }
   }
 </script>
