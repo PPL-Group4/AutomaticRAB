@@ -520,6 +520,8 @@
   });
 
   // ---------- AUTO PRICE MATCHING LOGIC ----------
+  let backendRecomputeTimeout = null;
+  
   document.addEventListener("input", async (event) => {
     if (!event.target.classList.contains("volume-input") && !event.target.classList.contains("price-input")) return;
 
@@ -541,60 +543,81 @@
     const volume = parseFloat(volumeInput.value) || 0;
     const price = parseFloat(priceInput.value) || 0;
 
-    // Instant UI update
+    // Instant UI update (no delay)
     const total = volume * price;
     totalCell.textContent = "Rp. " + total.toLocaleString("id-ID", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
+    // Update grand total immediately
     updateGrandTotalFromRows();
 
-    // Backend recomputation (precise rounding & persistence)
-    try {
-      const analysisCell = row.querySelector(".analysis-code-cell");
-      const code = analysisCell ? analysisCell.textContent.trim() : "";
-      const rowKey = row.dataset.rowKey || null;
-      const payload = { row_key: rowKey, volume, unit_price: price };
-      if (code) {
-        payload.code = code;
-        payload.analysis_code = code;
-      }
-
-      const response = await fetch(RECOMPUTE_ENDPOINT, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      const data = await response.json();
-      if (response.ok && data.total_cost !== undefined && data.total_cost !== null) {
-        const precise = parseFloat(data.total_cost);
-        if (!Number.isNaN(precise)) {
-          totalCell.textContent = "Rp. " + precise.toLocaleString("id-ID", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-        }
-        if (data.unit_price !== undefined && data.unit_price !== null) {
-          const resolvedUnit = parseFloat(data.unit_price);
-          if (!Number.isNaN(resolvedUnit)) {
-            priceInput.value = resolvedUnit;
-            priceInput.dataset.previousValue = priceInput.value;
-          }
-        }
-        updateGrandTotalFromRows();
-      }
-    } catch (err) {
-      console.warn("Fetch error:", err);
+    // Debounce backend recomputation: wait 800ms after last keystroke
+    if (backendRecomputeTimeout) {
+      clearTimeout(backendRecomputeTimeout);
     }
+    
+    backendRecomputeTimeout = setTimeout(async () => {
+      // Backend recomputation (precise rounding & persistence)
+      try {
+        const analysisCell = row.querySelector(".analysis-code-cell");
+        const code = analysisCell ? analysisCell.textContent.trim() : "";
+        const rowKey = row.dataset.rowKey || null;
+        const payload = { row_key: rowKey, volume, unit_price: price };
+        if (code) {
+          payload.code = code;
+          payload.analysis_code = code;
+        }
+
+        const response = await fetch(RECOMPUTE_ENDPOINT, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        const data = await response.json();
+        if (response.ok && data.total_cost !== undefined && data.total_cost !== null) {
+          const precise = parseFloat(data.total_cost);
+          if (!Number.isNaN(precise)) {
+            totalCell.textContent = "Rp. " + precise.toLocaleString("id-ID", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+          }
+          if (data.unit_price !== undefined && data.unit_price !== null) {
+            const resolvedUnit = parseFloat(data.unit_price);
+            if (!Number.isNaN(resolvedUnit)) {
+              priceInput.value = resolvedUnit;
+              priceInput.dataset.previousValue = priceInput.value;
+            }
+          }
+          // Update grand total but don't reset pie chart timer
+          updateGrandTotalFromRows(false);
+        }
+      } catch (err) {
+        console.warn("Fetch error:", err);
+      }
+    }, 800); // Wait 800ms before backend call
   });
 
   // ---------- Grand Total Update ----------
   let costWeightChart = null;
+  let chartUpdateTimeout = null;
 
-  function updateGrandTotalFromRows() {
+  function updateGrandTotalFromRows(shouldUpdateChart = true) {
     let grand = 0;
     document.querySelectorAll(".total-cell").forEach(cell => {
       let text = cell.textContent.replace(/[^\d,.-]/g, "").replace(/\./g, "").replace(",", ".");
       const val = parseFloat(text) || 0;
       grand += val;
     });
+    
+    // Update Grand Total immediately (no delay)
     updateGrandTotal(grand);
-    updateCostWeightChart();
+    
+    // Only reset pie chart timer if triggered by user input (not backend callback)
+    if (shouldUpdateChart) {
+      if (chartUpdateTimeout) {
+        clearTimeout(chartUpdateTimeout);
+      }
+      chartUpdateTimeout = setTimeout(() => {
+        updateCostWeightChart();
+      }, 2000); // Wait 2 seconds before updating chart
+    }
   }
 
   function updateGrandTotal(total) {
@@ -1263,7 +1286,7 @@
           if (data.total_cost !== undefined && totalCell) {
             const precise = parseFloat(data.total_cost) || 0;
             totalCell.textContent = "Rp. " + precise.toLocaleString("id-ID", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-            updateGrandTotalFromRows();
+            updateGrandTotalFromRows(false); // Don't reset chart timer from backend callback
           }
         }
       }
