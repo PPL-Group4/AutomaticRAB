@@ -32,5 +32,5 @@ langdetect==1.0.9
 pytest
 pytest-django
 selenium>=4.25.0
-
+matplotlib
 
