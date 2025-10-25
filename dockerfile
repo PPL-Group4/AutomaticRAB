@@ -1,8 +1,10 @@
 # Use the official Python image as the base image
 FROM python:3.12-slim
 
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV PYTHONUNBUFFERED=1
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1
 
 WORKDIR /app
 
@@ -14,15 +16,24 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     pkg-config \
     libpq-dev \
-    default-libmysqlclient-dev \
-    && pip install --upgrade pip \
-    && pip install --no-cache-dir -r requirements.txt \
-    && apt-get purge -y --auto-remove build-essential gcc \
-    && rm -rf /var/lib/apt/lists/*
+    default-libmysqlclient-dev && \
+    pip install --upgrade pip && \
+    pip install -r requirements.txt && \
+    pip install gunicorn && \
+    apt-get remove -y gcc && \
+    apt-get autoremove -y && \
+    rm -rf /var/lib/apt/lists/*
 
 COPY . /app/
 
+# Collect static files
+RUN python manage.py collectstatic --noinput
+
+# Create temp directory for file uploads
+RUN mkdir -p /tmp/media
+
+# Expose the port the app runs on
 EXPOSE 8000
 
-# Koyeb provides $PORT. Collect static files at startup, then run Gunicorn
-CMD ["sh", "-c", "python manage.py collectstatic --noinput && gunicorn --bind 0.0.0.0:${PORT:-8000} AutomaticRAB.wsgi:application"]
+# Run Gunicorn with increased timeout for file processing
+CMD ["sh", "-c", "gunicorn --bind 0.0.0.0:${PORT:-8000} --timeout 600 --workers 2 AutomaticRAB.wsgi:application"]
