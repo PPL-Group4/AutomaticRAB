@@ -35,10 +35,8 @@ jobs:
         with:
           context: .
           push: true
-          tags: |
-            ${{ secrets.DOCKER_HUB_USERNAME }}/${{ secrets.DOCKER_HUB_REPO_NAME }}:${{ github.sha }}
-            ${{ secrets.DOCKER_HUB_USERNAME }}/${{ secrets.DOCKER_HUB_REPO_NAME }}:latest
-          cache-from: type=registry,ref=${{ secrets.DOCKER_HUB_USERNAME }}/${{ secrets.DOCKER_HUB_REPO_NAME }}:latest
+          tags: ghazafadhlilbaqi/automatic-rab:latest
+          cache-from: type=registry,ref=ghazafadhlilbaqi/automatic-rab:latest
           cache-to: type=inline
 
   deploy:
@@ -61,4 +59,4 @@ jobs:
         with:
           app-name: ${{ env.AZURE_WEBAPP_NAME }}
           slot-name: 'Production'
-          images: ${{ secrets.DOCKER_HUB_USERNAME }}/${{ secrets.DOCKER_HUB_REPO_NAME }}:${{ github.sha }}
+          images: ghazafadhlilbaqi/automatic-rab:latest
