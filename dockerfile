@@ -6,14 +6,13 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1
 
-# Set the working directory in the container
 WORKDIR /app
 
-# Copy the requirements file into the container
 COPY requirements.txt /app/
 
-# Install dependencies
-RUN apt-get update && apt-get install -y \
+# System deps for mysqlclient/psycopg2
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
     gcc \
     pkg-config \
     libpq-dev \
@@ -25,7 +24,6 @@ RUN apt-get update && apt-get install -y \
     apt-get autoremove -y && \
     rm -rf /var/lib/apt/lists/*
 
-# Copy the project files into the container
 COPY . /app/
 
 # Collect static files

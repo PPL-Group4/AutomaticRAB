@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>Upload file Excel/PDF</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f5f7fa;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        .upload-container {
+            background: #fff;
+            width: 450px;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 6px 16px rgba(0,0,0,0.15);
+        }
+
+        .upload-container h2 {
+            text-align: center;
+            color: #00365A;
+            margin-bottom: 20px;
+        }
+
+        .upload-container h3 {
+            text-align: center;
+            color: #00365A;
+            margin: 25px 0 15px;
+            font-size: 18px;
+        }
+
+        .upload-box {
+            border: 2px dashed #989898;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 16px;
+            text-align: center;
+            font-size: 14px;
+            color: #555;
+        }
+
+        .upload-box strong {
+            display: block;
+            margin-bottom: 6px;
+            color: #333;
+        }
+
+        .browse-link {
+            color: #00365A;
+            font-weight: bold;
+            text-decoration: underline;
+            cursor: pointer;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .file-name {
+            margin-top: 8px;
+            font-size: 13px;
+            color: #666;
+            font-style: italic;
+        }
+
+        .button-container {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .btn-primary {
+            background-color: #00365A;
+            color: #fff;
+            border: none;
+            padding: 12px;
+            border-radius: 30px;
+            cursor: pointer;
+            font-size: 15px;
+            font-weight: bold;
+        }
+
+        .btn-secondary {
+            background-color: #fff;
+            color: #00365A;
+            border: 2px solid #00365A;
+            padding: 12px;
+            border-radius: 30px;
+            cursor: pointer;
+            font-size: 15px;
+            font-weight: bold;
+        }
+
+        .btn-primary:hover {
+            background-color: #002B47;
+        }
+
+        .btn-secondary:hover {
+            background-color: #f0f4f8;
+        }
+    </style>
+</head>
+<body>
+    <div class="upload-container">
+        <h2>Upload Excel</h2>
+
+    <form method="post" enctype="multipart/form-data" action="{% url 'upload' %}">
+            {% csrf_token %}
+
+            <div class="upload-box">
+                <strong>Unggah file format Excel standar di sini</strong>
+                atau <label for="excel-standard" class="browse-link">Klik untuk Browse</label>
+                <input id="excel-standard" type="file" name="excel_standard" 
+                       accept=".xls,.xlsx"
+                       onchange="showFileName(this, 'file-name-1')">
+                <div id="file-name-1" class="file-name"></div>
+            </div>
+
+            <div class="upload-box">
+                <strong>Unggah file format Excel APENDO LPSE</strong>
+                atau <label for="excel-apendo" class="browse-link">Klik untuk Browse</label>
+                <input id="excel-apendo" type="file" name="excel_apendo" 
+                       accept=".xls,.xlsx"
+                       onchange="showFileName(this, 'file-name-2')">
+                <div id="file-name-2" class="file-name"></div>
+            </div>
+
+            <h3>Upload File PDF</h3>
+
+            <div class="upload-box">
+                <strong>Unggah file format PDF</strong>
+                atau <label for="pdf-file" class="browse-link">Klik untuk Browse</label>
+                <input id="pdf-file" type="file" name="pdf_file" 
+                       accept=".pdf"
+                       onchange="showFileName(this, 'file-name-3')">
+                <div id="file-name-3" class="file-name"></div>
+            </div>
+
+            <div class="button-container">
+                <button type="submit" class="btn-primary">Lanjutkan</button>
+                <button type="button" class="btn-secondary" onclick="history.back()">Kembali</button>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        function showFileName(input, targetId) {
+            const fileName = input.files.length > 0 ? input.files[0].name : "";
+            document.getElementById(targetId).textContent = fileName;
+        }
+    </script>
+</body>
+</html>
