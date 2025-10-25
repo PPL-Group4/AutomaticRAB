@@ -2,8 +2,9 @@
 FROM python:3.12-slim
 
 # Set environment variables
-ENV PYTHONDONTWRITEBYTECODE 1
-ENV PYTHONUNBUFFERED 1
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1
 
 # Set the working directory in the container
 WORKDIR /app
@@ -14,10 +15,12 @@ COPY requirements.txt /app/
 # Install dependencies
 RUN apt-get update && apt-get install -y \
     gcc \
+    pkg-config \
     libpq-dev \
     default-libmysqlclient-dev && \
     pip install --upgrade pip && \
     pip install -r requirements.txt && \
+    pip install gunicorn && \
     apt-get remove -y gcc && \
     apt-get autoremove -y && \
     rm -rf /var/lib/apt/lists/*
@@ -25,8 +28,14 @@ RUN apt-get update && apt-get install -y \
 # Copy the project files into the container
 COPY . /app/
 
+# Collect static files
+RUN python manage.py collectstatic --noinput
+
+# Create temp directory for file uploads
+RUN mkdir -p /tmp/media
+
 # Expose the port the app runs on
 EXPOSE 8000
 
-# Run the Gunicorn server
-CMD ["sh", "-c", "gunicorn --bind 0.0.0.0:${PORT:-8000} AutomaticRAB.wsgi:application"]
+# Run Gunicorn with increased timeout for file processing
+CMD ["sh", "-c", "gunicorn --bind 0.0.0.0:${PORT:-8000} --timeout 600 --workers 2 AutomaticRAB.wsgi:application"]
