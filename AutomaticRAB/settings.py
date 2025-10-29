@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 from pathlib import Path
 import os
+import sys
 from dotenv import load_dotenv
 # Load environment variables from .env file
 load_dotenv()
@@ -27,9 +28,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.getenv('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.getenv("DEBUG", "False") == "True" 
 
-ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
+ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "localhost").split(",")
 
 
 # Application definition
@@ -41,10 +42,19 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'excel_parser',
+    'pdf_parser',
+    'rest_framework',
+    'automatic_job_matching',
+    'rencanakan_core',
+    'automatic_price_matching',
+    'cost_weight',
+    
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -58,7 +68,7 @@ ROOT_URLCONF = 'AutomaticRAB.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [BASE_DIR / "templates"],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -78,8 +88,12 @@ WSGI_APPLICATION = 'AutomaticRAB.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': os.getenv('MYSQL_NAME'),
+        'USER': os.getenv('MYSQL_USER'),
+        'PASSWORD': os.getenv('MYSQL_PASSWORD'),
+        'HOST': os.getenv('MYSQL_HOST'),
+        'PORT': os.getenv('MYSQL_PORT'),
     }
 }
 
@@ -118,9 +132,63 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
-STATIC_URL = 'static/'
+# URL prefix for static files (ensure leading slash for production)
+STATIC_URL = '/static/'
+
+# Where collectstatic gathers files for production serving
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+
+STATIC_ROOT = BASE_DIR / "staticfiles"
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+STATICFILES_DIRS = [
+    BASE_DIR / "excel_parser" / "static",
+]
+
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {
+        "console": {"class": "logging.StreamHandler"},
+    },
+    "root": {"handlers": ["console"], "level": "DEBUG"},
+}
+
+# Use a simpler storage during tests to avoid Manifest errors, and
+# enable hashed filenames (manifest) only in production builds.
+RUNNING_TESTS = any(arg in sys.argv for arg in ["test", "pytest", "py.test"])  # Django test runner sets 'test'
+
+if RUNNING_TESTS:
+    # During tests, Django doesn't run collectstatic; Manifest storage would raise
+    # 'Missing staticfiles manifest entry'. Use the basic storage instead.
+    STORAGES = {
+        "staticfiles": {
+            "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+        },
+    }
+else:
+    # In dev/prod (non-test), serve compressed, hashed static files via WhiteNoise.
+    STORAGES = {
+        "staticfiles": {
+            "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+        },
+    }
+
+# Azure App Service File Upload Fix
+if not DEBUG:
+    import tempfile
+    
+    # Use Azure's writable temp directory
+    MEDIA_ROOT = os.path.join(tempfile.gettempdir(), 'media')
+    MEDIA_URL = '/media/'
+    os.makedirs(MEDIA_ROOT, exist_ok=True)
+    
+    # Increase upload limits
+    DATA_UPLOAD_MAX_MEMORY_SIZE = 52428800  # 50MB
+    FILE_UPLOAD_MAX_MEMORY_SIZE = 52428800  # 50MB
+    FILE_UPLOAD_TEMP_DIR = tempfile.gettempdir()
