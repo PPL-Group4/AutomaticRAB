@@ -14,6 +14,8 @@ from django.core.exceptions import ValidationError
 _THOUSAND_DOT_DECIMAL_COMMA = re.compile(r"^\d{1,3}(\.\d{3})+,\d+$")
 _THOUSAND_COMMA_DECIMAL_DOT = re.compile(r"^\d{1,3}(,\d{3})+\.\d+$")
 
+_ERR_NUMERIC_REQUIRED = "Target budget must be a numeric value."
+
 
 @dataclass(frozen=True)
 class TargetBudgetInput:
@@ -95,17 +97,17 @@ class NumericParser:
 
             cleaned = re.sub(r"[^0-9.,+-]", "", text)
             if not any(ch.isdigit() for ch in cleaned):
-                self._errors.add(self._field, "Target budget must be a numeric value.")
+                self._errors.add(self._field, _ERR_NUMERIC_REQUIRED)
                 return None
 
             normalised = NumericNormaliser.normalise(cleaned)
             try:
                 return Decimal(normalised)
             except InvalidOperation:
-                self._errors.add(self._field, "Target budget must be a numeric value.")
+                self._errors.add(self._field, _ERR_NUMERIC_REQUIRED)
                 return None
 
-        self._errors.add(self._field, "Target budget must be a numeric value.")
+        self._errors.add(self._field, _ERR_NUMERIC_REQUIRED)
         return None
 
 
