@@ -96,6 +96,13 @@ class TargetBudgetValidationTests(SimpleTestCase):
 			"123.45",
 		)
 
+	def test_normalise_mode_returns_canonical_name(self) -> None:
+		self.assertEqual(validators._normalise_mode("Percent"), "percentage")
+
+	def test_normalise_mode_returns_none_for_invalid(self) -> None:
+		self.assertIsNone(validators._normalise_mode(123))
+		self.assertIsNone(validators._normalise_mode("custom"))
+
 	def test_absolute_strips_currency_and_underscores(self) -> None:
 		result = validate_target_budget_input("IDR 1_000", mode="absolute")
 
