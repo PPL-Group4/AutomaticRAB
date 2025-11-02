@@ -3,6 +3,7 @@ from decimal import Decimal
 import tempfile
 from unittest.mock import patch
 from django.core.exceptions import ValidationError
+from automatic_job_matching import views
 from excel_parser.services.header_mapper import map_headers, find_header_row
 from excel_parser.services.validators import validate_excel_file
 from excel_parser.services.services import ExcelSniffer
@@ -11,22 +12,19 @@ from excel_parser.services.reader import ExcelImporter, UnsupportedFileError
 from excel_parser.services import reader as reader_mod
 from datetime import date
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import TestCase,Client,override_settings
+from django.contrib.sessions.middleware import SessionMiddleware
+from django.test import RequestFactory, TestCase, Client, override_settings
 from openpyxl import Workbook
 from rest_framework.test import APITestCase
 from excel_parser.services.reader import preview_file
 from django.apps import apps
-from django.db import connection,models
-from io import BytesIO
-
-from django.core.files.uploadedfile import SimpleUploadedFile
-
-
-
+from django.db import connection, models
+from django.test import TransactionTestCase
 from excel_parser.models import Project, RabEntry
-
 from excel_parser.services.reader import ExcelImporter
 from rencanakan_core.models import RabItem, Rab
+from excel_parser import views
+
 
 SQLITE_DB_SETTINGS = {
     "default": {
@@ -41,6 +39,24 @@ try:
 except ImportError:
     xlrd = None
     XlsWorkbook = None
+
+
+def _attach_session(req):
+    mw = SessionMiddleware()
+    mw.process_request(req)
+    req.session.save()
+    return req
+
+
+def _make_xlsx_bytes():
+    bio = BytesIO()
+    wb = Workbook()
+    ws = wb.active
+    ws.append(["No", "Uraian Pekerjaan", "Volume", "Satuan", "Harga Satuan", "Jumlah Harga"])
+    ws.append(["1", "Pekerjaan A", "1", "Ls", "1000", "1000"])
+    wb.save(bio)
+    bio.seek(0)
+    return bio.getvalue()
 
 
 class FileValidatorTests(TestCase):
@@ -172,6 +188,7 @@ class FileValidatorTests(TestCase):
         )
         with self.assertRaises(ValidationError):
             validate_excel_file(file)
+
 
 class ExcelSnifferTests(TestCase):
     def _temp_path(self, suffix):
@@ -322,6 +339,7 @@ class ExcelReaderTests(TestCase):
         with self.assertRaises(UnsupportedFileError):
             ExcelImporter().import_file(bad)
 
+
 class HeaderMapperTests(TestCase):
     def test_maps_clean_headers(self):
         headers = ["No", "Uraian Pekerjaan", "Volume", "Satuan"]
@@ -354,6 +372,7 @@ class HeaderMapperTests(TestCase):
         ]
         idx = find_header_row(rows, scan_first=10)
         self.assertEqual(idx, 2)  # 0-based index
+
 
 class RabParserTests(TestCase):
     def setUp(self):
@@ -406,64 +425,6 @@ class RabParserTests(TestCase):
     def test_converts_boolean_strings_true(self):
         self.assertTrue(self.parser.to_boolean("TRUE"))
         self.assertTrue(self.parser.to_boolean("true"))
-
-
-@override_settings(DATABASES=SQLITE_DB_SETTINGS)
-class PreviewRowsOverrideTests(TestCase):
-    def setUp(self):
-        self.client = Client()
-
-    @patch("excel_parser.views.preview_file")
-    @patch("excel_parser.views.validate_excel_file")
-    def test_session_overrides_applied_to_preview(self, mock_validate, mock_preview):
-        mock_validate.return_value = None
-        base_row = {
-            "row_key": "0000-override",
-            "number": "1",
-            "description": "Pekerjaan Sample",
-            "volume": "1.00",
-            "unit": "m2",
-            "analysis_code": "AA-01",
-            "price": "120.00",
-            "total_price": "120.00",
-            "is_section": False,
-            "index_kind": None,
-            "section_letter": None,
-            "section_roman": None,
-            "section_type": None,
-            "job_match_status": "auto",
-            "job_match": [],
-            "job_match_error": None,
-        }
-        mock_preview.return_value = [base_row.copy()]
-
-        session = self.client.session
-        session["rab_overrides"] = {
-            "0000-override": {
-                "unit_price": "250.00",
-                "total_price": "750.00",
-                "volume": "3.00",
-                "analysis_code": "ZZ-99",
-            }
-        }
-        session.save()
-
-        dummy = SimpleUploadedFile(
-            "sample.xlsx",
-            b"dummy",
-            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        )
-
-        response = self.client.post("/excel_parser/preview_rows", {"file": dummy})
-        self.assertEqual(response.status_code, 200)
-
-        payload = response.json()
-        self.assertIn("rows", payload)
-        updated_row = payload["rows"][0]
-        self.assertEqual(updated_row["price"], "250.00")
-        self.assertEqual(updated_row["total_price"], "750.00")
-        self.assertEqual(updated_row["volume"], "3.00")
-        self.assertEqual(updated_row["analysis_code"], "ZZ-99")
         self.assertTrue(self.parser.to_boolean("True"))
 
     def test_converts_boolean_strings_false(self):
@@ -626,6 +587,73 @@ class PreviewRowsOverrideTests(TestCase):
         self.assertEqual(entry.entry_type, RabEntry.EntryType.ITEM)
         self.assertIsNone(entry.volume)
 
+
+@override_settings(DATABASES=SQLITE_DB_SETTINGS)
+class PreviewRowsOverrideTests(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.parser = create_rab_parser()
+        self.project = Project.objects.create(
+            program="TEST PROGRAM",
+            kegiatan="TEST ACTIVITY",
+            pekerjaan="TEST JOB",
+            lokasi="TEST LOCATION",
+            tahun_anggaran=2025
+        )
+
+    @patch("excel_parser.views.preview_file")
+    @patch("excel_parser.views.validate_excel_file")
+    def test_session_overrides_applied_to_preview(self, mock_validate, mock_preview):
+        mock_validate.return_value = None
+        base_row = {
+            "row_key": "0000-override",
+            "number": "1",
+            "description": "Pekerjaan Sample",
+            "volume": "1.00",
+            "unit": "m2",
+            "analysis_code": "AA-01",
+            "price": "120.00",
+            "total_price": "120.00",
+            "is_section": False,
+            "index_kind": None,
+            "section_letter": None,
+            "section_roman": None,
+            "section_type": None,
+            "job_match_status": "auto",
+            "job_match": [],
+            "job_match_error": None,
+        }
+        mock_preview.return_value = [base_row.copy()]
+
+        session = self.client.session
+        session["rab_overrides"] = {
+            "0000-override": {
+                "unit_price": "250.00",
+                "total_price": "750.00",
+                "volume": "3.00",
+                "analysis_code": "ZZ-99",
+            }
+        }
+        session.save()
+
+        dummy = SimpleUploadedFile(
+            "sample.xlsx",
+            b"dummy",
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+
+        response = self.client.post("/excel_parser/preview_rows", {"file": dummy})
+        self.assertEqual(response.status_code, 200)
+
+        payload = response.json()
+        self.assertIn("rows", payload)
+        updated_row = payload["rows"][0]
+        self.assertEqual(updated_row["price"], "250.00")
+        self.assertEqual(updated_row["total_price"], "750.00")
+        self.assertEqual(updated_row["volume"], "3.00")
+        self.assertEqual(updated_row["analysis_code"], "ZZ-99")
+
+
 class ReaderPrivateHelpersTests(TestCase):
     def test__norm_and__match_header(self):
         self.assertEqual(reader_mod._norm("  No.  "), "no.")
@@ -637,8 +665,6 @@ class ReaderPrivateHelpersTests(TestCase):
         self.assertEqual(raw2, "Satuan")
 
     def test_parse_decimal_full_branches(self):
-        from excel_parser.services import reader as reader_mod
-
         # invalid numeric strings should just return 0 instead of crashing
         self.assertEqual(reader_mod.parse_decimal("not_a_number"), Decimal("0"))
         self.assertEqual(reader_mod.parse_decimal("7 = 5 x 6"), Decimal("0"))
@@ -667,10 +693,10 @@ class ReaderPrivateHelpersTests(TestCase):
 
     def test_parse_decimal_last_separator_fallback_irregular_grouping(self):
         self.assertEqual(reader_mod.parse_decimal("12.34,56"), Decimal("1234.56"))
-        self.assertEqual(reader_mod.parse_decimal("1.2.3,4"),   Decimal("123.4"))
-
+        self.assertEqual(reader_mod.parse_decimal("1.2.3,4"), Decimal("123.4"))
         self.assertEqual(reader_mod.parse_decimal("12,34.56"), Decimal("1234.56"))
-        self.assertEqual(reader_mod.parse_decimal("1,2,3.4"),  Decimal("123.4"))
+        self.assertEqual(reader_mod.parse_decimal("1,2,3.4"), Decimal("123.4"))
+
 
 class ReaderHeaderAndRowParsingTests(TestCase):
     def test__find_header_map_success_with_preface(self):
@@ -709,7 +735,7 @@ class ReaderHeaderAndRowParsingTests(TestCase):
         cache = [
             ["No", "Uraian", "Volume", "Satuan"],  # header index 0
             ["1", "Item A", "1.000,50", "m3"],
-            ["", "", "", ""],                      # empty -> skip
+            ["", "", "", ""],  # empty -> skip
             ["2", "Item B", "2,5", "m3"],
         ]
         colmap = {"number": 0, "description": 1, "volume": 2, "unit": 3, "_header_row": 0}
@@ -754,6 +780,8 @@ class ImporterDefaultsTests(TestCase):
         self.assertEqual(e1.volume, Decimal("1000.50"))
         self.assertEqual(e1.unit, "m3")
         self.assertEqual(e1.entry_type, RabEntry.EntryType.ITEM)
+
+
 class PreviewFileTests(APITestCase):
     def test_preview_file_includes_all_columns(self):
         # Build Excel file in memory
@@ -773,48 +801,45 @@ class PreviewFileTests(APITestCase):
 
         response = self.client.post(
             "/excel_parser/preview_rows",
-            {"excel_standard": f},   # ✅ matches the view
+            {"excel_standard": f},
             format="multipart"
         )
 
         self.assertEqual(response.status_code, 200, response.content)
-
-        # ✅ unwrap the actual key your view uses
         rows = response.json()["excel_standard"]
 
         self.assertIn("analysis_code", rows[0])
         self.assertIn("price", rows[0])
         self.assertIn("total_price", rows[0])
 
-
     def test_preview_file_detects_section_rows(self):
-                # Build an in-memory Excel file
-                bio = BytesIO()
-                wb = Workbook()
-                ws = wb.active
-                ws.append(["No", "Uraian Pekerjaan", "Volume", "Satuan", "Harga Satuan", "Jumlah Harga"])
-                ws.append(["I.", "PEKERJAAN PERSIAPAN", "", ""])  # should be a section
-                ws.append(["1", "Mobilisasi", "1", "Ls", "1000", "1000"])  # should be an item
-                wb.save(bio)
+        # Build an in-memory Excel file
+        bio = BytesIO()
+        wb = Workbook()
+        ws = wb.active
+        ws.append(["No", "Uraian Pekerjaan", "Volume", "Satuan", "Harga Satuan", "Jumlah Harga"])
+        ws.append(["I.", "PEKERJAAN PERSIAPAN", "", ""])  # should be a section
+        ws.append(["1", "Mobilisasi", "1", "Ls", "1000", "1000"])  # should be an item
+        wb.save(bio)
 
-                f = SimpleUploadedFile(
-                    "mini.xlsx",
-                    bio.getvalue(),
-                    content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                )
+        f = SimpleUploadedFile(
+            "mini.xlsx",
+            bio.getvalue(),
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
 
-                rows = preview_file(f)
-                # Check first row is section
-                self.assertTrue(rows[0]["is_section"])
-                self.assertEqual(rows[0]["description"], "PEKERJAAN PERSIAPAN")
-                self.assertEqual(rows[0]["job_match_status"], "skipped")
+        rows = preview_file(f)
+        # Check first row is section
+        self.assertTrue(rows[0]["is_section"])
+        self.assertEqual(rows[0]["description"], "PEKERJAAN PERSIAPAN")
+        self.assertEqual(rows[0]["job_match_status"], "skipped")
 
-                # Check second row is normal item
-                self.assertFalse(rows[1]["is_section"])
-                self.assertEqual(rows[1]["description"], "Mobilisasi")
-                self.assertAlmostEqual(float(rows[1]["volume"]), 1.0, places=2)
-                self.assertEqual(rows[1]["price"], "1000.00")
-                self.assertEqual(rows[1]["total_price"], "1000.00")
+        # Check second row is normal item
+        self.assertFalse(rows[1]["is_section"])
+        self.assertEqual(rows[1]["description"], "Mobilisasi")
+        self.assertAlmostEqual(float(rows[1]["volume"]), 1.0, places=2)
+        self.assertEqual(rows[1]["price"], "1000.00")
+        self.assertEqual(rows[1]["total_price"], "1000.00")
 
     @patch("excel_parser.services.reader.match_description")
     def test_preview_file_includes_job_matching_results(self, mock_match):
@@ -840,7 +865,6 @@ class PreviewFileTests(APITestCase):
         mock_match.assert_called_once_with("Mobilisasi")
 
 
-
 class TestProject(models.Model):
     name = models.CharField(max_length=255)
 
@@ -856,7 +880,8 @@ class TestRab(models.Model):
     class Meta:
         db_table = "test_rabs"
         managed = True
-from django.db import connection
+
+
 class TestRabItemHeader(models.Model):
     rab = models.ForeignKey(TestRab, on_delete=models.CASCADE)
     name = models.CharField(max_length=255)
@@ -878,8 +903,6 @@ class TestRabItem(models.Model):
         db_table = "test_rab_items"
         managed = True
 
-from django.test import TransactionTestCase
-from django.db import connection
 
 class ImporterIntegrationTests(TransactionTestCase):
     @classmethod
@@ -919,7 +942,6 @@ class ImporterIntegrationTests(TransactionTestCase):
             content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
 
-        from excel_parser.services.reader import preview_file
         rows = preview_file(f)
 
         # simulate writing into TestRabItem
@@ -938,6 +960,7 @@ class ImporterIntegrationTests(TransactionTestCase):
         self.assertEqual(item.volume, 1.0)
         self.assertEqual(item.price, 1000.0)
 
+
 class RABConvertedViewTests(TestCase):
     def setUp(self):
         self.client = Client()
@@ -946,6 +969,7 @@ class RABConvertedViewTests(TestCase):
         response = self.client.get("/excel_parser/rab_converted/")
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "rab_converted.html")
+
 
 class LoggingTests(TestCase):
     def _make_excel_file(self, filename="logtest.xlsx"):
@@ -990,3 +1014,544 @@ class LoggingTests(TestCase):
 
         logs = "\n".join(cm.output)
         self.assertIn("Rejected file", logs)
+
+
+class DetectHeadersTests(APITestCase):
+    def setUp(self):
+        self.client = Client()
+
+    def _make_workbook(self, header_row_index=2):
+        bio = BytesIO()
+        wb = Workbook()
+        ws = wb.active
+        # add some title rows to ensure header may be found lower
+        for _ in range(header_row_index):
+            ws.append([None, None, None])
+        # actual header
+        ws.append(["No", "Uraian Pekerjaan", "Volume", "Satuan"])
+        # one data row
+        ws.append([1, "Pondasi", 10, "m3"])
+        wb.save(bio)
+        bio.seek(0)
+        return bio
+
+    def test_detect_headers_success(self):
+        bio = self._make_workbook(header_row_index=1)
+        f = SimpleUploadedFile(
+            "test.xlsx", bio.read(),
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+        resp = self.client.post("/excel_parser/detect_headers", {"file": f}, format="multipart")
+        self.assertEqual(resp.status_code, 200)
+        payload = resp.json()
+        # header_row_index is 1-based in response
+        self.assertEqual(payload["header_row_index"], 3)
+        self.assertIn("mapping", payload)
+        self.assertIn("originals", payload)
+        self.assertIn("missing", payload)
+
+    def test_detect_headers_missing_file(self):
+        resp = self.client.post("/excel_parser/detect_headers", {}, format="multipart")
+        self.assertEqual(resp.status_code, 400)
+        self.assertIn("file is required", resp.json().get("detail", ""))
+
+    def test_detect_headers_invalid_excel(self):
+        # send a pdf (invalid) so validate_excel_file should raise -> 400
+        bad = SimpleUploadedFile("bad.pdf", b"%PDF", content_type="application/pdf")
+        resp = self.client.post("/excel_parser/detect_headers", {"file": bad}, format="multipart")
+        # service validator rejects non-excel -> 400
+        self.assertEqual(resp.status_code, 400)
+
+    @patch("excel_parser.views.find_header_row")
+    def test_detect_headers_header_not_found(self, mock_find):
+        # simulate find_header_row returning -1
+        mock_find.return_value = -1
+        bio = self._make_workbook()
+        f = SimpleUploadedFile(
+            "test.xlsx", bio.read(),
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+        resp = self.client.post("/excel_parser/detect_headers", {"file": f}, format="multipart")
+        self.assertEqual(resp.status_code, 422)
+        self.assertIn("header not found", resp.json().get("detail", ""))
+
+    @patch("excel_parser.views.load_workbook")
+    def test_detect_headers_unexpected_exception(self, mock_load):
+        mock_load.side_effect = Exception("boom")
+        bio = self._make_workbook()
+        f = SimpleUploadedFile(
+            "test.xlsx", bio.read(),
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+        resp = self.client.post("/excel_parser/detect_headers", {"file": f}, format="multipart")
+        self.assertEqual(resp.status_code, 500)
+        self.assertIn("boom", resp.json().get("detail", ""))
+
+
+class PreviewRowsExtendedPathsTests(APITestCase):
+    def setUp(self):
+        self.client = Client()
+
+    def _make_excel_bytes(self):
+        bio = BytesIO()
+        wb = Workbook()
+        ws = wb.active
+        ws.append(["No", "Uraian Pekerjaan", "Volume", "Satuan", "Harga Satuan", "Jumlah Harga"])
+        ws.append(["1", "Mobilisasi", "1", "Ls", "1000", "1000"])
+        wb.save(bio)
+        return bio.getvalue()
+
+    def test_preview_rows_no_file(self):
+        resp = self.client.post("/excel_parser/preview_rows", {}, format="multipart")
+        self.assertEqual(resp.status_code, 400)
+        self.assertIn("No file uploaded", resp.json().get("detail", ""))
+
+    def test_preview_rows_get_not_allowed(self):
+        resp = self.client.get("/excel_parser/preview_rows")
+        self.assertEqual(resp.status_code, 405)
+
+    def test_preview_rows_pdf_accepts_and_reports(self):
+        pdf = SimpleUploadedFile("dummy.pdf", b"%PDF", content_type="application/pdf")
+        resp = self.client.post("/excel_parser/preview_rows", {"pdf_file": pdf}, format="multipart")
+        self.assertEqual(resp.status_code, 200)
+        payload = resp.json()
+        self.assertIn("pdf_file", payload)
+        self.assertIn("PDF uploaded successfully", payload["pdf_file"]["message"])
+
+    def test_preview_rows_pdf_rejects_wrong_mimetype(self):
+        # wrong mimetype should raise ValidationError from validate_pdf_file -> 400
+        fake = SimpleUploadedFile("dummy.pdf", b"not pdf", content_type="text/plain")
+        resp = self.client.post("/excel_parser/preview_rows", {"pdf_file": fake}, format="multipart")
+        self.assertEqual(resp.status_code, 400)
+        self.assertIn("Only .pdf files are allowed", resp.json().get("error", ""))
+
+    def test_preview_rows_excel_standard_and_apendo(self):
+        b = self._make_excel_bytes()
+        std = SimpleUploadedFile("std.xlsx", b, content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        apendo = SimpleUploadedFile("apendo.xlsx", b, content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        resp = self.client.post("/excel_parser/preview_rows", {"excel_standard": std, "excel_apendo": apendo}, format="multipart")
+        self.assertEqual(resp.status_code, 200)
+        payload = resp.json()
+        # both keys should be present
+        self.assertIn("excel_standard", payload)
+        self.assertIn("excel_apendo", payload)
+        # ensure returned rows include expected keys
+        self.assertIn("description", payload["excel_standard"][0])
+        self.assertIn("price", payload["excel_standard"][0])
+
+
+class UploadViewTests(TestCase):
+    def setUp(self):
+        self.factory = RequestFactory()
+
+    def _make_excel(self):
+        bio = BytesIO()
+        wb = Workbook()
+        ws = wb.active
+        ws.append(["No", "Uraian Pekerjaan", "Volume", "Satuan"])
+        ws.append([1, "Test pekerjaan", 10, "m2"])
+        wb.save(bio)
+        return bio.getvalue()
+
+    def test_upload_view_get_renders(self):
+        req = self.factory.get("/excel_parser/upload")
+        resp = views.upload_view(req)
+        self.assertEqual(resp.status_code, 200)
+
+    def test_upload_view_post_excel_standard_success(self):
+        """Cover lines 138-139: if excel_standard: validate_excel_file(excel_standard)"""
+        excel = SimpleUploadedFile(
+            "up.xlsx", self._make_excel(),
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+        req = self.factory.post("/excel_parser/upload", {}, FILES={"excel_standard": excel})
+        resp = views.upload_view(req)
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn("Standard Excel uploaded successfully", resp.content.decode())
+
+    def test_upload_view_post_apendo_success(self):
+        """Cover lines 144-145: if excel_apendo: validate_excel_file(excel_apendo) return render"""
+        excel = SimpleUploadedFile(
+            "apendo.xlsx", self._make_excel(),
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+        req = self.factory.post("/excel_parser/upload", {}, FILES={"excel_apendo": excel})
+        resp = views.upload_view(req)
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn("APENDO Excel uploaded successfully", resp.content.decode())
+
+    def test_upload_view_post_pdf_success(self):
+        """Cover lines 150-151: if pdf_file: validate_pdf_file(pdf_file) return render"""
+        pdf = SimpleUploadedFile("file.pdf", b"%PDF", content_type="application/pdf")
+        req = self.factory.post("/excel_parser/upload", {}, FILES={"pdf_file": pdf})
+        resp = views.upload_view(req)
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn("PDF uploaded successfully", resp.content.decode())
+
+    def test_upload_view_no_file_returns_400(self):
+        req = self.factory.post("/excel_parser/upload", {})
+        resp = views.upload_view(req)
+        self.assertEqual(resp.status_code, 400)
+        self.assertIn("No file selected", resp.content.decode())
+
+    def test_upload_view_validation_error_returns_400(self):
+        """Cover lines 159-161: except ValidationError as ve: return render with error"""
+        fake = SimpleUploadedFile("file.pdf", b"notpdf", content_type="text/plain")
+        req = self.factory.post("/excel_parser/upload", {}, FILES={"pdf_file": fake})
+        resp = views.upload_view(req)
+        self.assertEqual(resp.status_code, 400)
+        self.assertIn("Only .pdf files are allowed", resp.content.decode())
+
+    def test_upload_view_generic_exception_returns_500(self):
+        """Cover lines 162-165: except Exception as e: return render with error"""
+        excel = SimpleUploadedFile(
+            "test.xlsx", self._make_excel(),
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+        req = self.factory.post("/excel_parser/upload", {}, FILES={"excel_standard": excel})
+
+        with patch('excel_parser.views.validate_excel_file') as mock_validate:
+            mock_validate.side_effect = Exception("Unexpected error")
+            resp = views.upload_view(req)
+
+        self.assertEqual(resp.status_code, 500)
+        self.assertIn("Unexpected error", resp.content.decode())
+
+class ApplyPreviewOverridesUnitTests(TestCase):
+    def test_no_overrides_returns_early(self):
+        rows = [{"row_key": "k1", "volume": "1"}]
+        views._apply_preview_overrides(rows, None)
+        self.assertEqual(rows[0]["volume"], "1")
+
+    def test_row_without_row_key_is_ignored(self):
+        rows = [{"description": "no key"}]
+        overrides = {"k1": {"volume": "9"}}
+        views._apply_preview_overrides(rows, overrides)
+        self.assertEqual(rows[0]["description"], "no key")
+
+    def test_row_with_no_override_data_is_ignored(self):
+        rows = [{"row_key": "k-not-found", "volume": "1"}]
+        overrides = {"other": {"volume": "9"}}
+        views._apply_preview_overrides(rows, overrides)
+        self.assertEqual(rows[0]["volume"], "1")
+
+    def test_apply_all_override_fields_and_price_fallback(self):
+        rows = [{"row_key": "rk1", "volume": "1", "price": "100.00", "total_price": "100.00"}]
+        overrides = {"rk1": {"volume": "2.5", "analysis_code": "AC-1", "unit_price": "250.00", "total_price": "625.00"}}
+        views._apply_preview_overrides(rows, overrides)
+        r = rows[0]
+        self.assertEqual(r["volume"], "2.5")
+        self.assertEqual(r["analysis_code"], "AC-1")
+        self.assertEqual(r["price"], "250.00")
+        self.assertEqual(r["total_price"], "625.00")
+
+    def test_price_fallback_uses_price_key_when_unit_price_missing(self):
+        rows = [{"row_key": "rk2", "price": "99.00", "total_price": "99.00"}]
+        overrides = {"rk2": {"price": "199.00", "total_price": "199.00"}}
+        views._apply_preview_overrides(rows, overrides)
+        self.assertEqual(rows[0]["price"], "199.00")
+        self.assertEqual(rows[0]["total_price"], "199.00")
+
+    def test_apply_preview_overrides_with_partial_keys(self):
+        rows = [
+            {"row_key": "k1", "volume": "1", "price": "10.00"},
+            {"row_key": "k2", "volume": "2", "price": "20.00"},
+            {"description": "no key row"},
+        ]
+        overrides = {
+            "k1": {"volume": "5.5"},
+            "k2": {"price": "99.99"},
+        }
+        views._apply_preview_overrides(rows, overrides)
+        self.assertEqual(rows[0]["volume"], "5.5")
+        self.assertEqual(rows[0]["price"], "10.00")
+        self.assertEqual(rows[1]["price"], "99.99")
+        self.assertEqual(rows[2]["description"], "no key row")
+
+    def test_apply_preview_overrides_total_price_only_and_volume_only(self):
+        rows = [
+            {"row_key": "r1", "price": "10.00", "total_price": "10.00", "volume": "1"},
+            {"row_key": "r2", "price": "5.00", "total_price": "5.00", "volume": "1"},
+        ]
+        overrides = {
+            "r1": {"total_price": "99.99"},
+            "r2": {"volume": "3.5"},
+        }
+        views._apply_preview_overrides(rows, overrides)
+        self.assertEqual(rows[0]["total_price"], "99.99")
+        self.assertEqual(rows[0]["price"], "10.00")
+        self.assertEqual(rows[1]["volume"], "3.5")
+        self.assertEqual(rows[1]["price"], "5.00")
+
+
+class PreviewRowsExceptionPathsTests(TestCase):
+    def setUp(self):
+        self.client = Client()
+
+    def _make_excel_bytes(self):
+        bio = BytesIO()
+        wb = Workbook()
+        ws = wb.active
+        ws.append(["No", "Uraian Pekerjaan", "Volume", "Satuan"])
+        ws.append(["1", "Mobilisasi", "1", "Ls"])
+        wb.save(bio)
+        return bio.getvalue()
+
+    def test_preview_rows_raises_validation_error_for_excel(self):
+        bad = SimpleUploadedFile("bad.xlsx", b"not excel", content_type="text/plain")
+        resp = self.client.post("/excel_parser/preview_rows", {"excel_standard": bad}, format="multipart")
+        self.assertEqual(resp.status_code, 400)
+        self.assertIn("error", resp.json())
+
+    @patch("excel_parser.views.preview_file")
+    def test_preview_rows_unexpected_exception_returns_500(self, mock_preview):
+        mock_preview.side_effect = Exception("boom-preview")
+        good = SimpleUploadedFile(
+            "good.xlsx",
+            self._make_excel_bytes(),
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+        resp = self.client.post("/excel_parser/preview_rows", {"excel_standard": good}, format="multipart")
+        self.assertEqual(resp.status_code, 500)
+        self.assertIn("boom-preview", resp.json().get("error", ""))
+
+
+class PreviewRowsExtendedOverridesAndErrors(TestCase):
+    def setUp(self):
+        self.factory = RequestFactory()
+
+    def test_extended_path_applies_session_overrides_to_both_keys(self):
+        row = {
+            "row_key": "OVR-1",
+            "number": "1",
+            "description": "Pekerjaan A",
+            "volume": "1.00",
+            "unit": "m2",
+            "analysis_code": None,
+            "price": "1000.00",
+            "total_price": "1000.00",
+        }
+
+        with patch("excel_parser.views.preview_file", return_value=[row.copy()]) as mock_preview:
+            payload = {
+                "excel_standard": SimpleUploadedFile(
+                    "std.xlsx", _make_xlsx_bytes(),
+                    content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                ),
+                "excel_apendo": SimpleUploadedFile(
+                    "apendo.xlsx", _make_xlsx_bytes(),
+                    content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                ),
+            }
+
+            req = self.factory.post("/excel_parser/preview_rows", {}, FILES=payload)
+            _attach_session(req)
+            req.session["rab_overrides"] = {
+                "OVR-1": {
+                    "unit_price": "250.00",
+                    "total_price": "500.00",
+                    "volume": "2.00",
+                    "analysis_code": "AC-TEST",
+                }
+            }
+            req.session.save()
+
+            resp = views.preview_rows(req)
+            self.assertEqual(resp.status_code, 200)
+            data = resp.json()
+            self.assertIn("excel_standard", data)
+            self.assertIn("excel_apendo", data)
+            std_row = data["excel_standard"][0]
+            apendo_row = data["excel_apendo"][0]
+
+            for r in (std_row, apendo_row):
+                self.assertEqual(r["price"], "250.00")
+                self.assertEqual(r["total_price"], "500.00")
+                self.assertEqual(r["volume"], "2.00")
+                self.assertEqual(r["analysis_code"], "AC-TEST")
+
+            assert mock_preview.call_count == 2
+
+    def test_extended_path_validationerror_from_validator_returns_400(self):
+        f = SimpleUploadedFile(
+            "apendo.xlsx", _make_xlsx_bytes(),
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+        req = self.factory.post("/excel_parser/preview_rows", {}, FILES={"excel_apendo": f})
+        _attach_session(req)
+
+        with patch("excel_parser.views.validate_excel_file", side_effect=ValidationError("bad-excel")):
+            resp = views.preview_rows(req)
+        self.assertEqual(resp.status_code, 400)
+        self.assertIn("bad-excel", resp.json().get("error", ""))
+
+
+class UploadViewBranchesTests(TestCase):
+    def setUp(self):
+        self.factory = RequestFactory()
+
+    def _make_sample_xlsx(self):
+        bio = BytesIO()
+        wb = Workbook()
+        ws = wb.active
+        ws.append(["No", "Uraian Pekerjaan", "Volume", "Satuan"])
+        ws.append([1, "Test pekerjaan", 10, "m2"])
+        wb.save(bio)
+        return bio.getvalue()
+
+    @patch("excel_parser.views.validate_excel_file")
+    def test_upload_view_excel_standard_success_calls_validator_and_renders(self, mock_validate):
+        mock_validate.return_value = None
+        excel = SimpleUploadedFile(
+            "std.xlsx", self._make_sample_xlsx(),
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+        req = self.factory.post("/excel_parser/upload", {}, FILES={"excel_standard": excel})
+        resp = views.upload_view(req)
+        mock_validate.assert_called_once()
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn("Standard Excel uploaded successfully", resp.content.decode())
+
+    @patch("excel_parser.views.validate_excel_file")
+    def test_upload_view_excel_apendo_success_calls_validator_and_renders(self, mock_validate):
+        mock_validate.return_value = None
+        excel = SimpleUploadedFile(
+            "apendo.xlsx", self._make_sample_xlsx(),
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+        req = self.factory.post("/excel_parser/upload", {}, FILES={"excel_apendo": excel})
+        resp = views.upload_view(req)
+        mock_validate.assert_called_once()
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn("APENDO Excel uploaded successfully", resp.content.decode())
+
+    @patch("excel_parser.views.validate_pdf_file")
+    def test_upload_view_pdf_success_calls_validator_and_renders(self, mock_validate_pdf):
+        mock_validate_pdf.return_value = None
+        pdf = SimpleUploadedFile("file.pdf", b"%PDF", content_type="application/pdf")
+        req = self.factory.post("/excel_parser/upload", {}, FILES={"pdf_file": pdf})
+        resp = views.upload_view(req)
+        mock_validate_pdf.assert_called_once()
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn("PDF uploaded successfully", resp.content.decode())
+
+    def test_upload_view_validate_excel_raises_validationerror_renders_400(self):
+        excel = SimpleUploadedFile(
+            "bad.xlsx", self._make_sample_xlsx(),
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+        req = self.factory.post("/excel_parser/upload", {}, FILES={"excel_standard": excel})
+        with patch("excel_parser.views.validate_excel_file", side_effect=ValidationError("bad-excel")):
+            resp = views.upload_view(req)
+        self.assertEqual(resp.status_code, 400)
+        self.assertIn("bad-excel", resp.content.decode())
+
+    def test_upload_view_validate_pdf_raises_unexpected_exception_renders_500(self):
+        pdf = SimpleUploadedFile("file.pdf", b"%PDF", content_type="application/pdf")
+        req = self.factory.post("/excel_parser/upload", {}, FILES={"pdf_file": pdf})
+        with patch("excel_parser.views.validate_pdf_file", side_effect=Exception("boom-pdf")):
+            resp = views.upload_view(req)
+        self.assertEqual(resp.status_code, 500)
+        self.assertIn("boom-pdf", resp.content.decode())
+
+    def test_validate_pdf_file_accepts_and_rejects(self):
+        good = SimpleUploadedFile("ok.pdf", b"%PDF-1.4\n", content_type="application/pdf")
+        views.validate_pdf_file(good)
+
+        bad = SimpleUploadedFile("bad.pdf", b"notpdf", content_type="text/plain")
+        with self.assertRaises(ValidationError):
+            views.validate_pdf_file(bad)
+
+class ViewsTestCase(TestCase):
+    def setUp(self):
+        self.factory = RequestFactory()
+
+    def test_preview_rows_pdf_file(self):
+        pdf_content = b'%PDF-1.4 test pdf'
+        pdf_file = SimpleUploadedFile("test.pdf", pdf_content, content_type="application/pdf")
+        request = self.factory.post('/excel_parser/preview_rows', {'pdf_file': pdf_file})
+        request.FILES['pdf_file'] = pdf_file
+        request.session = {}
+        response = views.preview_rows(request)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("pdf_file", response.json())
+
+    def test_upload_view_excel_standard(self):
+        excel_content = b'PK\x03\x04'  # minimal XLSX header
+        excel_file = SimpleUploadedFile("test.xlsx", excel_content, content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        request = self.factory.post('/excel_parser/upload', {'excel_standard': excel_file})
+        request.FILES['excel_standard'] = excel_file
+        response = views.upload_view(request)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b'Standard Excel uploaded successfully', response.content)
+
+    def test_upload_view_excel_apendo(self):
+        excel_content = b'PK\x03\x04'
+        excel_file = SimpleUploadedFile("apendo.xlsx", excel_content, content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        request = self.factory.post('/excel_parser/upload', {'excel_apendo': excel_file})
+        request.FILES['excel_apendo'] = excel_file
+        response = views.upload_view(request)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b'APENDO Excel uploaded successfully', response.content)
+
+    def test_upload_view_pdf_file(self):
+        pdf_content = b'%PDF-1.4 test pdf'
+        pdf_file = SimpleUploadedFile("test.pdf", pdf_content, content_type="application/pdf")
+        request = self.factory.post('/excel_parser/upload', {'pdf_file': pdf_file})
+        request.FILES['pdf_file'] = pdf_file
+        response = views.upload_view(request)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b'PDF uploaded successfully', response.content)
+
+    def test_upload_view_validation_error(self):
+        # Pass a file with wrong content type to trigger ValidationError
+        bad_file = SimpleUploadedFile("bad.txt", b"bad", content_type="text/plain")
+        request = self.factory.post('/excel_parser/upload', {'pdf_file': bad_file})
+        request.FILES['pdf_file'] = bad_file
+        response = views.upload_view(request)
+        self.assertEqual(response.status_code, 400)
+        self.assertIn(b'Only .pdf files are allowed.', response.content)
+
+    def test_upload_view_exception(self):
+        # Patch validate_pdf_file to raise an Exception
+        def raise_exception(_):
+            raise Exception("Test exception")
+        orig = views.validate_pdf_file
+        views.validate_pdf_file = raise_exception
+        pdf_content = b'%PDF-1.4 test pdf'
+        pdf_file = SimpleUploadedFile("test.pdf", pdf_content, content_type="application/pdf")
+        request = self.factory.post('/excel_parser/upload', {'pdf_file': pdf_file})
+        request.FILES['pdf_file'] = pdf_file
+        response = views.upload_view(request)
+        self.assertEqual(response.status_code, 500)
+        self.assertIn(b'Test exception', response.content)
+        views.validate_pdf_file = orig
+
+class MinimalDirectTests(TestCase):
+    """Minimal tests using RequestFactory but calling upload_view directly"""
+    
+    def test_upload_pdf_direct_call(self):
+        """Direct function call to upload_view with PDF"""
+        factory = RequestFactory()
+        pdf_file = SimpleUploadedFile("t.pdf", b"%PDF-1.4", content_type="application/pdf")
+        
+        request = factory.post('/upload', {})
+        request.FILES['pdf_file'] = pdf_file
+        
+        response = views.upload_view(request)
+        
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b'PDF uploaded successfully', response.content)
+    
+    def test_upload_invalid_pdf_direct_call(self):
+        """Direct function call to upload_view with invalid PDF"""
+        factory = RequestFactory()
+        bad_file = SimpleUploadedFile("bad.pdf", b"not pdf", content_type="image/png")
+        
+        request = factory.post('/upload', {})
+        request.FILES['pdf_file'] = bad_file
+        
+        response = views.upload_view(request)
+        
+        self.assertEqual(response.status_code, 400)
+        self.assertIn(b'Only .pdf files are allowed', response.content)
