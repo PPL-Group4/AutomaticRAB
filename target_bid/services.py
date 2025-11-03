@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
 from typing import Iterable, List, Optional, Protocol
+import re
 
 from rencanakan_core.models import RabItem
 
@@ -20,6 +21,7 @@ class RabJobItem:
     rab_item_header_id: Optional[int]
     rab_item_header_name: Optional[str]
     custom_ahs_id: Optional[int]
+    analysis_code: Optional[str]
 
     def to_dict(self) -> dict:
         """Serialise the job item into JSON-safe primitives."""
@@ -34,6 +36,7 @@ class RabJobItem:
             "rab_item_header_id": self.rab_item_header_id,
             "rab_item_header_name": self.rab_item_header_name,
             "custom_ahs_id": self.custom_ahs_id,
+            "analysis_code": self.analysis_code,
         }
 
 
@@ -94,6 +97,8 @@ class RabJobItemMapper:
     def map(self, row: object) -> RabJobItem:
         unit = getattr(row, "unit", None)
         header = getattr(row, "rab_item_header", None)
+        raw_code = getattr(row, "analysis_code", None)
+        analysis_code = (raw_code or "").strip() or None
 
         unit_price = self._decimal.to_decimal(getattr(row, "price", None))
         volume = self._decimal.to_decimal(getattr(row, "volume", None))
@@ -109,6 +114,7 @@ class RabJobItemMapper:
             rab_item_header_id=getattr(header, "id", None),
             rab_item_header_name=getattr(header, "name", None),
             custom_ahs_id=getattr(row, "custom_ahs_id", None),
+            analysis_code=analysis_code,
         )
 
 
@@ -125,7 +131,53 @@ class RabJobItemService:
 
     def get_items(self, rab_id: int) -> List[RabJobItem]:
         rows = self._repository.for_rab(rab_id)
-        return [self._mapper.map(row) for row in rows]
+        mapped = [self._mapper.map(row) for row in rows]
+        return [item for item in mapped if not _is_non_adjustable(item)]
+
+
+_NON_ADJUSTABLE_NAME_LOOKUP = {
+    "rencana keselamatan konstruksi",
+    "penyiapan dokumen penerapan smkk",
+    "sosialisasi promosi dan pelatihan",
+    "alat pelindung kerja apk",
+    "alat pelindung kerja apk terdiri dari",
+    "pembatas area",
+    "alat pelindung diri apd",
+    "alat pelindung diri apd terdiri dari",
+    "helm pelindung",
+    "sarung tangan",
+    "kacamata pelindung",
+    "sepatu keselamatan",
+    "rompi keselamatan",
+    "fasilitas sarana prasarana dan alat kesehatan",
+    "peralatan p3k kotak p3k",
+    "rambu dan perlengkapan lalu lintas",
+    "alat pemadam api ringan apar",
+}
+
+
+_ROMAN_NUMERAL_PREFIX = re.compile(r"^(?:[0-9]+|[ivxlcdm]+)\s+", re.IGNORECASE)
+
+
+def _normalise_item_name(name: Optional[str]) -> str:
+    if not name:
+        return ""
+    text = re.sub(r"[^0-9a-zA-Z]+", " ", name).strip().lower()
+    text = _ROMAN_NUMERAL_PREFIX.sub("", text)
+    return re.sub(r"\s+", " ", text)
+
+
+def _is_non_adjustable_by_name(name: Optional[str]) -> bool:
+    normalised = _normalise_item_name(name)
+    return bool(normalised) and normalised in _NON_ADJUSTABLE_NAME_LOOKUP
+
+
+def _is_non_adjustable(item: RabJobItem) -> bool:
+    if _is_non_adjustable_by_name(item.name):
+        return True
+    if item.custom_ahs_id is not None:
+        return False
+    return bool(item.analysis_code)
 
 
 _DEFAULT_SERVICE = RabJobItemService(DjangoRabItemRepository(), RabJobItemMapper())
