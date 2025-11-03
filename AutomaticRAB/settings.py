@@ -20,6 +20,9 @@ load_dotenv()
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# Detect when Django is being executed via its test runner.
+RUNNING_TESTS = any(arg in sys.argv for arg in ["test", "pytest", "py.test"])
+
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
@@ -49,6 +52,7 @@ INSTALLED_APPS = [
     'rencanakan_core',
     'automatic_price_matching',
     'cost_weight',
+    'target_bid',
     
 ]
 
@@ -96,6 +100,12 @@ DATABASES = {
         'PORT': os.getenv('MYSQL_PORT'),
     }
 }
+
+if RUNNING_TESTS:
+    DATABASES['default'] = {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'test_db.sqlite3',
+    }
 
 
 # Password validation
@@ -158,10 +168,6 @@ LOGGING = {
     },
     "root": {"handlers": ["console"], "level": "DEBUG"},
 }
-
-# Use a simpler storage during tests to avoid Manifest errors, and
-# enable hashed filenames (manifest) only in production builds.
-RUNNING_TESTS = any(arg in sys.argv for arg in ["test", "pytest", "py.test"])  # Django test runner sets 'test'
 
 if RUNNING_TESTS:
     # During tests, Django doesn't run collectstatic; Manifest storage would raise

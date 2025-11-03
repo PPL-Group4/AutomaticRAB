@@ -28,6 +28,7 @@ urlpatterns = [
     path("", lambda request: redirect("job-matching")),
     path('automatic_price_matching/', include('automatic_price_matching.urls')),
     path("cost_weight/", include("cost_weight.urls")),
+    path("target_bid/", include("target_bid.urls")),
     path("api/recompute_total_cost/", recompute_total_cost),
 ]
 
