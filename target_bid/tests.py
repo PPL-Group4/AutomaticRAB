@@ -2,8 +2,9 @@ from decimal import Decimal
 
 from django.core.exceptions import ValidationError
 from django.test import SimpleTestCase
-
+import pytest
 from target_bid import validators
+from target_bid.services.services import TargetBudgetConverter
 from target_bid.validators import TargetBudgetInput, validate_target_budget_input
 
 
@@ -185,3 +186,39 @@ class TargetBudgetValidationTests(SimpleTestCase):
 			exc.exception.message_dict["target_budget"],
 			["Target budget is required."],
 		)
+
+def test_percentage_to_nominal_conversion():
+    current_total = Decimal("1000000")
+    input_data = TargetBudgetInput(mode="percentage", value=Decimal("75"))
+    result = TargetBudgetConverter.to_nominal(input_data, current_total)
+    assert result == Decimal("750000.00")
+
+
+def test_absolute_mode_returns_same_value():
+    current_total = Decimal("1000000")
+    input_data = TargetBudgetInput(mode="absolute", value=Decimal("800000"))
+    result = TargetBudgetConverter.to_nominal(input_data, current_total)
+    assert result == Decimal("800000.00")
+
+
+def test_invalid_current_total_type_raises():
+    input_data = TargetBudgetInput(mode="percentage", value=Decimal("50"))
+    try:
+        TargetBudgetConverter.to_nominal(input_data, "1000000")
+    except TypeError as e:
+        assert "current_total" in str(e)
+    else:
+        pytest.fail("TypeError expected but not raised")
+
+def test_zero_percent_returns_zero():
+    current_total = Decimal("1000000")
+    input_data = TargetBudgetInput(mode="percentage", value=Decimal("0"))
+    result = TargetBudgetConverter.to_nominal(input_data, current_total)
+    assert result == Decimal("0.00")
+
+
+def test_hundred_percent_returns_same_total():
+    current_total = Decimal("1000000")
+    input_data = TargetBudgetInput(mode="percentage", value=Decimal("100"))
+    result = TargetBudgetConverter.to_nominal(input_data, current_total)
+    assert result == Decimal("1000000.00")
