@@ -1,10 +1,22 @@
 from decimal import Decimal
+from types import SimpleNamespace
+from unittest.mock import patch
 
 from django.core.exceptions import ValidationError
 from django.test import SimpleTestCase
+from rest_framework.test import APIRequestFactory
 
 from target_bid import validators
 from target_bid.validators import TargetBudgetInput, validate_target_budget_input
+from target_bid.services import (
+	RabJobItem,
+	_default_queryset,
+	_decimal_to_string,
+	_multiply_decimal,
+	_to_decimal,
+	fetch_rab_job_items,
+)
+from target_bid.views import fetch_rab_job_items_view
 
 
 class TargetBudgetValidationTests(SimpleTestCase):
@@ -143,6 +155,87 @@ class TargetBudgetValidationTests(SimpleTestCase):
 			exc.exception.message_dict["target_budget"],
 			["Target budget is required."],
 		)
+
+
+class FetchRabJobItemsTests(SimpleTestCase):
+	def test_fetch_rab_job_items_normalises_values(self) -> None:
+		unit = SimpleNamespace(name="m2")
+		header = SimpleNamespace(id=7, name="Pekerjaan Tanah")
+		row = SimpleNamespace(
+			id=1,
+			name="Galian Tanah",
+			unit=unit,
+			price=5000,
+			volume=2,
+			rab_item_header=header,
+			custom_ahs_id=42,
+		)
+
+		items = fetch_rab_job_items(10, queryset=[row])
+		self.assertEqual(len(items), 1)
+		item = items[0]
+		self.assertEqual(item.unit_name, "m2")
+		self.assertEqual(item.rab_item_header_id, 7)
+		self.assertEqual(item.custom_ahs_id, 42)
+		self.assertEqual(item.unit_price, Decimal("5000"))
+		self.assertEqual(item.total_price, Decimal("10000"))
+
+	def test_fetch_rab_job_items_handles_missing_numeric(self) -> None:
+		row = SimpleNamespace(id=2, name="Mobilisasi", price=None, volume=None, unit=None, rab_item_header=None)
+		items = fetch_rab_job_items(11, queryset=[row])
+		item = items[0]
+		self.assertIsNone(item.unit_price)
+		self.assertIsNone(item.total_price)
+		self.assertIsNone(item.unit_name)
+
+	def test_helper_functions_cover_edge_cases(self) -> None:
+		value = _to_decimal(Decimal("1.23"))
+		self.assertEqual(value, Decimal("1.23"))
+		self.assertIsNone(_to_decimal(object()))
+		self.assertIsNone(_multiply_decimal(None, Decimal("2")))
+		self.assertEqual(_multiply_decimal(Decimal("2"), Decimal("3")), Decimal("6"))
+		self.assertEqual(_decimal_to_string(Decimal("10.500")), "10.5")
+		self.assertEqual(_decimal_to_string(Decimal("0")), "0")
+		self.assertIsNone(_decimal_to_string(None))
+
+	def test_default_queryset_invokes_select_related_chain(self) -> None:
+		with patch("target_bid.services.RabItem") as mock_model:
+			select = mock_model.objects.select_related.return_value
+			filtered = select.filter.return_value
+			ordered = filtered.order_by.return_value
+
+			result = _default_queryset(55)
+
+		mock_model.objects.select_related.assert_called_once_with("unit", "rab_item_header")
+		select.filter.assert_called_once_with(rab_id=55)
+		filtered.order_by.assert_called_once_with("id")
+		self.assertEqual(result, ordered)
+
+
+class FetchRabJobItemsViewTests(SimpleTestCase):
+	def setUp(self) -> None:
+		self.factory = APIRequestFactory()
+
+	def test_view_returns_serialised_payload(self) -> None:
+		request = self.factory.get("/target_bid/rabs/99/items/")
+		mock_item = RabJobItem(
+			rab_item_id=5,
+			name="Urugan Tanah",
+			unit_name="m2",
+			unit_price=Decimal("12500"),
+			volume=Decimal("3"),
+			total_price=Decimal("37500"),
+			rab_item_header_id=4,
+			rab_item_header_name="Pekerjaan Persiapan",
+			custom_ahs_id=None,
+		)
+		with patch("target_bid.views.fetch_rab_job_items", return_value=[mock_item]) as mock_fetch:
+			response = fetch_rab_job_items_view(request, rab_id=99)
+
+		mock_fetch.assert_called_once_with(99)
+		self.assertEqual(response.status_code, 200)
+		self.assertEqual(response.data["rab_id"], 99)
+		self.assertEqual(response.data["items"], [mock_item.to_dict()])
 
 	def test_invalid_mode_rejected(self) -> None:
 		with self.assertRaises(ValidationError) as exc:
