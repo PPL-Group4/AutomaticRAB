@@ -10,6 +10,8 @@ from target_bid import validators
 from target_bid.validators import TargetBudgetInput, validate_target_budget_input
 from target_bid.services import (
 	RabJobItem,
+	RabJobItemMapper,
+	RabJobItemService,
 	_default_queryset,
 	_decimal_to_string,
 	_multiply_decimal,
@@ -210,6 +212,24 @@ class FetchRabJobItemsTests(SimpleTestCase):
 		select.filter.assert_called_once_with(rab_id=55)
 		filtered.order_by.assert_called_once_with("id")
 		self.assertEqual(result, ordered)
+
+	def test_service_branch_uses_injected_service(self) -> None:
+		class StubService:
+			def get_items(self, rab_id: int):
+				return [f"rab-{rab_id}"]
+
+		result = fetch_rab_job_items(77, service=StubService())
+		self.assertEqual(result, ["rab-77"])
+
+	def test_rab_job_item_service_maps_rows(self) -> None:
+		row = SimpleNamespace(id=9, name="Item", unit=None, rab_item_header=None, price=100, volume=2, custom_ahs_id=None)
+		repository = SimpleNamespace(for_rab=lambda rab_id: [row])
+		mapper = RabJobItemMapper()
+		service = RabJobItemService(repository, mapper)
+
+		items = service.get_items(5)
+		self.assertEqual(len(items), 1)
+		self.assertEqual(items[0].total_price, Decimal("200"))
 
 
 class FetchRabJobItemsViewTests(SimpleTestCase):
