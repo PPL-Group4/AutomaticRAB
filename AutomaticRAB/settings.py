@@ -49,6 +49,7 @@ INSTALLED_APPS = [
     'rencanakan_core',
     'automatic_price_matching',
     'cost_weight',
+    'efficiency_recommendations',
     
 ]
 
