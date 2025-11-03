@@ -207,3 +207,120 @@ class TopCostContributorsIdentifierTest(TestCase):
         # Original data should remain unchanged
         self.assertEqual(len(self.job_data['items']), original_items_count)
         self.assertEqual(self.job_data['items'][0], original_first_item)
+
+    def test_sorting_works_with_random_order(self):
+        """Test that sorting works correctly when items are in random order"""
+        job_data_random = {
+            'job_id': 5,
+            'job_name': 'Proyek dengan Item Acak',
+            'total_cost': Decimal('500000000'),
+            'items': [
+                # Items intentionally in random order by weight_pct
+                {
+                    'name': 'Item Sedang',
+                    'cost': Decimal('100000000'),
+                    'weight_pct': Decimal('20.00'),
+                    'quantity': Decimal('1'),
+                    'unit_price': Decimal('100000000')
+                },
+                {
+                    'name': 'Item Terbesar',
+                    'cost': Decimal('250000000'),
+                    'weight_pct': Decimal('50.00'),
+                    'quantity': Decimal('1'),
+                    'unit_price': Decimal('250000000')
+                },
+                {
+                    'name': 'Item Terkecil',
+                    'cost': Decimal('50000000'),
+                    'weight_pct': Decimal('10.00'),
+                    'quantity': Decimal('1'),
+                    'unit_price': Decimal('50000000')
+                },
+                {
+                    'name': 'Item Kedua Terbesar',
+                    'cost': Decimal('100000000'),
+                    'weight_pct': Decimal('20.00'),
+                    'quantity': Decimal('1'),
+                    'unit_price': Decimal('100000000')
+                }
+            ]
+        }
+
+        result = identify_top_cost_contributors(job_data_random)
+        top_items = result['top_items']
+
+        # Should return top 3
+        self.assertEqual(len(top_items), 3)
+
+        # First should be Item Terbesar (50%)
+        self.assertEqual(top_items[0]['name'], 'Item Terbesar')
+        self.assertEqual(top_items[0]['weight_pct'], Decimal('50.00'))
+
+        # Second and third should be the 20% items (either order is fine for ties)
+        self.assertEqual(top_items[1]['weight_pct'], Decimal('20.00'))
+        self.assertEqual(top_items[2]['weight_pct'], Decimal('20.00'))
+
+        # Item Terkecil (10%) should NOT be in top 3
+        item_names = [item['name'] for item in top_items]
+        self.assertNotIn('Item Terkecil', item_names)
+
+    def test_sorting_with_unsorted_descending_order(self):
+        """Test sorting when items are in reverse order (cheapest to most expensive)"""
+        job_data_reversed = {
+            'job_id': 6,
+            'job_name': 'Proyek Urutan Terbalik',
+            'total_cost': Decimal('300000000'),
+            'items': [
+                {
+                    'name': 'Item Paling Murah',
+                    'cost': Decimal('30000000'),
+                    'weight_pct': Decimal('10.00'),
+                    'quantity': Decimal('1'),
+                    'unit_price': Decimal('30000000')
+                },
+                {
+                    'name': 'Item Menengah Bawah',
+                    'cost': Decimal('60000000'),
+                    'weight_pct': Decimal('20.00'),
+                    'quantity': Decimal('1'),
+                    'unit_price': Decimal('60000000')
+                },
+                {
+                    'name': 'Item Menengah Atas',
+                    'cost': Decimal('90000000'),
+                    'weight_pct': Decimal('30.00'),
+                    'quantity': Decimal('1'),
+                    'unit_price': Decimal('90000000')
+                },
+                {
+                    'name': 'Item Paling Mahal',
+                    'cost': Decimal('120000000'),
+                    'weight_pct': Decimal('40.00'),
+                    'quantity': Decimal('1'),
+                    'unit_price': Decimal('120000000')
+                }
+            ]
+        }
+
+        result = identify_top_cost_contributors(job_data_reversed)
+        top_items = result['top_items']
+
+        # Should correctly identify top 3 despite reverse order
+        self.assertEqual(len(top_items), 3)
+
+        # First should be Item Paling Mahal (40%)
+        self.assertEqual(top_items[0]['name'], 'Item Paling Mahal')
+        self.assertEqual(top_items[0]['weight_pct'], Decimal('40.00'))
+
+        # Second should be Item Menengah Atas (30%)
+        self.assertEqual(top_items[1]['name'], 'Item Menengah Atas')
+        self.assertEqual(top_items[1]['weight_pct'], Decimal('30.00'))
+
+        # Third should be Item Menengah Bawah (20%)
+        self.assertEqual(top_items[2]['name'], 'Item Menengah Bawah')
+        self.assertEqual(top_items[2]['weight_pct'], Decimal('20.00'))
+
+        # Item Paling Murah should NOT be in top 3
+        item_names = [item['name'] for item in top_items]
+        self.assertNotIn('Item Paling Murah', item_names)
