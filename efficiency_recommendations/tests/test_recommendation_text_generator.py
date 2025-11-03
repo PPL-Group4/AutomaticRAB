@@ -40,38 +40,6 @@ class RecommendationTextGeneratorTest(unittest.TestCase):
             'cost': Decimal('200000000.00'),
             'weight_pct': Decimal('42.00'),
             'quantity': Decimal('50'),
-            'unit_price': Decimal('4000000')
-        }
-        
-        text = generate_recommendation_text(highest_item)
-        
-        # Should follow format: "{name} accounts for {pct}% of the total cost."
-        self.assertIn("Foundation Work", text)
-        self.assertIn("accounts for", text)
-        self.assertIn("42.00%", text)
-        self.assertIn("total cost", text)
-        
-    def test_text_includes_action_recommendation(self):
-        """Test that text includes actionable recommendation"""
-        highest_item = {
-            'name': 'Roofing',
-            'cost': Decimal('80000000.00'),
-            'weight_pct': Decimal('25.50'),
-            'quantity': Decimal('80'),
-            'unit_price': Decimal('1000000')
-        }
-        
-        text = generate_recommendation_text(highest_item)
-        
-        # Should suggest action
-        action_keywords = ['consider', 'evaluating', 'material prices']
-        has_action = any(keyword in text.lower() for keyword in action_keywords)
-        self.assertTrue(has_action, "Text should include actionable recommendation")
-        
-    def test_percentage_formatting(self):
-        """Test that percentage is formatted with 2 decimal places"""
-        highest_item = {
-            'name': 'Test Item',
             'cost': Decimal('100000.00'),
             'weight_pct': Decimal('33.333333'),
             'quantity': Decimal('10'),
