@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
-from typing import Iterable, List, Optional, Protocol
 import re
+from typing import Iterable, List, Optional, Protocol, Sequence
 
 from rencanakan_core.models import RabItem
 
@@ -125,14 +125,16 @@ class RabJobItemService:
         self,
         repository: RabItemRepository,
         mapper: RabJobItemMapper,
+        non_adjustable_policy: Optional["NonAdjustableEvaluator"] = None,
     ) -> None:
         self._repository = repository
         self._mapper = mapper
+        self._non_adjustable_policy = non_adjustable_policy or _DEFAULT_NON_ADJUSTABLE_POLICY
 
     def get_items(self, rab_id: int) -> List[RabJobItem]:
         rows = self._repository.for_rab(rab_id)
         mapped = [self._mapper.map(row) for row in rows]
-        return [item for item in mapped if not _is_non_adjustable(item)]
+        return [item for item in mapped if not self._non_adjustable_policy.is_non_adjustable(item)]
 
 
 _NON_ADJUSTABLE_NAME_LOOKUP = {
@@ -159,25 +161,101 @@ _NON_ADJUSTABLE_NAME_LOOKUP = {
 _ROMAN_NUMERAL_PREFIX = re.compile(r"^(?:[0-9]+|[ivxlcdm]+)\s+", re.IGNORECASE)
 
 
+class NameNormaliser:
+    """Normalises job item names to simplify matching strategies."""
+
+    def normalise(self, name: Optional[str]) -> str:
+        if not name:
+            return ""
+        text = re.sub(r"[^0-9a-zA-Z]+", " ", name).strip().lower()
+        text = _ROMAN_NUMERAL_PREFIX.sub("", text)
+        return re.sub(r"\s+", " ", text)
+
+
+class DecisionRule(Protocol):
+    """Represents a filtering rule that may accept or reject an item."""
+
+    def decide(self, item: RabJobItem) -> Optional[bool]:  # pragma: no cover - interface
+        ...
+
+
+class NameBlacklistRule:
+    """Rejects job items whose normalised name appears in the blacklist."""
+
+    def __init__(self, blacklist: Sequence[str], normaliser: NameNormaliser) -> None:
+        self._blacklist = set(blacklist)
+        self._normaliser = normaliser
+
+    def decide(self, item: RabJobItem) -> Optional[bool]:
+        normalised = self._normaliser.normalise(item.name)
+        if normalised and normalised in self._blacklist:
+            return True
+        return None
+
+
+class CustomAhsOverrideRule:
+    """Allows custom AHS entries to remain adjustable regardless of codes."""
+
+    def decide(self, item: RabJobItem) -> Optional[bool]:
+        if item.custom_ahs_id is not None:
+            return False
+        return None
+
+
+class AnalysisCodeRule:
+    """Marks items that provide an analysis code as non-adjustable."""
+
+    def decide(self, item: RabJobItem) -> Optional[bool]:
+        if item.analysis_code:
+            return True
+        return None
+
+
+class NonAdjustableEvaluator:
+    """Evaluates items against an ordered list of decision rules."""
+
+    def __init__(self, rules: Sequence[DecisionRule]) -> None:
+        self._rules = list(rules)
+
+    def is_non_adjustable(self, item: RabJobItem) -> bool:
+        for rule in self._rules:
+            decision = rule.decide(item)
+            if decision is not None:
+                return decision
+        return False
+
+
+_DEFAULT_NAME_NORMALISER = NameNormaliser()
+_DEFAULT_NAME_RULE = NameBlacklistRule(_NON_ADJUSTABLE_NAME_LOOKUP, _DEFAULT_NAME_NORMALISER)
+_DEFAULT_RULES: Sequence[DecisionRule] = (
+    _DEFAULT_NAME_RULE,
+    CustomAhsOverrideRule(),
+    AnalysisCodeRule(),
+)
+_DEFAULT_NON_ADJUSTABLE_POLICY = NonAdjustableEvaluator(_DEFAULT_RULES)
+
+
 def _normalise_item_name(name: Optional[str]) -> str:
-    if not name:
-        return ""
-    text = re.sub(r"[^0-9a-zA-Z]+", " ", name).strip().lower()
-    text = _ROMAN_NUMERAL_PREFIX.sub("", text)
-    return re.sub(r"\s+", " ", text)
+    return _DEFAULT_NAME_NORMALISER.normalise(name)
 
 
 def _is_non_adjustable_by_name(name: Optional[str]) -> bool:
-    normalised = _normalise_item_name(name)
-    return bool(normalised) and normalised in _NON_ADJUSTABLE_NAME_LOOKUP
+    return bool(_DEFAULT_NAME_RULE.decide(RabJobItem(
+        rab_item_id=0,
+        name=name or "",
+        unit_name=None,
+        unit_price=None,
+        volume=None,
+        total_price=None,
+        rab_item_header_id=None,
+        rab_item_header_name=None,
+        custom_ahs_id=None,
+        analysis_code=None,
+    )))
 
 
 def _is_non_adjustable(item: RabJobItem) -> bool:
-    if _is_non_adjustable_by_name(item.name):
-        return True
-    if item.custom_ahs_id is not None:
-        return False
-    return bool(item.analysis_code)
+    return _DEFAULT_NON_ADJUSTABLE_POLICY.is_non_adjustable(item)
 
 
 _DEFAULT_SERVICE = RabJobItemService(DjangoRabItemRepository(), RabJobItemMapper())
