@@ -96,22 +96,37 @@ def parse_pdf_to_dtos(path: str) -> List[Dict[str, Any]]:
 
     # 🆕 Step 6: perform automatic job matching
     enriched_rows = []
+
+    roman_sections = {
+        "I", "II", "III", "IV", "V",
+        "VI", "VII", "VIII", "IX", "X",
+        "XI", "XII", "XIII", "XIV", "XV",
+    }
+    
     for row in normalized:
         desc = row.get("description") or ""
-        analysis_code = row.get("analysis_code") or row.get("kode") or row.get("analysis code") or ""
-        if analysis_code:
+        analysis_code = (
+            row.get("analysis_code")
+            or row.get("kode")
+            or row.get("analysis code")
+            or ""
+        )
+        number = str(row.get("number") or "").strip()
+
+        if number in roman_sections:
+            match_info = {"status": "skipped", "match": None}
+            logger.debug("Skipping match for Roman numeral section: %s", number)
+
+        elif analysis_code and any(ch.isdigit() for ch in analysis_code):
             code = analysis_code.strip()
-            if code and any(ch.isdigit() for ch in code):  
-                match_info = {
-                    "status": "found",
-                    "match": {"code": code, "confidence": 1.0}
-                }
-                logger.debug("Skipping auto-match: valid code detected (%s)", code)
-            else:
-                match_info = match_description(desc)
+            match_info = {
+                "status": "found",
+                "match": {"code": code, "confidence": 1.0},
+            }
+            logger.debug("Detected existing analysis code: %s", code)
+
         else:
             match_info = match_description(desc)
-
 
         try:
             volume = Decimal(str(row.get("volume") or "0"))
@@ -122,15 +137,17 @@ def parse_pdf_to_dtos(path: str) -> List[Dict[str, Any]]:
             price = Decimal("0")
             total_price = Decimal("0")
 
-        enriched_rows.append({
-            **row,
-            "volume": float(volume),
-            "price": float(price),
-            "total_price": float(total_price),
-            "job_match_status": match_info.get("status"),
-            "job_match": match_info.get("match"),
-            "job_match_error": match_info.get("error"),
-        })
+        enriched_rows.append(
+            {
+                **row,
+                "volume": float(volume),
+                "price": float(price),
+                "total_price": float(total_price),
+                "job_match_status": match_info.get("status"),
+                "job_match": match_info.get("match"),
+                "job_match_error": match_info.get("error"),
+            }
+        )
 
     logger.info("Parsed %d rows with job matching from %s", len(enriched_rows), path)
     return enriched_rows
