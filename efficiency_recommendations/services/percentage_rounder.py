@@ -1,5 +1,5 @@
 from decimal import Decimal, ROUND_DOWN
-from typing import List, Dict, Optional
+from typing import List, Dict
 
 def round_weight_percentages(
     items: List[Dict],
@@ -9,10 +9,16 @@ def round_weight_percentages(
     if not items:
         return items
 
-    step = Decimal(10) ** (-ndigits)          
+    step = Decimal(10) ** (-ndigits)        
     target = Decimal("100").quantize(step)
 
     raw = [Decimal(str(it.get(key, "0"))) for it in items]
+    total_raw = sum(raw)
+
+    if total_raw == 0:
+        for it in items:
+            it[key] = Decimal("0").quantize(step)
+        return items
 
     floors = [v.quantize(step, rounding=ROUND_DOWN) for v in raw]
     remainders = [v - f for v, f in zip(raw, floors)]
@@ -26,11 +32,12 @@ def round_weight_percentages(
         reverse=True,
     )
 
-    rounded = floors[:]  
+    rounded = floors[:]
     for k in range(max(0, needed_steps)):
         idx = order[k % len(items)]
         rounded[idx] = (rounded[idx] + step).quantize(step)
 
+    # Write back
     for val, it in zip(rounded, items):
         it[key] = val
     return items
