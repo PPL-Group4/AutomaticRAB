@@ -14,7 +14,10 @@ from target_bid.services import (
 	RabJobItemService,
 	_default_queryset,
 	_decimal_to_string,
+	_is_non_adjustable,
+	_is_non_adjustable_by_name,
 	_multiply_decimal,
+	_normalise_item_name,
 	_to_decimal,
 	fetch_rab_job_items,
 )
@@ -159,6 +162,102 @@ class TargetBudgetValidationTests(SimpleTestCase):
 		)
 
 
+class RabJobItemHelperTests(SimpleTestCase):
+	def test_rab_job_item_to_dict_serialises_numbers(self) -> None:
+		item = RabJobItem(
+			rab_item_id=10,
+			name="Item",
+			unit_name="m",
+			unit_price=Decimal("12.3400"),
+			volume=Decimal("2.000"),
+			total_price=Decimal("24.6800"),
+			rab_item_header_id=2,
+			rab_item_header_name="Header",
+			custom_ahs_id=None,
+			analysis_code="AT.01",
+		)
+
+		self.assertEqual(
+			item.to_dict(),
+			{
+				"id": 10,
+				"name": "Item",
+				"unit": "m",
+				"unit_price": "12.34",
+				"volume": "2",
+				"total_price": "24.68",
+				"rab_item_header_id": 2,
+				"rab_item_header_name": "Header",
+				"custom_ahs_id": None,
+				"analysis_code": "AT.01",
+			},
+		)
+
+	def test_normalise_item_name_strips_noise(self) -> None:
+		self.assertEqual(
+			_normalise_item_name("III. Alat Pelindung Diri (APD)"),
+			"alat pelindung diri apd",
+		)
+		self.assertEqual(_normalise_item_name(None), "")
+
+	def test_is_non_adjustable_by_name_matches_lookup(self) -> None:
+		self.assertTrue(_is_non_adjustable_by_name("Alat Pelindung Kerja (APK)"))
+		self.assertFalse(_is_non_adjustable_by_name("Pekerjaan Tanah"))
+
+	def test_is_non_adjustable_checks_priority_rules(self) -> None:
+		safety = RabJobItem(
+			rab_item_id=1,
+			name="Alat Pelindung Kerja (APK)",
+			unit_name=None,
+			unit_price=None,
+			volume=None,
+			total_price=None,
+			rab_item_header_id=None,
+			rab_item_header_name=None,
+			custom_ahs_id=None,
+			analysis_code=None,
+		)
+		coded = RabJobItem(
+			rab_item_id=2,
+			name="Mobilisasi",
+			unit_name=None,
+			unit_price=None,
+			volume=None,
+			total_price=None,
+			rab_item_header_id=None,
+			rab_item_header_name=None,
+			custom_ahs_id=None,
+			analysis_code="AT.10",
+		)
+		custom = RabJobItem(
+			rab_item_id=3,
+			name="Mobilisasi",
+			unit_name=None,
+			unit_price=None,
+			volume=None,
+			total_price=None,
+			rab_item_header_id=None,
+			rab_item_header_name=None,
+			custom_ahs_id=5,
+			analysis_code="AT.10",
+		)
+
+		self.assertTrue(_is_non_adjustable(safety))
+		self.assertTrue(_is_non_adjustable(coded))
+		self.assertFalse(_is_non_adjustable(custom))
+
+	def test_helper_functions_cover_edge_cases(self) -> None:
+		value = _to_decimal(Decimal("1.23"))
+		self.assertEqual(value, Decimal("1.23"))
+		self.assertIsNone(_to_decimal(object()))
+		self.assertIsNone(_to_decimal("not-a-number"))
+		self.assertIsNone(_multiply_decimal(None, Decimal("2")))
+		self.assertEqual(_multiply_decimal(Decimal("2"), Decimal("3")), Decimal("6"))
+		self.assertEqual(_decimal_to_string(Decimal("10.500")), "10.5")
+		self.assertEqual(_decimal_to_string(Decimal("0")), "0")
+		self.assertIsNone(_decimal_to_string(None))
+
+
 class FetchRabJobItemsTests(SimpleTestCase):
 	def test_fetch_rab_job_items_normalises_values(self) -> None:
 		unit = SimpleNamespace(name="m2")
@@ -171,6 +270,7 @@ class FetchRabJobItemsTests(SimpleTestCase):
 			volume=2,
 			rab_item_header=header,
 			custom_ahs_id=42,
+			analysis_code=" AT.01 ",
 		)
 
 		items = fetch_rab_job_items(10, queryset=[row])
@@ -181,24 +281,25 @@ class FetchRabJobItemsTests(SimpleTestCase):
 		self.assertEqual(item.custom_ahs_id, 42)
 		self.assertEqual(item.unit_price, Decimal("5000"))
 		self.assertEqual(item.total_price, Decimal("10000"))
+		self.assertEqual(item.analysis_code, "AT.01")
 
 	def test_fetch_rab_job_items_handles_missing_numeric(self) -> None:
-		row = SimpleNamespace(id=2, name="Mobilisasi", price=None, volume=None, unit=None, rab_item_header=None)
+		row = SimpleNamespace(
+			id=2,
+			name="Mobilisasi",
+			price=None,
+			volume=None,
+			unit=None,
+			rab_item_header=None,
+			custom_ahs_id=None,
+			analysis_code="",
+		)
 		items = fetch_rab_job_items(11, queryset=[row])
 		item = items[0]
 		self.assertIsNone(item.unit_price)
 		self.assertIsNone(item.total_price)
 		self.assertIsNone(item.unit_name)
-
-	def test_helper_functions_cover_edge_cases(self) -> None:
-		value = _to_decimal(Decimal("1.23"))
-		self.assertEqual(value, Decimal("1.23"))
-		self.assertIsNone(_to_decimal(object()))
-		self.assertIsNone(_multiply_decimal(None, Decimal("2")))
-		self.assertEqual(_multiply_decimal(Decimal("2"), Decimal("3")), Decimal("6"))
-		self.assertEqual(_decimal_to_string(Decimal("10.500")), "10.5")
-		self.assertEqual(_decimal_to_string(Decimal("0")), "0")
-		self.assertIsNone(_decimal_to_string(None))
+		self.assertIsNone(item.analysis_code)
 
 	def test_default_queryset_invokes_select_related_chain(self) -> None:
 		with patch("target_bid.services.RabItem") as mock_model:
@@ -222,7 +323,16 @@ class FetchRabJobItemsTests(SimpleTestCase):
 		self.assertEqual(result, ["rab-77"])
 
 	def test_rab_job_item_service_maps_rows(self) -> None:
-		row = SimpleNamespace(id=9, name="Item", unit=None, rab_item_header=None, price=100, volume=2, custom_ahs_id=None)
+		row = SimpleNamespace(
+			id=9,
+			name="Item",
+			unit=None,
+			rab_item_header=None,
+			price=100,
+			volume=2,
+			custom_ahs_id=None,
+			analysis_code=None,
+		)
 		repository = SimpleNamespace(for_rab=lambda rab_id: [row])
 		mapper = RabJobItemMapper()
 		service = RabJobItemService(repository, mapper)
@@ -230,6 +340,56 @@ class FetchRabJobItemsTests(SimpleTestCase):
 		items = service.get_items(5)
 		self.assertEqual(len(items), 1)
 		self.assertEqual(items[0].total_price, Decimal("200"))
+
+	def test_service_filters_analysis_code_items(self) -> None:
+		row = SimpleNamespace(
+			id=3,
+			name="Mobilisasi",
+			unit=None,
+			rab_item_header=None,
+			price=100,
+			volume=1,
+			custom_ahs_id=None,
+			analysis_code="AT.19-1",
+		)
+		repository = SimpleNamespace(for_rab=lambda _: [row])
+		service = RabJobItemService(repository, RabJobItemMapper())
+
+		self.assertEqual(service.get_items(1), [])
+
+	def test_service_keeps_custom_items_even_with_code(self) -> None:
+		row = SimpleNamespace(
+			id=4,
+			name="Custom Item",
+			unit=None,
+			rab_item_header=None,
+			price=50,
+			volume=2,
+			custom_ahs_id=99,
+			analysis_code="AT.20-1",
+		)
+		repository = SimpleNamespace(for_rab=lambda _: [row])
+		service = RabJobItemService(repository, RabJobItemMapper())
+
+		items = service.get_items(1)
+		self.assertEqual(len(items), 1)
+		self.assertEqual(items[0].custom_ahs_id, 99)
+
+	def test_service_filters_named_safety_items(self) -> None:
+		row = SimpleNamespace(
+			id=5,
+			name="Alat Pemadam Api Ringan (APAR)",
+			unit=None,
+			rab_item_header=None,
+			price=10,
+			volume=1,
+			custom_ahs_id=None,
+			analysis_code=None,
+		)
+		repository = SimpleNamespace(for_rab=lambda _: [row])
+		service = RabJobItemService(repository, RabJobItemMapper())
+
+		self.assertEqual(service.get_items(1), [])
 
 
 class FetchRabJobItemsViewTests(SimpleTestCase):
@@ -248,6 +408,7 @@ class FetchRabJobItemsViewTests(SimpleTestCase):
 			rab_item_header_id=4,
 			rab_item_header_name="Pekerjaan Persiapan",
 			custom_ahs_id=None,
+			analysis_code="AT.02",
 		)
 		with patch("target_bid.views.fetch_rab_job_items", return_value=[mock_item]) as mock_fetch:
 			response = fetch_rab_job_items_view(request, rab_id=99)
