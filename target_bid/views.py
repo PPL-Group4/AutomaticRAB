@@ -2,9 +2,7 @@ from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
-from .services import fetch_rab_job_items
-
-
+from target_bid.services import fetch_rab_job_items
 @api_view(["GET"])
 def fetch_rab_job_items_view(request, rab_id: int):
 	"""Return all job items within a RAB, including their unit prices."""
