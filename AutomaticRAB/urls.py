@@ -15,19 +15,8 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
-from django.urls import include, path
-from django.shortcuts import redirect
-
-from automatic_price_matching.views import recompute_total_cost
+from django.urls import path
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path("api/", include("automatic_job_matching.urls")),
-    path("excel_parser/", include("excel_parser.urls")),
-    path("pdf_parser/", include("pdf_parser.urls")),
-    path("", lambda request: redirect("job-matching")),
-    path('automatic_price_matching/', include('automatic_price_matching.urls')),
-    path("cost_weight/", include("cost_weight.urls")),
-    path("api/recompute_total_cost/", recompute_total_cost),
 ]
-
