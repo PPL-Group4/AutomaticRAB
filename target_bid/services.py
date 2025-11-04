@@ -22,6 +22,7 @@ class RabJobItem:
     rab_item_header_name: Optional[str]
     custom_ahs_id: Optional[int]
     analysis_code: Optional[str]
+    is_locked: Optional[bool] = None
 
     def to_dict(self) -> dict:
         """Serialise the job item into JSON-safe primitives."""
@@ -38,6 +39,16 @@ class RabJobItem:
             "custom_ahs_id": self.custom_ahs_id,
             "analysis_code": self.analysis_code,
         }
+
+class LockedItemRule:
+    """Marks RAB job items as non-adjustable if they are flagged as locked/inflexible."""
+
+    def decide(self, item: RabJobItem) -> Optional[bool]:
+        # Some RAB models might store this as 'is_locked', 'locked', or 'inflexible'
+        locked_flag = getattr(item, "is_locked", None)
+        if locked_flag is True:
+            return True
+        return None
 
 
 class RabItemRepository(Protocol):
@@ -115,6 +126,7 @@ class RabJobItemMapper:
             rab_item_header_name=getattr(header, "name", None),
             custom_ahs_id=getattr(row, "custom_ahs_id", None),
             analysis_code=analysis_code,
+            is_locked=getattr(row, "is_locked", False),
         )
 
 
@@ -231,6 +243,7 @@ _DEFAULT_RULES: Sequence[DecisionRule] = (
     _DEFAULT_NAME_RULE,
     CustomAhsOverrideRule(),
     AnalysisCodeRule(),
+    LockedItemRule(),
 )
 _DEFAULT_NON_ADJUSTABLE_POLICY = NonAdjustableEvaluator(_DEFAULT_RULES)
 
