@@ -5,6 +5,7 @@ import tempfile
 import os
 from decimal import Decimal
 from .services.pipeline import parse_pdf_to_dtos
+import cProfile, pstats, io
 
 # Template constants
 RAB_CONVERTED_TEMPLATE = "rab_converted.html"
@@ -44,8 +45,15 @@ def rab_converted_pdf(request):
                 tmp_path = tmp.name
 
             # Parse PDF
+            profiler = cProfile.Profile()
+            profiler.enable()
             rows = parse_pdf_to_dtos(tmp_path) or []
             rows = _convert_decimals(rows)
+            profiler.disable()
+
+            s = io.StringIO()
+            pstats.Stats(profiler, stream=s).sort_stats(pstats.SortKey.TIME).print_stats(15)
+            print(s.getvalue())
             
             return JsonResponse({"rows": rows}, status=200)
             
