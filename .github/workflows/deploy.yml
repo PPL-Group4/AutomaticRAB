@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
 
 env:
-  DOCKER_IMAGE_NAME: ghazafadhlilbaqi/automatic-rab
+  DOCKER_IMAGE_NAME: ghazafadhlilbaqi/autorab-ppl
 
 jobs:
   build:
@@ -84,25 +84,25 @@ jobs:
           envs: ENVIRONMENT,TAG,PORT,DOCKER_IMAGE
           script: |
             # Navigate to app directory
-            cd /home/${{ secrets.SSH_USERNAME }}/automatic-rab-${ENVIRONMENT}
+            cd /home/${{ secrets.SSH_USERNAME }}/autorab-ppl-${ENVIRONMENT}
             
             # Pull latest image
             docker pull ${DOCKER_IMAGE}
             
             # Stop and remove existing container
-            docker stop automatic-rab-${ENVIRONMENT} 2>/dev/null || true
-            docker rm automatic-rab-${ENVIRONMENT} 2>/dev/null || true
+            docker stop autorab-ppl-${ENVIRONMENT} 2>/dev/null || true
+            docker rm autorab-ppl-${ENVIRONMENT} 2>/dev/null || true
             
             # Run new container
             docker run -d \
-              --name automatic-rab-${ENVIRONMENT} \
+              --name autorab-ppl-${ENVIRONMENT} \
               --restart unless-stopped \
               -p ${PORT}:8000 \
               --env-file .env \
-              -v /home/${{ secrets.SSH_USERNAME }}/automatic-rab-${ENVIRONMENT}/media:/tmp/media \
+              -v /home/${{ secrets.SSH_USERNAME }}/autorab-ppl-${ENVIRONMENT}/media:/tmp/media \
               ${DOCKER_IMAGE}
             
             # Clean up old images for this environment only (keep last 3 versions)
-            docker images ghazafadhlilbaqi/automatic-rab:${TAG}-* --format "{{.ID}}" | tail -n +4 | xargs -r docker rmi -f 2>/dev/null || true
+            docker images ghazafadhlilbaqi/autorab-ppl:${TAG}-* --format "{{.ID}}" | tail -n +4 | xargs -r docker rmi -f 2>/dev/null || true
             
             echo "Deployment of ${ENVIRONMENT} environment completed successfully!"
