@@ -1,0 +1,1326 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<style>
+  .price-origin-wrapper {
+    width: 100%;
+  }
+
+  .price-origin-wrapper .price-input {
+    width: 100%;
+  }
+
+  .price-origin-badge {
+    font-size: 0.7rem;
+    letter-spacing: 0.02em;
+  }
+
+  .price-input-auto {
+    background-color: #e7f1ff;
+    border-color: rgba(13, 110, 253, 0.35);
+  }
+
+  .price-input-manual {
+    background-color: #fff5e6;
+    border-color: rgba(255, 193, 7, 0.45);
+  }
+
+  table th:nth-child(8),
+  table td:nth-child(8) {
+    width: 100px;          /* adjust to fit your layout */
+    max-width: 100px;
+    min-width: 100px;
+    text-align: justify;     /* keeps prices neatly aligned */
+  }
+</style>
+<div class="section-box position-relative">
+  <h5 class="section-title">RAB Preview</h5>
+
+  <div class="row g-3 mb-3">
+    <div class="col-lg-6">
+      <form id="excelUploadForm" enctype="multipart/form-data" class="h-100 p-3 border rounded bg-light-subtle">
+        <label for="excelFileInput" class="form-label fw-semibold">Upload Excel</label>
+        <div class="input-group">
+          <input type="file" name="file" id="excelFileInput" accept=".xls,.xlsx" class="form-control">
+          <button type="submit" class="btn btn-primary" style="background-color:#00365a;">Upload & Preview Excel</button>
+        </div>
+        <small class="text-muted">Format didukung: .xls, .xlsx</small>
+      </form>
+    </div>
+    <div class="col-lg-6">
+      <form id="pdfUploadForm" enctype="multipart/form-data" class="h-100 p-3 border rounded bg-light-subtle">
+        <label for="pdfFileInput" class="form-label fw-semibold">Upload PDF</label>
+        <div class="input-group">
+          <input type="file" name="pdf_file" id="pdfFileInput" accept=".pdf" class="form-control">
+          <button type="submit" class="btn btn-primary" style="background-color:#00365a;">Upload & Preview PDF</button>
+        </div>
+        <small class="text-muted">Format didukung: .pdf</small>
+      </form>
+    </div>
+  </div>
+
+  <div id="errorContainer"></div>
+  <div id="loadingSpinner" class="text-center py-4" style="display:none;">
+    <div class="spinner-border text-primary" role="status">
+      <span class="visually-hidden">Loading...</span>
+    </div>
+    <p class="mt-2">Memproses file, mohon tunggu...</p>
+  </div>
+
+  <div id="rabTables" class="mt-3"></div>
+
+  <div class="grand-total-box card mt-4 p-3 shadow-sm" id="grandTotalBox" style="display:none; max-width:400px;">
+    <div class="d-flex justify-content-between"><span class="fw-bold">Total</span> <span id="grandTotal">Rp. 0</span></div>
+    <div class="d-flex justify-content-between"><span class="fw-bold">PPN (10%)</span> <span id="ppn">Rp. 0</span></div>
+    <div class="d-flex justify-content-between"><span class="fw-bold">Total (Termasuk PPN)</span> <span id="totalWithPpn">Rp. 0</span></div>
+    <div class="d-flex justify-content-between"><span class="fw-bold">Terbilang</span> <span id="terbilang">NOL RUPIAH</span></div>
+  </div>
+
+  <!-- Cost Weight Analysis Chart -->
+  <div class="card mt-4 p-4 shadow-sm" id="costWeightChartBox" style="display:none;">
+    <h5 class="mb-3">📊 Cost Weight Analysis</h5>
+    <div class="row">
+      <div class="col-lg-7">
+        <canvas id="costWeightPieChart" style="max-height: 400px;"></canvas>
+      </div>
+      <div class="col-lg-5">
+        <div id="costWeightLegend" style="max-height: 400px; overflow-y: auto;"></div>
+      </div>
+    </div>
+  </div>
+
+  <a href="#" class="btn btn-outline-primary mt-3">+ Tambah Kategori Pekerjaan / Pilih Referensi RAB</a>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+  {{ block.super }}
+
+  // Debug: Check if Chart.js is loaded
+  console.log("Chart.js loaded:", typeof Chart !== 'undefined');
+  console.log("Cost Weight Chart Box element:", document.getElementById("costWeightChartBox"));
+
+  const MATCH_ENDPOINT = "{% url 'match-best' %}";
+  const RECOMPUTE_ENDPOINT = "/api/recompute_total_cost/";
+  const EXCEL_UPLOAD_ENDPOINT = "{% url 'preview_rows' %}";
+  const PDF_UPLOAD_ENDPOINT = "{% url 'pdf_parser:rab_converted_pdf' %}";
+  const suggestionCache = new Map();
+  const dropdownRequestState = new WeakMap();
+  const MANUAL_SUGGESTION_LIMIT = 12;
+  const PRICE_OVERRIDE_CONFIRM_MESSAGE = "Harga ini diisi otomatis oleh sistem. Apakah Anda yakin ingin menimpa nilai tersebut secara manual?";
+
+  function showError(message) {
+    const errorContainer = document.getElementById("errorContainer");
+    errorContainer.innerHTML = `<div class="alert alert-danger">${message}</div>`;
+    setTimeout(() => (errorContainer.innerHTML = ""), 4000);
+  }
+
+  function showLoading() {
+    document.getElementById("loadingSpinner").style.display = "block";
+  }
+  function hideLoading() {
+    document.getElementById("loadingSpinner").style.display = "none";
+  }
+
+  const excelUploadForm = document.getElementById("excelUploadForm");
+  const pdfUploadForm = document.getElementById("pdfUploadForm");
+
+  if (excelUploadForm) {
+    excelUploadForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const fileInput = document.getElementById("excelFileInput");
+      if (!fileInput.files.length) {
+        showError("Silakan pilih file Excel terlebih dahulu");
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append("file", fileInput.files[0]);
+
+      try {
+        showLoading();
+        const response = await fetch(EXCEL_UPLOAD_ENDPOINT, { method: "POST", body: formData });
+        const data = await response.json();
+        hideLoading();
+
+        const rows = data.rows || data.excel_standard || data.excel_apendo;
+        if (rows) {
+          renderTables(rows, { sourceType: "excel" });
+          fileInput.value = "";
+        } else {
+          showError("Gagal memproses file: " + (data.error || "Terjadi kesalahan yang tidak diketahui"));
+        }
+      } catch (error) {
+        hideLoading();
+        showError("Terjadi kesalahan saat mengunggah file: " + error.message);
+      }
+    });
+  }
+
+  if (pdfUploadForm) {
+    pdfUploadForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const fileInput = document.getElementById("pdfFileInput");
+      if (!fileInput.files.length) {
+        showError("Silakan pilih file PDF terlebih dahulu");
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append("pdf_file", fileInput.files[0]);
+
+      try {
+        showLoading();
+        const response = await fetch(PDF_UPLOAD_ENDPOINT, { method: "POST", body: formData });
+        const data = await response.json();
+        hideLoading();
+
+        if (Array.isArray(data.rows) && data.rows.length) {
+          renderTables(data.rows, { sourceType: "pdf" });
+          fileInput.value = "";
+        } else {
+          showError("Gagal memproses file: " + (data.error || "Tidak ada baris yang ditemukan"));
+        }
+      } catch (error) {
+        hideLoading();
+        showError("Terjadi kesalahan saat mengunggah file: " + error.message);
+      }
+    });
+  }
+
+  // ---------- MAIN TABLE RENDER ----------
+  function renderTables(rows, options = {}) {
+    const container = document.getElementById("rabTables");
+    container.innerHTML = "";
+
+    if (!Array.isArray(rows) || !rows.length) {
+      document.getElementById("grandTotalBox").style.display = "none";
+      showError("Tidak ada baris yang dapat ditampilkan");
+      return;
+    }
+
+    const hasSections = rows.some(row => row && row.is_section);
+    if (hasSections) {
+      renderSectionedTables(rows, container);
+    } else {
+      renderFlatTable(rows, container);
+    }
+
+    document.getElementById("grandTotalBox").style.display = "block";
+    updateGrandTotalFromRows();
+  }
+
+  function renderSectionedTables(rows, container) {
+    let total = 0;
+    let currentTable = null;
+    let tbody = null;
+    let bujakCounter = 0;
+
+    rows.forEach((row, rowIndex) => {
+      const skipKeywords = ["PAJAK", "JUMLAH SETELAH PAJAK", "DIBULATKAN", "TERBILANG"];
+      if (row.description && skipKeywords.some(k => row.description.toUpperCase().includes(k))) {
+        return;
+      }
+
+      if (row.is_section && row.section_type === "CATEGORY" && row.number === "A") {
+        bujakCounter++;
+        const header = document.createElement("div");
+        header.classList.add("alert", "alert-warning", "fw-bold", "mt-3");
+        header.innerText = `BUJAK ${bujakCounter}`;
+        container.appendChild(header);
+
+        const table = document.createElement("table");
+        table.classList.add("table", "table-bordered", "table-sm", "align-middle", "mb-4");
+        table.innerHTML = `
+          <thead class="table-light">
+            <tr>
+              <th>No.</th>
+              <th>Uraian Pekerjaan</th>
+              <th>Kode</th>
+              <th>Status Pencocokan</th>
+              <th>Hasil AHSP</th>
+              <th>Volume</th>
+              <th>SAT</th>
+              <th>Harga Satuan (Rp.)</th>
+              <th>Jumlah </th>
+            </tr>
+          </thead>
+        `;
+        const newBody = document.createElement("tbody");
+        table.appendChild(newBody);
+        container.appendChild(table);
+        currentTable = table;
+        tbody = newBody;
+      }
+
+      if (!currentTable || !tbody) {
+        return;
+      }
+
+      if (row.is_section && row.section_type === "CATEGORY") {
+        const tr = document.createElement("tr");
+        const numberCell = document.createElement("td");
+        numberCell.textContent = row.number || "";
+        tr.appendChild(numberCell);
+
+        const titleCell = document.createElement("td");
+        titleCell.colSpan = 8;
+        const strong = document.createElement("strong");
+        strong.textContent = row.description || "";
+        titleCell.appendChild(strong);
+        tr.appendChild(titleCell);
+        tbody.appendChild(tr);
+        return;
+      }
+
+      if (row.is_section && row.section_type === "SECTION") {
+        const tr = document.createElement("tr");
+        const numberCell = document.createElement("td");
+        numberCell.textContent = row.number || "";
+        tr.appendChild(numberCell);
+
+        const titleCell = document.createElement("td");
+        titleCell.colSpan = 8;
+        const emphasis = document.createElement("em");
+        emphasis.textContent = row.description || "";
+        titleCell.appendChild(emphasis);
+        tr.appendChild(titleCell);
+        tbody.appendChild(tr);
+        return;
+      }
+
+      if (row.is_section) {
+        return;
+      }
+
+      const tr = buildDataRow(row, rowIndex);
+      tbody.appendChild(tr);
+      total += parseCurrencyNumber(row.total_price);
+    });
+
+    updateGrandTotal(total);
+  }
+
+  function renderFlatTable(rows, container) {
+    let total = 0;
+    const table = document.createElement("table");
+    table.classList.add("table", "table-bordered", "table-sm", "align-middle", "mb-4");
+    table.innerHTML = `
+      <thead class="table-light">
+        <tr>
+          <th>No.</th>
+          <th>Uraian Pekerjaan</th>
+          <th>Kode</th>
+          <th>Status Pencocokan</th>
+          <th>Hasil AHSP</th>
+          <th>Volume</th>
+          <th>SAT</th>
+          <th>Harga Sat (Rp.)</th>
+          <th>Jumlah </th>
+        </tr>
+      </thead>
+    `;
+    const tbody = document.createElement("tbody");
+    table.appendChild(tbody);
+    container.appendChild(table);
+
+    rows.forEach((row, rowIndex) => {
+      const tr = buildDataRow(row, rowIndex, { flatNumbering: true });
+      tbody.appendChild(tr);
+      total += parseCurrencyNumber(row.total_price);
+    });
+
+    updateGrandTotal(total);
+  }
+
+  function buildDataRow(row, rowIndex, options = {}) {
+    const tr = document.createElement("tr");
+    const rowKey = row.row_key || row.rowKey || `row-${rowIndex}`;
+    tr.dataset.rowKey = rowKey;
+
+    const numberCell = document.createElement("td");
+    numberCell.textContent = options.flatNumbering ? (row.number || rowIndex + 1) : (row.number || "");
+    tr.appendChild(numberCell);
+
+    const descriptionCell = document.createElement("td");
+    descriptionCell.textContent = row.description || "";
+    tr.appendChild(descriptionCell);
+
+    const analysisCell = document.createElement("td");
+    analysisCell.classList.add("analysis-code-cell");
+    analysisCell.textContent = row.analysis_code || row.analysisCode || row.code || "";
+    analysisCell.dataset.rowKey = rowKey;
+    tr.appendChild(analysisCell);
+
+    const statusCell = document.createElement("td");
+    statusCell.textContent = formatMatchStatusText(row);
+    tr.appendChild(statusCell);
+
+    const matchCell = document.createElement("td");
+    populateMatchCell(matchCell, row, analysisCell, statusCell);
+    tr.appendChild(matchCell);
+
+    const volumeCell = document.createElement("td");
+    const volumeInput = document.createElement("input");
+    volumeInput.type = "number";
+    volumeInput.className = "form-control form-control-sm volume-input";
+    volumeInput.value = parseCurrencyNumber(row.volume);
+    volumeInput.min = "0";
+    volumeInput.step = "0.01";
+    volumeInput.dataset.rowIndex = rowIndex;
+    volumeInput.dataset.rowKey = rowKey;
+    volumeCell.appendChild(volumeInput);
+    tr.appendChild(volumeCell);
+
+    const unitCell = document.createElement("td");
+    unitCell.textContent = row.unit || row.sat || "";
+    tr.appendChild(unitCell);
+
+    const priceCell = document.createElement("td");
+    const priceWrapper = document.createElement("div");
+    priceWrapper.className = "price-origin-wrapper d-flex flex-column align-items-start gap-1";
+
+    const priceInput = document.createElement("input");
+    priceInput.type = "number";
+    priceInput.className = "form-control form-control-sm price-input";
+    priceInput.value = parseCurrencyNumber(row.price);
+    priceInput.min = "0";
+    priceInput.step = "0.01";
+    priceInput.dataset.rowIndex = rowIndex;
+    priceInput.dataset.rowKey = rowKey;
+    priceWrapper.appendChild(priceInput);
+
+    const badge = document.createElement("span");
+    badge.className = "price-origin-badge badge rounded-pill";
+    badge.textContent = "Manual";
+    priceWrapper.appendChild(badge);
+
+    priceCell.appendChild(priceWrapper);
+    tr.appendChild(priceCell);
+
+    const initialOrigin = ((row.price_origin || row.priceOrigin || "").toLowerCase() === "auto") ? "auto" : "manual";
+    decoratePriceInput(priceInput, { initialOrigin });
+
+    const totalCell = document.createElement("td");
+    totalCell.classList.add("total-cell");
+    totalCell.textContent = "Rp. " + formatCurrencyValue(row.total_price);
+    tr.appendChild(totalCell);
+
+    return tr;
+  }
+
+  function refreshTooltip(element) {
+    if (!element || typeof window === "undefined" || !window.bootstrap || !bootstrap.Tooltip) {
+      return;
+    }
+    const existing = bootstrap.Tooltip.getInstance(element);
+    if (existing) {
+      existing.dispose();
+    }
+    if (element.getAttribute("title")) {
+      new bootstrap.Tooltip(element);
+    }
+  }
+
+  function updatePriceOriginUI(priceInput, origin, options = {}) {
+    if (!priceInput) {
+      return;
+    }
+
+    const normalizedOrigin = origin === "auto" ? "auto" : "manual";
+    priceInput.dataset.origin = normalizedOrigin;
+    priceInput.classList.remove("price-input-auto", "price-input-manual");
+    priceInput.classList.add(normalizedOrigin === "auto" ? "price-input-auto" : "price-input-manual");
+
+    const wrapper = priceInput.closest(".price-origin-wrapper");
+    if (wrapper) {
+      let badge = wrapper.querySelector(".price-origin-badge");
+      if (!badge) {
+        badge = document.createElement("span");
+        badge.className = "price-origin-badge badge rounded-pill";
+        badge.textContent = "";
+        wrapper.appendChild(badge);
+      }
+      const baseClass = "price-origin-badge badge rounded-pill";
+      if (normalizedOrigin === "auto") {
+        badge.className = `${baseClass} bg-info-subtle text-info-emphasis`;
+        badge.textContent = "Auto";
+      } else {
+        badge.className = `${baseClass} bg-warning-subtle text-warning-emphasis`;
+        badge.textContent = "Manual";
+      }
+    }
+
+    const tooltipText = normalizedOrigin === "auto"
+      ? "Harga ini berasal dari referensi otomatis sistem."
+      : "Harga ini saat ini merupakan nilai manual.";
+    priceInput.setAttribute("data-bs-toggle", "tooltip");
+    priceInput.setAttribute("data-bs-placement", "top");
+    priceInput.setAttribute("title", tooltipText);
+
+    if (!options.skipTooltipRefresh) {
+      refreshTooltip(priceInput);
+    }
+  }
+
+  function decoratePriceInput(priceInput, { initialOrigin = "manual" } = {}) {
+    if (!priceInput) {
+      return;
+    }
+
+    const wrapper = priceInput.closest(".price-origin-wrapper");
+    if (wrapper && !wrapper.querySelector(".price-origin-badge")) {
+      const badge = document.createElement("span");
+      badge.className = "price-origin-badge badge rounded-pill";
+      badge.textContent = "Manual";
+      wrapper.appendChild(badge);
+    }
+
+    const normalizedOrigin = initialOrigin === "auto" ? "auto" : "manual";
+    priceInput.dataset.overrideMessage = PRICE_OVERRIDE_CONFIRM_MESSAGE;
+    priceInput.dataset.origin = normalizedOrigin;
+    priceInput.dataset.manualConfirmed = normalizedOrigin === "auto" ? "false" : "true";
+    priceInput.dataset.previousValue = priceInput.value;
+
+    updatePriceOriginUI(priceInput, normalizedOrigin);
+  }
+
+  function shouldProceedWithPriceChange(priceInput, event) {
+    if (!priceInput) {
+      return true;
+    }
+
+    if (!event.isTrusted) {
+      priceInput.dataset.previousValue = priceInput.value;
+      return true;
+    }
+
+    const origin = priceInput.dataset.origin || "manual";
+    const isConfirmedManual = priceInput.dataset.manualConfirmed === "true";
+
+    if (origin === "auto" && !isConfirmedManual) {
+      const message = priceInput.dataset.overrideMessage || PRICE_OVERRIDE_CONFIRM_MESSAGE;
+      const confirmed = window.confirm(message);
+      if (!confirmed) {
+        const revertValue = priceInput.dataset.previousValue !== undefined ? priceInput.dataset.previousValue : "";
+        priceInput.value = revertValue;
+        updatePriceOriginUI(priceInput, "auto");
+        priceInput.dataset.manualConfirmed = "false";
+        refreshTooltip(priceInput);
+        return false;
+      }
+    }
+
+    updatePriceOriginUI(priceInput, "manual");
+    priceInput.dataset.manualConfirmed = "true";
+    priceInput.dataset.previousValue = priceInput.value;
+    return true;
+  }
+
+  document.addEventListener("focusin", (event) => {
+    if (event.target && event.target.classList && event.target.classList.contains("price-input")) {
+      event.target.dataset.previousValue = event.target.value;
+    }
+  });
+
+  // ---------- AUTO PRICE MATCHING LOGIC ----------
+  let backendRecomputeTimeout = null;
+  
+  document.addEventListener("input", async (event) => {
+    if (!event.target.classList.contains("volume-input") && !event.target.classList.contains("price-input")) return;
+
+    if (event.target.classList.contains("price-input")) {
+      const proceed = shouldProceedWithPriceChange(event.target, event);
+      if (!proceed) {
+        return;
+      }
+    }
+
+    const row = event.target.closest("tr");
+    if (!row) {
+      return;
+    }
+    const volumeInput = row.querySelector(".volume-input");
+    const priceInput = row.querySelector(".price-input");
+    const totalCell = row.querySelector(".total-cell");
+
+    const volume = parseFloat(volumeInput.value) || 0;
+    const price = parseFloat(priceInput.value) || 0;
+
+    // Instant UI update (no delay)
+    const total = volume * price;
+    totalCell.textContent = "Rp. " + total.toLocaleString("id-ID", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+    // Update grand total immediately
+    updateGrandTotalFromRows();
+
+    // Debounce backend recomputation: wait 800ms after last keystroke
+    if (backendRecomputeTimeout) {
+      clearTimeout(backendRecomputeTimeout);
+    }
+    
+    backendRecomputeTimeout = setTimeout(async () => {
+      // Backend recomputation (precise rounding & persistence)
+      try {
+        const analysisCell = row.querySelector(".analysis-code-cell");
+        const code = analysisCell ? analysisCell.textContent.trim() : "";
+        const rowKey = row.dataset.rowKey || null;
+        const payload = { row_key: rowKey, volume, unit_price: price };
+        if (code) {
+          payload.code = code;
+          payload.analysis_code = code;
+        }
+
+        const response = await fetch(RECOMPUTE_ENDPOINT, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        const data = await response.json();
+        if (response.ok && data.total_cost !== undefined && data.total_cost !== null) {
+          const precise = parseFloat(data.total_cost);
+          if (!Number.isNaN(precise)) {
+            totalCell.textContent = "Rp. " + precise.toLocaleString("id-ID", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+          }
+          if (data.unit_price !== undefined && data.unit_price !== null) {
+            const resolvedUnit = parseFloat(data.unit_price);
+            if (!Number.isNaN(resolvedUnit)) {
+              priceInput.value = resolvedUnit;
+              priceInput.dataset.previousValue = priceInput.value;
+            }
+          }
+          // Update grand total but don't reset pie chart timer
+          updateGrandTotalFromRows(false);
+        }
+      } catch (err) {
+        console.warn("Fetch error:", err);
+      }
+    }, 800); // Wait 800ms before backend call
+  });
+
+  // ---------- Grand Total Update ----------
+  let costWeightChart = null;
+  let chartUpdateTimeout = null;
+
+  function updateGrandTotalFromRows(shouldUpdateChart = true) {
+    let grand = 0;
+    document.querySelectorAll(".total-cell").forEach(cell => {
+      let text = cell.textContent.replace(/[^\d,.-]/g, "").replace(/\./g, "").replace(",", ".");
+      const val = parseFloat(text) || 0;
+      grand += val;
+    });
+    
+    // Update Grand Total immediately (no delay)
+    updateGrandTotal(grand);
+    
+    // Only reset pie chart timer if triggered by user input (not backend callback)
+    if (shouldUpdateChart) {
+      if (chartUpdateTimeout) {
+        clearTimeout(chartUpdateTimeout);
+      }
+      chartUpdateTimeout = setTimeout(() => {
+        updateCostWeightChart();
+      }, 2000); // Wait 2 seconds before updating chart
+    }
+  }
+
+  function updateGrandTotal(total) {
+    document.getElementById("grandTotal").innerText = "Rp. " + total.toLocaleString();
+    const ppn = total * 0.1;
+    document.getElementById("ppn").innerText = "Rp. " + ppn.toLocaleString();
+    document.getElementById("totalWithPpn").innerText = "Rp. " + (total + ppn).toLocaleString();
+    document.getElementById("terbilang").innerText =
+      total === 0 ? "NOL RUPIAH" : numberToWords(total + ppn).toUpperCase();
+  }
+
+  function updateCostWeightChart() {
+    // Collect all items with their costs
+    const items = [];
+    const tables = document.querySelectorAll("#rabTables table");
+    
+    tables.forEach(table => {
+      const rows = table.querySelectorAll("tbody tr");
+      rows.forEach(row => {
+        // Get description from second td (index 1)
+        const cells = row.querySelectorAll("td");
+        if (cells.length < 9) return; // Skip if not enough cells
+        
+        const descCell = cells[1]; // Uraian Pekerjaan
+        const totalCell = row.querySelector(".total-cell");
+        
+        if (descCell && totalCell) {
+          const description = descCell.textContent.trim();
+          const totalText = totalCell.textContent.replace(/[^\d,.-]/g, "").replace(/\./g, "").replace(",", ".");
+          const cost = parseFloat(totalText) || 0;
+          
+          if (cost > 0 && description && description !== "") {
+            items.push({ name: description, cost: cost });
+          }
+        }
+      });
+    });
+
+    console.log("Cost Weight Chart - Items found:", items.length, items);
+
+    if (items.length === 0) {
+      document.getElementById("costWeightChartBox").style.display = "none";
+      return;
+    }
+
+    // Calculate total and weights
+    const totalCost = items.reduce((sum, item) => sum + item.cost, 0);
+    items.forEach(item => {
+      item.weight = (item.cost / totalCost) * 100;
+    });
+
+    // Sort by cost descending
+    items.sort((a, b) => b.cost - a.cost);
+
+    // Take top 10 items for clarity
+    const topItems = items.slice(0, 10);
+    if (items.length > 10) {
+      const othersTotal = items.slice(10).reduce((sum, item) => sum + item.cost, 0);
+      topItems.push({ 
+        name: `Others (${items.length - 10} items)`, 
+        cost: othersTotal,
+        weight: (othersTotal / totalCost) * 100
+      });
+    }
+
+    // Prepare chart data
+    const labels = topItems.map(item => item.name);
+    const costs = topItems.map(item => item.cost);
+    const weights = topItems.map(item => item.weight);
+    const colors = [
+      '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', 
+      '#9966FF', '#FF9F40', '#FF6384', '#C9CBCF',
+      '#E7E9ED', '#FFA1B5', '#8DD3C7'
+    ];
+
+    // Show chart box
+    document.getElementById("costWeightChartBox").style.display = "block";
+
+    // Render chart
+    const ctx = document.getElementById("costWeightPieChart");
+    
+    if (costWeightChart) {
+      costWeightChart.destroy();
+    }
+
+    costWeightChart = new Chart(ctx, {
+      type: 'pie',
+      data: {
+        labels: labels,
+        datasets: [{
+          data: costs,
+          backgroundColor: colors,
+          borderWidth: 2,
+          borderColor: '#fff'
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            display: false
+          },
+          title: {
+            display: true,
+            text: 'Cost Distribution by Item',
+            font: {
+              size: 16,
+              weight: 'bold'
+            }
+          },
+          tooltip: {
+            callbacks: {
+              label: function(context) {
+                const label = context.label || '';
+                const value = context.parsed;
+                const weight = weights[context.dataIndex];
+                return `${label}: Rp ${value.toLocaleString('id-ID')} (${weight.toFixed(2)}%)`;
+              }
+            }
+          }
+        }
+      }
+    });
+
+    // Render custom legend
+    const legendContainer = document.getElementById("costWeightLegend");
+    legendContainer.innerHTML = '<h6 class="mb-3">Items Breakdown</h6>';
+    
+    topItems.forEach((item, index) => {
+      const legendItem = document.createElement('div');
+      legendItem.className = 'd-flex align-items-center mb-2 p-2 rounded';
+      legendItem.style.cursor = 'pointer';
+      legendItem.innerHTML = `
+        <div style="width: 20px; height: 20px; background: ${colors[index]}; border-radius: 4px; margin-right: 10px; flex-shrink: 0;"></div>
+        <div style="flex-grow: 1; font-size: 0.85rem;">
+          <div style="font-weight: 600; color: #333;">${item.name}</div>
+          <div style="font-size: 0.75rem; color: #666;">Rp ${item.cost.toLocaleString('id-ID')} (${item.weight.toFixed(2)}%)</div>
+        </div>
+      `;
+      legendItem.addEventListener('mouseenter', () => {
+        legendItem.style.background = '#f8f9fa';
+      });
+      legendItem.addEventListener('mouseleave', () => {
+        legendItem.style.background = 'transparent';
+      });
+      legendContainer.appendChild(legendItem);
+    });
+  }
+
+  function numberToWords(number) {
+    return number.toLocaleString("id-ID") + " rupiah";
+  }
+
+  function formatMatchStatusText(row) {
+    if (row.job_match_selected) {
+      if (row.job_match_selected.match_status === "Manual" || row.job_match_status === "manual") {
+        return "Manual";
+      }
+      return "Dipilih";
+    }
+
+    const status = row.job_match_status;
+    if (!status || status === "skipped") {
+      return "Skipped";
+    }
+    if (status === "error") {
+      return "Error";
+    }
+
+    const matches = normalizeMatches(row.job_match);
+    const fallback = matches.find(entry => entry && entry.match_status && !entry.code);
+    if (fallback) {
+      return fallback.match_status;
+    }
+
+    return status.replace(/(^|\s)\w/g, letter => letter.toUpperCase());
+  }
+
+  function populateMatchCell(cell, row, analysisCell, statusCell) {
+    cell.innerHTML = "";
+
+    if (row.job_match_status === "error") {
+      const errorNotice = document.createElement("div");
+      errorNotice.className = "text-danger small mb-2";
+      errorNotice.textContent = row.job_match_error ? `Error: ${row.job_match_error}` : "Error";
+      cell.appendChild(errorNotice);
+      renderManualInput(cell, row, analysisCell, statusCell, "Masukkan kode AHSP secara manual", {
+        noticeClass: "text-warning small mb-2"
+      });
+      return;
+    }
+
+    const matches = normalizeMatches(row.job_match);
+    const lookup = updateRowLookup(row, matches);
+    const selectableMatches = matches.filter(match => match && match.code);
+    const fallbackMessages = matches.filter(match => !match || !match.code);
+
+    if (row.job_match_status === "found" && selectableMatches.length === 1) {
+      const match = selectableMatches[0];
+      row.job_match_selected = match;
+      row.analysis_code = match.code;
+      analysisCell.textContent = match.code;
+      statusCell.textContent = "Dipilih";
+      statusCell.classList.add("text-success");
+
+      const span = document.createElement("span");
+      span.className = "text-success fw-semibold";
+      span.textContent = buildMatchLabel(match);
+      cell.appendChild(span);
+
+      const tr = analysisCell.closest("tr");
+      if (tr) {
+        setTimeout(() => setPriceForRow(match, tr), 0);
+      }
+
+      return;
+    }
+
+    if (!selectableMatches.length && !fallbackMessages.length) {
+      renderManualInput(cell, row, analysisCell, statusCell, "Masukkan kode AHSP secara manual", {
+        noticeClass: "text-warning small mb-2"
+      });
+      return;
+    }
+
+    if (selectableMatches.length) {
+      const helper = document.createElement("div");
+      helper.className = "fw-semibold small mb-2 text-dark";
+      helper.textContent = "Pilih kode yang sesuai atau gunakan input manual:";
+      cell.appendChild(helper);
+
+      selectableMatches.forEach(match => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "btn btn-sm btn-outline-primary w-100 text-start match-option mb-1";
+        const label = buildMatchLabel(match);
+        button.dataset.label = label;
+        if (match.code) {
+          button.dataset.code = match.code;
+        }
+        button.textContent = label;
+        button.addEventListener("click", () => {
+          handleMatchSelection(match, row, analysisCell, statusCell, cell, button);
+        });
+        cell.appendChild(button);
+      });
+    }
+
+    const manualLabel = fallbackMessages.length
+      ? (fallbackMessages[0] && fallbackMessages[0].match_status ? fallbackMessages[0].match_status : "Masukkan kode AHSP secara manual")
+      : "Masukkan kode AHSP secara manual";
+
+    renderManualInput(cell, row, analysisCell, statusCell, manualLabel, {
+      noticeClass: selectableMatches.length ? "text-muted small mb-2" : "text-warning small mb-2"
+    });
+  }
+
+  function normalizeMatches(matchData) {
+    if (!matchData) {
+      return [];
+    }
+    return Array.isArray(matchData) ? matchData : [matchData];
+  }
+
+  function buildMatchLabel(match) {
+    const pieces = [];
+    if (match.code) {
+      pieces.push(match.code);
+    }
+    if (match.name) {
+      pieces.push(match.name);
+    }
+    if (typeof match.confidence === "number") {
+      const pct = Math.round(match.confidence * 100);
+      pieces.push(`${pct}%`);
+    }
+    return pieces.length ? pieces.join(" – ") : "Pilih";
+  }
+
+  async function handleMatchSelection(match, row, analysisCell, statusCell, matchCell, button) {
+    row.job_match_selected = match;
+    row.analysis_code = match.code || "";
+    updateRowLookup(row, [match]);
+
+    analysisCell.textContent = row.analysis_code;
+    statusCell.textContent = "Dipilih";
+    statusCell.classList.add("text-success");
+
+    matchCell.querySelectorAll("button.match-option").forEach(btn => {
+      btn.classList.remove("btn-success");
+      btn.classList.add("btn-outline-primary");
+      if (btn.dataset.label) {
+        btn.textContent = btn.dataset.label;
+      }
+    });
+
+    button.classList.remove("btn-outline-primary");
+    button.classList.add("btn-success");
+    button.textContent = `Dipilih: ${button.dataset.label}`;
+
+    // AFTER selection: try to fetch unit price and set Harga Sat for this row
+    const tr = analysisCell.closest("tr");
+    if (tr) {
+      await setPriceForRow(match, tr);
+    }
+  }
+
+  function renderManualInput(cell, row, analysisCell, statusCell, label, options = {}) {
+    cell.style.position = "relative";
+
+    const group = document.createElement("div");
+    group.className = options.groupClass || "input-group input-group-sm manual-match-group";
+
+    const input = document.createElement("input");
+    input.type = "text";
+    input.className = "form-control";
+    input.placeholder = options.placeholder || "Masukkan kode AHSP";
+    input.value = row.analysis_code || "";
+    input.autocomplete = "off";
+
+    const dropdown = document.createElement("div");
+    dropdown.className = "dropdown-menu w-100";
+    dropdown.style.maxHeight = "200px";
+    dropdown.style.overflowY = "auto";
+    dropdown.style.display = "none";
+    dropdown.style.left = "0";
+    dropdown.style.top = "100%";
+    dropdown.style.zIndex = "1000";
+
+    const updateNotice = (message) => {
+      notice.textContent = message || label || "Needs Manual Input";
+    };
+
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "btn btn-primary";
+    button.textContent = "Gunakan";
+
+    const applyManual = async () => {
+      const value = input.value.trim();
+      if (!value) {
+        input.focus();
+        return;
+      }
+
+      const matched = findMatchByCode(row, value);
+      row.analysis_code = value;
+      row.job_match_selected = matched ? { ...matched, match_status: "Manual" } : {
+        code: value,
+        match_status: "Manual",
+      };
+      row.job_match_status = "manual";
+      updateRowLookup(row, matched ? [matched] : []);
+
+      if (matched && matched.name) {
+        updateNotice(`Manual: ${matched.name}`);
+      } else {
+        updateNotice(label);
+      }
+
+      analysisCell.textContent = value;
+      statusCell.textContent = "Manual";
+      statusCell.classList.add("text-success");
+
+      cell.querySelectorAll("button.match-option").forEach(btn => {
+        btn.classList.remove("btn-success");
+        btn.classList.add("btn-outline-primary");
+        if (btn.dataset.label) {
+          btn.textContent = btn.dataset.label;
+        }
+      });
+
+      button.classList.remove("btn-primary");
+      button.classList.add("btn-success");
+      button.textContent = "Dipakai";
+      dropdown.style.display = "none";
+
+      // AFTER manual apply: try to fetch unit price and set Harga Sat for this row
+      const tr = analysisCell.closest("tr");
+      if (tr) {
+        await setPriceForRow(row.job_match_selected || { code: value }, tr);
+      }
+    };
+
+    button.addEventListener("click", applyManual);
+    input.addEventListener("keydown", event => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        applyManual();
+      }
+    });
+
+    let dropdownDebounce;
+    const triggerDropdown = () => showDropdown(input, dropdown, row, label);
+    input.addEventListener("focus", triggerDropdown);
+    input.addEventListener("input", () => {
+      clearTimeout(dropdownDebounce);
+      dropdownDebounce = setTimeout(triggerDropdown, 200);
+    });
+    input.addEventListener("blur", () => {
+      setTimeout(() => {
+        dropdown.style.display = "none";
+      }, 150);
+    });
+
+    dropdown.addEventListener("mousedown", event => {
+      event.preventDefault();
+    });
+
+    group.appendChild(input);
+    group.appendChild(button);
+    cell.appendChild(group);
+    cell.appendChild(dropdown);
+  }
+
+  function showDropdown(input, dropdown, row, label) {
+    const query = input.value.trim();
+    const lookupMatches = filterMatches(Array.from(getMatchLookup(row).values()), query);
+
+    if (lookupMatches.length) {
+      renderDropdownOptions(dropdown, lookupMatches, input);
+    } else {
+      renderDropdownOptions(dropdown, [], input, { placeholderText: label || "Mencari saran..." });
+    }
+
+    const requestToken = Symbol("suggestion-request");
+    dropdownRequestState.set(dropdown, requestToken);
+
+    fetchAndStoreSuggestions(row, query).then(allMatches => {
+      if (dropdownRequestState.get(dropdown) !== requestToken) {
+        return;
+      }
+
+      const combined = filterMatches(dedupeMatches(allMatches), query);
+      if (combined.length) {
+        renderDropdownOptions(dropdown, combined, input);
+      } else {
+        renderDropdownOptions(dropdown, [], input, { placeholderText: "Tidak ada saran" });
+      }
+    });
+  }
+
+  function getMatchLookup(row) {
+    if (!row._matchLookup || !(row._matchLookup instanceof Map)) {
+      row._matchLookup = new Map();
+    }
+    return row._matchLookup;
+  }
+
+  function updateRowLookup(row, matches) {
+    const lookup = getMatchLookup(row);
+    const list = Array.isArray(matches) ? matches : [matches];
+    list.forEach(match => {
+      if (match && match.code) {
+        lookup.set(match.code.toLowerCase(), match);
+      }
+    });
+    return lookup;
+  }
+
+  function filterMatches(matches, query) {
+    const lowered = (query || "").trim().toLowerCase();
+    if (!lowered) {
+      return matches;
+    }
+    return matches.filter(match => {
+      if (!match || !match.code) {
+        return false;
+      }
+      const code = match.code.toLowerCase();
+      const name = (match.name || "").toLowerCase();
+      return code.includes(lowered) || name.includes(lowered);
+    });
+  }
+
+  function renderDropdownOptions(dropdown, matches, input, options = {}) {
+    const { placeholderText } = options;
+    dropdown.innerHTML = "";
+
+    if (!matches.length) {
+      if (placeholderText) {
+        const info = document.createElement("div");
+        info.className = "dropdown-item-text text-muted";
+        info.textContent = placeholderText;
+        dropdown.appendChild(info);
+        const width = input.getBoundingClientRect().width;
+        dropdown.style.minWidth = `${width}px`;
+        dropdown.style.display = "block";
+        dropdown.classList.add("show");
+      } else {
+        dropdown.style.display = "none";
+        dropdown.classList.remove("show");
+      }
+      return;
+    }
+
+    const width = input.getBoundingClientRect().width;
+    dropdown.style.minWidth = `${width}px`;
+
+    matches.slice(0, MANUAL_SUGGESTION_LIMIT).forEach(match => {
+      if (!match || !match.code) {
+        return;
+      }
+      const item = document.createElement("button");
+      item.type = "button";
+      item.className = "dropdown-item text-wrap";
+      item.textContent = `${match.code} – ${match.name || ""}`;
+      item.addEventListener("click", () => {
+        input.value = match.code;
+        dropdown.style.display = "none";
+        input.focus();
+      });
+      dropdown.appendChild(item);
+    });
+
+    const shouldShow = dropdown.childElementCount > 0;
+    dropdown.style.display = shouldShow ? "block" : "none";
+    dropdown.classList.toggle("show", shouldShow);
+  }
+
+  function dedupeMatches(matches) {
+    const map = new Map();
+    matches.forEach(match => {
+      if (!match || !match.code) {
+        return;
+      }
+      const key = match.code.toLowerCase();
+      if (!map.has(key)) {
+        map.set(key, match);
+      }
+    });
+    return Array.from(map.values());
+  }
+
+  function fetchRemoteSuggestions(row, query, limit = MANUAL_SUGGESTION_LIMIT) {
+    const trimmedQuery = (query || "").trim();
+    const description = trimmedQuery || (row.description || "").trim();
+
+    if (!description) {
+      return Promise.resolve([]);
+    }
+
+    const cacheKey = `${description}|${limit}`;
+    if (suggestionCache.has(cacheKey)) {
+      return suggestionCache.get(cacheKey);
+    }
+
+    const request = fetch(MATCH_ENDPOINT, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify({ description }),
+    })
+      .then(res => (res.ok ? res.json() : { match: [] }))
+      .then(data => {
+        const { match } = data || {};
+        if (!match) {
+          return [];
+        }
+        if (Array.isArray(match)) {
+          return match;
+        }
+        return match.code ? [match] : [];
+      })
+      .catch(() => []);
+
+    suggestionCache.set(cacheKey, request);
+    return request;
+  }
+
+  function fetchAndStoreSuggestions(row, query) {
+    return fetchRemoteSuggestions(row, query).then(results => {
+      updateRowLookup(row, results);
+      return Array.from(getMatchLookup(row).values());
+    });
+  }
+
+  function findMatchByCode(row, code) {
+    const lookup = getMatchLookup(row);
+    if (!code) {
+      return null;
+    }
+    return lookup.get(code.toLowerCase()) || null;
+  }
+
+  // Helper: parse numeric-ish strings into numbers
+  function parseCurrencyNumber(value) {
+    if (typeof value === "number") {
+      return Number.isFinite(value) ? value : 0;
+    }
+    if (value === null || value === undefined) {
+      return 0;
+    }
+    const numeric = parseFloat(String(value).replace(/[^0-9.-]/g, ""));
+    return Number.isFinite(numeric) ? numeric : 0;
+  }
+
+  function formatCurrencyValue(value) {
+    return parseCurrencyNumber(value).toLocaleString("id-ID", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+  }
+
+  function showMatchingSpinner(priceCell) {
+    priceCell.innerHTML = `
+      <div class="d-flex align-items-center justify-content-center text-secondary" style="gap:6px; font-size: 0.85rem;">
+        <div class="spinner-border spinner-border-sm text-secondary" role="status" style="width: 0.9rem; height: 0.9rem;"></div>
+        <span>Matching...</span>
+      </div>
+    `;
+  }
+
+  // ---------------- NEW: setPriceForRow helper ----------------
+  async function setPriceForRow(match, tr) {
+    const volumeInput = tr.querySelector(".volume-input");
+    const priceInput = tr.querySelector(".price-input");
+    const totalCell = tr.querySelector(".total-cell");
+    if (!priceInput) return;
+
+    // prefer any price present on match object (various keys)
+    const possiblePrice = match && (match.unit_price ?? match.price ?? match.unitPrice ?? match.unitPriceRp ?? null);
+    if (possiblePrice !== null && possiblePrice !== undefined && String(possiblePrice).trim() !== "") {
+      const num = parseFloat(String(possiblePrice).replace(/[^0-9.-]/g, ""));
+      if (!Number.isNaN(num)) {
+        priceInput.value = num;
+        priceInput.dataset.previousValue = priceInput.value;
+        priceInput.dataset.manualConfirmed = "false";
+        updatePriceOriginUI(priceInput, "auto");
+        priceInput.dispatchEvent(new Event("input", { bubbles: true }));
+        return;
+      }
+    }
+
+    // else, call backend recompute endpoint to resolve price by code + current volume
+    const code = match && match.code ? match.code : "";
+    if (!code) return;
+
+    const priceCell = priceInput.closest("td");
+    if (priceCell) {
+      showMatchingSpinner(priceCell);
+    }
+
+    const volume = volumeInput ? (parseFloat(volumeInput.value) || 0) : 0;
+    const rowKey = tr.dataset.rowKey || null;
+    const payload = { code, volume, row_key: rowKey };
+    if (code) {
+      payload.analysis_code = code;
+    }
+
+    try {
+      const resp = await fetch(RECOMPUTE_ENDPOINT, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (priceCell) {
+        priceCell.innerHTML = "";
+        priceCell.appendChild(priceInput.closest(".price-origin-wrapper"));
+      }
+
+      if (!resp.ok) {
+        return;
+      }
+      const data = await resp.json();
+      const serverUnit = data && (data.unit_price ?? data.unitPrice ?? null);
+      if (serverUnit !== null && serverUnit !== undefined && String(serverUnit).trim() !== "") {
+        const num = parseFloat(String(serverUnit).replace(/[^0-9.-]/g, ""));
+        if (!Number.isNaN(num)) {
+          priceInput.value = num;
+          priceInput.dataset.previousValue = priceInput.value;
+          priceInput.dataset.manualConfirmed = "false";
+          updatePriceOriginUI(priceInput, "auto");
+          // trigger existing input handler to recalc totals & backend rounding
+          priceInput.dispatchEvent(new Event("input", { bubbles: true }));
+
+          // if backend returned precise total, update total cell
+          if (data.total_cost !== undefined && totalCell) {
+            const precise = parseFloat(data.total_cost) || 0;
+            totalCell.textContent = "Rp. " + precise.toLocaleString("id-ID", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            updateGrandTotalFromRows(false); // Don't reset chart timer from backend callback
+          }
+        }
+      }
+    } catch (err) {
+      console.warn("Failed to fetch unit price for code:", code, err);
+      if (priceCell) {
+        priceCell.innerHTML = "";
+        priceCell.appendChild(priceInput.closest(".price-origin-wrapper"));
+      }
+    }
+  }
+</script>
+{% endblock %}

@@ -1,0 +1,108 @@
+name: Build and deploy Docker container to Azure VM - AutomaticRAB
+
+on:
+  push:
+    branches:
+      - development
+      - staging
+      - main
+  workflow_dispatch:
+
+env:
+  DOCKER_IMAGE_NAME: ghazafadhlilbaqi/autorab-ppl
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set environment based on branch
+        id: set-env
+        run: |
+          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            echo "ENVIRONMENT=production" >> $GITHUB_OUTPUT
+            echo "TAG=production" >> $GITHUB_OUTPUT
+            echo "PORT=8000" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.ref }}" == "refs/heads/staging" ]]; then
+            echo "ENVIRONMENT=staging" >> $GITHUB_OUTPUT
+            echo "TAG=staging" >> $GITHUB_OUTPUT
+            echo "PORT=8001" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.ref }}" == "refs/heads/development" ]]; then
+            echo "ENVIRONMENT=development" >> $GITHUB_OUTPUT
+            echo "TAG=development" >> $GITHUB_OUTPUT
+            echo "PORT=8002" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ env.DOCKER_IMAGE_NAME }}:${{ steps.set-env.outputs.TAG }}
+            ${{ env.DOCKER_IMAGE_NAME }}:${{ steps.set-env.outputs.TAG }}-${{ github.sha }}
+          cache-from: type=registry,ref=${{ env.DOCKER_IMAGE_NAME }}:${{ steps.set-env.outputs.TAG }}
+          cache-to: type=inline
+
+    outputs:
+      environment: ${{ steps.set-env.outputs.ENVIRONMENT }}
+      tag: ${{ steps.set-env.outputs.TAG }}
+      port: ${{ steps.set-env.outputs.PORT }}
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+    permissions:
+      contents: read
+
+    steps:
+      - name: Deploy to Azure VM
+        uses: appleboy/ssh-action@v1.0.0
+        env:
+          ENVIRONMENT: ${{ needs.build.outputs.environment }}
+          TAG: ${{ needs.build.outputs.tag }}
+          PORT: ${{ needs.build.outputs.port }}
+          DOCKER_IMAGE: ${{ env.DOCKER_IMAGE_NAME }}:${{ needs.build.outputs.tag }}
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_KEY }}
+          port: 22
+          envs: ENVIRONMENT,TAG,PORT,DOCKER_IMAGE
+          script: |
+            # Navigate to app directory
+            cd /home/${{ secrets.SSH_USERNAME }}/autorab-ppl-${ENVIRONMENT}
+            
+            # Pull latest image
+            docker pull ${DOCKER_IMAGE}
+            
+            # Stop and remove existing container
+            docker stop autorab-ppl-${ENVIRONMENT} 2>/dev/null || true
+            docker rm autorab-ppl-${ENVIRONMENT} 2>/dev/null || true
+            
+            # Run new container
+            docker run -d \
+              --name autorab-ppl-${ENVIRONMENT} \
+              --restart unless-stopped \
+              -p ${PORT}:8000 \
+              --env-file .env \
+              -v /home/${{ secrets.SSH_USERNAME }}/autorab-ppl-${ENVIRONMENT}/media:/tmp/media \
+              ${DOCKER_IMAGE}
+            
+            # Clean up old images for this environment only (keep last 3 versions)
+            docker images ghazafadhlilbaqi/autorab-ppl:${TAG}-* --format "{{.ID}}" | tail -n +4 | xargs -r docker rmi -f 2>/dev/null || true
+            
+            echo "Deployment of ${ENVIRONMENT} environment completed successfully!"
