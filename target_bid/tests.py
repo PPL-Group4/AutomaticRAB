@@ -5,10 +5,10 @@ from unittest.mock import patch
 from django.core.exceptions import ValidationError
 from django.test import SimpleTestCase
 from rest_framework.test import APIRequestFactory
-
+from django.test import TestCase
 import pytest
 from target_bid import validators
-from target_bid.services.services import TargetBudgetConverter
+from target_bid.service_utils.budgetservice import TargetBudgetConverter
 from target_bid.validators import TargetBudgetInput, validate_target_budget_input
 from target_bid.services import (
 	RabJobItem,
@@ -22,6 +22,8 @@ from target_bid.services import (
 	_normalise_item_name,
 	_to_decimal,
 	fetch_rab_job_items,
+	LockedItemRule,
+	NonAdjustableEvaluator
 )
 from target_bid.views import fetch_rab_job_items_view
 
@@ -497,3 +499,103 @@ def test_hundred_percent_returns_same_total():
     input_data = TargetBudgetInput(mode="percentage", value=Decimal("100"))
     result = TargetBudgetConverter.to_nominal(input_data, current_total)
     assert result == Decimal("1000000.00")
+
+class LockedItemRuleTests(TestCase):
+    """Unit tests for LockedItemRule and its integration with NonAdjustableEvaluator."""
+
+    def setUp(self):
+        self.rule = LockedItemRule()
+        self.evaluator = NonAdjustableEvaluator([self.rule])
+
+    # ---------- POSITIVE CASES ----------
+    def test_locked_item_is_excluded(self):
+        """Locked items (is_locked=True) should be non-adjustable."""
+        item = RabJobItem(
+            rab_item_id=1,
+            name="Test Work",
+            unit_name="m2",
+            unit_price=Decimal("1000"),
+            volume=Decimal("2"),
+            total_price=Decimal("2000"),
+            rab_item_header_id=None,
+            rab_item_header_name=None,
+            custom_ahs_id=None,
+            analysis_code=None,
+            is_locked=True,
+        )
+        decision = self.rule.decide(item)
+        self.assertTrue(decision)
+
+    # ---------- NEGATIVE CASES ----------
+    def test_non_locked_item_returns_none(self):
+        """Unlocked items should not be marked non-adjustable by this rule."""
+        item = RabJobItem(
+            rab_item_id=2,
+            name="Open Work",
+            unit_name="m",
+            unit_price=Decimal("500"),
+            volume=Decimal("5"),
+            total_price=Decimal("2500"),
+            rab_item_header_id=None,
+            rab_item_header_name=None,
+            custom_ahs_id=None,
+            analysis_code=None,
+            is_locked=False,
+        )
+        decision = self.rule.decide(item)
+        self.assertIsNone(decision)
+
+    def test_missing_is_locked_attribute_returns_none(self):
+        """Items without is_locked attribute should be ignored."""
+        item = RabJobItem(
+            rab_item_id=3,
+            name="Unnamed Work",
+            unit_name=None,
+            unit_price=None,
+            volume=None,
+            total_price=None,
+            rab_item_header_id=None,
+            rab_item_header_name=None,
+            custom_ahs_id=None,
+            analysis_code=None,
+            is_locked=None,
+        )
+        decision = self.rule.decide(item)
+        self.assertIsNone(decision)
+
+    # ---------- EDGE CASES ----------
+    def test_combined_evaluator_prefers_locked_rule(self):
+        """Even if multiple rules exist, locked items should be filtered first."""
+        locked_item = RabJobItem(
+            rab_item_id=4,
+            name="Safety Gear",
+            unit_name="set",
+            unit_price=Decimal("500"),
+            volume=Decimal("2"),
+            total_price=Decimal("1000"),
+            rab_item_header_id=None,
+            rab_item_header_name=None,
+            custom_ahs_id=None,
+            analysis_code=None,
+            is_locked=True,
+        )
+        result = self.evaluator.is_non_adjustable(locked_item)
+        self.assertTrue(result)
+
+    def test_unlocked_item_passes_through_combined_evaluator(self):
+        """Unlocked items should not be filtered out by evaluator."""
+        unlocked_item = RabJobItem(
+            rab_item_id=5,
+            name="Normal Job",
+            unit_name="unit",
+            unit_price=Decimal("100"),
+            volume=Decimal("10"),
+            total_price=Decimal("1000"),
+            rab_item_header_id=None,
+            rab_item_header_name=None,
+            custom_ahs_id=None,
+            analysis_code=None,
+            is_locked=False,
+        )
+        result = self.evaluator.is_non_adjustable(unlocked_item)
+        self.assertFalse(result)
