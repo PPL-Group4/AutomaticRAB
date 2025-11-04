@@ -329,6 +329,23 @@
     container.appendChild(table);
 
     rows.forEach((row, rowIndex) => {
+      if (row.job_match_status === "skipped" && (!row.is_section || row.is_section === undefined)) {
+        const tr = document.createElement("tr");
+        const numberCell = document.createElement("td");
+        numberCell.textContent = row.number || "";
+        tr.appendChild(numberCell);
+
+        const titleCell = document.createElement("td");
+        titleCell.colSpan = 8;
+        const strong = document.createElement("strong");
+        strong.textContent = row.description || "";
+        titleCell.appendChild(strong);
+        tr.appendChild(titleCell);
+
+        tr.classList.add("table-secondary", "fw-semibold");
+        tbody.appendChild(tr);
+        return; 
+      }
       const tr = buildDataRow(row, rowIndex, { flatNumbering: true });
       tbody.appendChild(tr);
       total += parseCurrencyNumber(row.total_price);
