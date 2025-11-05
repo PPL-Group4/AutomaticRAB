@@ -42,4 +42,4 @@ EXPOSE 8000
 ARG CACHE_BUST=1
 
 # Start the application using Gunicorn with increased timeout
-CMD ["sh", "-c", "gunicorn --bind 0.0.0.0:${PORT:-8000} --timeout 2400 --workers 2 AutomaticRAB.wsgi:application"]
+CMD ["sh", "-c", "gunicorn --bind 0.0.0.0:${PORT:-8000} --timeout 3600 --workers 2 AutomaticRAB.wsgi:application"]
