@@ -28,10 +28,10 @@
 
   table th:nth-child(8),
   table td:nth-child(8) {
-    width: 100px;
+    width: 100px;          /* adjust to fit your layout */
     max-width: 100px;
     min-width: 100px;
-    text-align: justify;
+    text-align: justify;     /* keeps prices neatly aligned */
   }
 </style>
 <div class="section-box position-relative">
@@ -65,7 +65,7 @@
     <div class="spinner-border text-primary" role="status">
       <span class="visually-hidden">Loading...</span>
     </div>
-    <p class="mt-2" id="loadingMessage">Memproses file, mohon tunggu...</p>
+    <p class="mt-2">Memproses file, mohon tunggu...</p>
   </div>
 
   <div id="rabTables" class="mt-3"></div>
@@ -108,13 +108,6 @@
   const RECOMPUTE_ENDPOINT = "/api/recompute_total_cost/";
   const EXCEL_UPLOAD_ENDPOINT = "{% url 'preview_rows' %}";
   const PDF_UPLOAD_ENDPOINT = "{% url 'pdf_parser:rab_converted_pdf' %}";
-  
-  // Polling configuration
-  const EXCEL_CHECK_STATUS_ENDPOINT = "{% url 'check_preview_status' job_id='PLACEHOLDER' %}".replace('PLACEHOLDER', '');
-  const PDF_CHECK_STATUS_ENDPOINT = "{% url 'pdf_parser:check_pdf_status' job_id='PLACEHOLDER' %}".replace('PLACEHOLDER', '');
-  const POLL_INTERVAL_MS = 2000; // Poll every 2 seconds
-  const MAX_POLL_ATTEMPTS = 120; // Max 4 minutes (120 * 2s = 240s)
-  
   const suggestionCache = new Map();
   const dropdownRequestState = new WeakMap();
   const MANUAL_SUGGESTION_LIMIT = 12;
@@ -126,66 +119,11 @@
     setTimeout(() => (errorContainer.innerHTML = ""), 4000);
   }
 
-  function showLoading(message = "Memproses file, mohon tunggu...") {
-    document.getElementById("loadingMessage").textContent = message;
+  function showLoading() {
     document.getElementById("loadingSpinner").style.display = "block";
   }
-  
   function hideLoading() {
     document.getElementById("loadingSpinner").style.display = "none";
-  }
-
-  /**
-   * Poll job status endpoint until completed, error, or timeout
-   * @param {string} jobId - The job ID to poll
-   * @param {string} baseEndpoint - Base URL for status checking (without job_id)
-   * @returns {Promise<Object>} - Final job result
-   */
-  async function pollJobStatus(jobId, baseEndpoint) {
-    const statusUrl = baseEndpoint + jobId + '/';
-    let attempts = 0;
-
-    while (attempts < MAX_POLL_ATTEMPTS) {
-      try {
-        const response = await fetch(statusUrl, { method: "GET" });
-        
-        if (!response.ok) {
-          if (response.status === 404) {
-            throw new Error("Job tidak ditemukan di server");
-          }
-          throw new Error(`Server error: ${response.status}`);
-        }
-
-        const data = await response.json();
-
-        // Check job status
-        if (data.status === "completed") {
-          return data; // Success
-        } else if (data.status === "error") {
-          return data; // Error occurred during processing
-        } else if (data.status === "processing") {
-          // Still processing, wait and retry
-          attempts++;
-          await sleep(POLL_INTERVAL_MS);
-        } else {
-          throw new Error("Status tidak dikenal: " + data.status);
-        }
-      } catch (error) {
-        throw new Error("Polling error: " + error.message);
-      }
-    }
-
-    // Timeout reached
-    throw new Error("Timeout: Proses memakan waktu terlalu lama (lebih dari 4 menit)");
-  }
-
-  /**
-   * Sleep helper function
-   * @param {number} ms - Milliseconds to sleep
-   * @returns {Promise<void>}
-   */
-  function sleep(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
   }
 
   const excelUploadForm = document.getElementById("excelUploadForm");
@@ -204,40 +142,17 @@
       formData.append("file", fileInput.files[0]);
 
       try {
-        showLoading("Mengunggah file Excel...");
-        
-        // Step 1: Upload file and get job_id
+        showLoading();
         const response = await fetch(EXCEL_UPLOAD_ENDPOINT, { method: "POST", body: formData });
         const data = await response.json();
-        
-        if (!response.ok) {
-          hideLoading();
-          showError("Gagal memproses file: " + (data.error || data.detail || "Terjadi kesalahan"));
-          return;
-        }
-
-        const jobId = data.job_id;
-        if (!jobId) {
-          hideLoading();
-          showError("Gagal mendapatkan job ID dari server");
-          return;
-        }
-
-        // Step 2: Poll for results
-        showLoading("Memproses file Excel, mohon tunggu...");
-        const result = await pollJobStatus(jobId, EXCEL_CHECK_STATUS_ENDPOINT);
         hideLoading();
 
-        if (result.error) {
-          showError("Gagal memproses file: " + result.error);
-        } else if (result.result) {
-          const rows = result.result.rows || result.result.excel_standard || result.result.excel_apendo;
-          if (rows) {
-            renderTables(rows, { sourceType: "excel" });
-            fileInput.value = "";
-          } else {
-            showError("Tidak ada data yang dapat ditampilkan");
-          }
+        const rows = data.rows || data.excel_standard || data.excel_apendo;
+        if (rows) {
+          renderTables(rows, { sourceType: "excel" });
+          fileInput.value = "";
+        } else {
+          showError("Gagal memproses file: " + (data.error || "Terjadi kesalahan yang tidak diketahui"));
         }
       } catch (error) {
         hideLoading();
@@ -259,37 +174,16 @@
       formData.append("pdf_file", fileInput.files[0]);
 
       try {
-        showLoading("Mengunggah file PDF...");
-        
-        // Step 1: Upload file and get job_id
+        showLoading();
         const response = await fetch(PDF_UPLOAD_ENDPOINT, { method: "POST", body: formData });
         const data = await response.json();
-        
-        if (!response.ok) {
-          hideLoading();
-          showError("Gagal memproses file: " + (data.error || data.detail || "Terjadi kesalahan"));
-          return;
-        }
-
-        const jobId = data.job_id;
-        if (!jobId) {
-          hideLoading();
-          showError("Gagal mendapatkan job ID dari server");
-          return;
-        }
-
-        // Step 2: Poll for results
-        showLoading("Memproses file PDF, mohon tunggu...");
-        const result = await pollJobStatus(jobId, PDF_CHECK_STATUS_ENDPOINT);
         hideLoading();
 
-        if (result.error) {
-          showError("Gagal memproses file: " + result.error);
-        } else if (result.result && Array.isArray(result.result.rows) && result.result.rows.length) {
-          renderTables(result.result.rows, { sourceType: "pdf" });
+        if (Array.isArray(data.rows) && data.rows.length) {
+          renderTables(data.rows, { sourceType: "pdf" });
           fileInput.value = "";
         } else {
-          showError("Tidak ada baris yang ditemukan dalam PDF");
+          showError("Gagal memproses file: " + (data.error || "Tidak ada baris yang ditemukan"));
         }
       } catch (error) {
         hideLoading();
@@ -535,15 +429,6 @@
 
     return tr;
   }
-
-  // ... (rest of the existing JavaScript code remains unchanged)
-  // Copy all the remaining functions from your original file:
-  // - refreshTooltip, updatePriceOriginUI, decoratePriceInput
-  // - shouldProceedWithPriceChange, input event listeners
-  // - updateGrandTotalFromRows, updateGrandTotal, updateCostWeightChart
-  // - numberToWords, formatMatchStatusText, populateMatchCell
-  // - normalizeMatches, buildMatchLabel, handleMatchSelection
-  // - renderManualInput, showDropdown, getMatchLookup, etc.
 
   function refreshTooltip(element) {
     if (!element || typeof window === "undefined" || !window.bootstrap || !bootstrap.Tooltip) {
@@ -1088,6 +973,10 @@
     dropdown.style.top = "100%";
     dropdown.style.zIndex = "1000";
 
+    const updateNotice = (message) => {
+      notice.textContent = message || label || "Needs Manual Input";
+    };
+
     const button = document.createElement("button");
     button.type = "button";
     button.className = "btn btn-primary";
@@ -1108,6 +997,12 @@
       };
       row.job_match_status = "manual";
       updateRowLookup(row, matched ? [matched] : []);
+
+      if (matched && matched.name) {
+        updateNotice(`Manual: ${matched.name}`);
+      } else {
+        updateNotice(label);
+      }
 
       analysisCell.textContent = value;
       statusCell.textContent = "Manual";
