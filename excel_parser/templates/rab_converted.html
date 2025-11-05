@@ -1181,23 +1181,33 @@
   function fetchRemoteSuggestions(row, query, limit = MANUAL_SUGGESTION_LIMIT) {
     const trimmedQuery = (query || "").trim();
     const description = trimmedQuery || (row.description || "").trim();
-
+  
     if (!description) {
       return Promise.resolve([]);
     }
-
-    const cacheKey = `${description}|${limit}`;
+  
+    // Extract unit from row
+    const unit = (row.unit || row.sat || "").trim();
+  
+    // Include unit in cache key if present
+    const cacheKey = unit ? `${description}|${unit}|${limit}` : `${description}|${limit}`;
     if (suggestionCache.has(cacheKey)) {
       return suggestionCache.get(cacheKey);
     }
-
+  
+    // Build payload with unit
+    const payload = { description };
+    if (unit) {
+      payload.unit = unit;
+    }
+  
     const request = fetch(MATCH_ENDPOINT, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Accept: "application/json",
       },
-      body: JSON.stringify({ description }),
+      body: JSON.stringify(payload),
     })
       .then(res => (res.ok ? res.json() : { match: [] }))
       .then(data => {
@@ -1211,7 +1221,7 @@
         return match.code ? [match] : [];
       })
       .catch(() => []);
-
+  
     suggestionCache.set(cacheKey, request);
     return request;
   }
