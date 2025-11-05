@@ -97,7 +97,7 @@ jobs:
             docker stop autorab-ppl-${ENVIRONMENT} 2>/dev/null || true
             docker rm autorab-ppl-${ENVIRONMENT} 2>/dev/null || true
 
-            # Run new container
+            # Run new container with memory limits
             docker run -d \
               --name autorab-ppl-${ENVIRONMENT} \
               --restart unless-stopped \
@@ -105,6 +105,8 @@ jobs:
               --env-file .env \
               -v /home/${{ secrets.SSH_USERNAME }}/autorab-ppl-${ENVIRONMENT}/media:/app/media \
               -v /home/${{ secrets.SSH_USERNAME }}/autorab-ppl-${ENVIRONMENT}/tmp:/app/tmp \
+              --memory=2g \
+              --memory-swap=2g \
               ${DOCKER_IMAGE}
 
             # Clean up old images (keep last 3)
