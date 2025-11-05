@@ -1,12 +1,11 @@
 from django.urls import path
+from .views import detect_headers, rab_converted, preview_rows, upload_view, check_pdf_status
 from . import views
 
-app_name = "pdf_parser"
-
 urlpatterns = [
-    path("upload/", views.upload_pdf, name="upload_pdf"),
-    path("preview/", views.preview_pdf, name="preview_pdf"),
-    path("parse", views.parse_pdf_view, name="parse_pdf"),
-    path("rab_converted/", views.rab_converted_pdf, name="rab_converted_pdf"),
+    path("detect_headers", views.detect_headers, name="detect_headers"),
+    path("preview_rows", views.preview_rows, name="preview_rows"),
     path("check_pdf_status/<str:job_id>/", views.check_pdf_status, name="check_preview_status"),
+    path("rab_converted/", views.rab_converted, name="rab_converted"),
+    path("upload/", views.upload_view, name="upload"),
 ]
