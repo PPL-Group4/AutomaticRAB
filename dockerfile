@@ -41,5 +41,5 @@ EXPOSE 8000
 # Cache busting to force rebuild when commit changes
 ARG CACHE_BUST=1
 
-# Start the application using Gunicorn with increased timeout
-CMD ["sh", "-c", "gunicorn --bind 0.0.0.0:${PORT:-8000} --timeout 3600 --workers 2 AutomaticRAB.wsgi:application"]
+# Start the application using Gunicorn with increased workers and threads
+CMD ["sh", "-c", "gunicorn --bind 0.0.0.0:${PORT:-8000} --timeout 3600 --workers 4 --threads 2 AutomaticRAB.wsgi:application"]
