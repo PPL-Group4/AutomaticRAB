@@ -5,6 +5,7 @@ import tempfile
 import os
 from decimal import Decimal
 from .services.pipeline import parse_pdf_to_dtos
+import cProfile, pstats, io
 
 # Template constants
 RAB_CONVERTED_TEMPLATE = "rab_converted.html"
@@ -13,6 +14,39 @@ PDF_UPLOAD_TEMPLATE = "pdf_upload.html"
 # Error message constants
 NO_FILE_UPLOADED_MSG = "No file uploaded"
 
+class PdfUploadHandler:
+    """Template Method for handling PDF upload, temp save, parse, and response."""
+
+    def handle_upload(self, request, parser_fn):
+        file = request.FILES.get("pdf_file")
+        if not file:
+            return JsonResponse({"error": "No file uploaded"}, status=400)
+
+        tmp_path = None
+        try:
+            # Step 1 — Save uploaded file to temporary path
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
+                for chunk in file.chunks():
+                    tmp.write(chunk)
+                tmp_path = tmp.name
+
+            # Step 2 — Parse PDF using injected parser function
+            rows = parser_fn(tmp_path)
+            rows = _convert_decimals(rows)
+
+            # Step 3 — Return parsed result
+            return JsonResponse({"rows": rows}, status=200)
+
+        except Exception as e:
+            return JsonResponse({"error": str(e), "rows": []}, status=500)
+
+        finally:
+            # Step 4 — Clean up temp file
+            if tmp_path and os.path.exists(tmp_path):
+                try:
+                    os.unlink(tmp_path)
+                except OSError:
+                    pass
 
 def _convert_decimals(obj):
     """Recursively convert Decimal objects to float for JSON serialization."""
@@ -31,36 +65,8 @@ def rab_converted_pdf(request):
         return render(request, RAB_CONVERTED_TEMPLATE)
 
     if request.method == "POST":
-        file = request.FILES.get("pdf_file")
-        if not file:
-            return JsonResponse({"error": NO_FILE_UPLOADED_MSG}, status=400)
-
-        tmp_path = None
-        try:
-            # Create temp file
-            with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
-                for chunk in file.chunks():
-                    tmp.write(chunk)
-                tmp_path = tmp.name
-
-            # Parse PDF
-            rows = parse_pdf_to_dtos(tmp_path) or []
-            rows = _convert_decimals(rows)
-            
-            return JsonResponse({"rows": rows}, status=200)
-            
-        except Exception as e:
-            # Return error as JSON instead of crashing
-            return JsonResponse({"error": str(e), "rows": []}, status=500)
-            
-        finally:
-            # Clean up temp file (works on local, AWS, Azure)
-            if tmp_path and os.path.exists(tmp_path):
-                try:
-                    os.unlink(tmp_path)
-                except OSError:
-                    # Log silently if file deletion fails
-                    pass
+        handler = PdfUploadHandler()
+        return handler.handle_upload(request, parse_pdf_to_dtos)
 
     return HttpResponseNotAllowed(["GET", "POST"])
 
@@ -70,36 +76,8 @@ def parse_pdf_view(request):
     if request.method != "POST":
         return JsonResponse({"error": "Only POST allowed"}, status=405)
 
-    file = request.FILES.get("file")
-    if not file:
-        return JsonResponse({"error": NO_FILE_UPLOADED_MSG}, status=400)
-
-    tmp_path = None
-    try:
-        # Create temp file
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
-            for chunk in file.chunks():
-                tmp.write(chunk)
-            tmp_path = tmp.name
-
-        # Parse PDF
-        dtos = parse_pdf_to_dtos(tmp_path)
-        dtos = _convert_decimals(dtos)
-        
-        return JsonResponse({"rows": dtos}, safe=False)
-        
-    except Exception as e:
-        # Return proper JSON error
-        return JsonResponse({"error": str(e)}, status=500)
-        
-    finally:
-        # Clean up temp file
-        if tmp_path and os.path.exists(tmp_path):
-            try:
-                os.unlink(tmp_path)
-            except OSError:
-                # Log silently if file deletion fails
-                pass
+    handler = PdfUploadHandler()
+    return handler.handle_upload(request, parse_pdf_to_dtos)
 
 
 def upload_pdf(request):
