@@ -38,5 +38,8 @@ RUN python manage.py collectstatic --noinput
 # Expose port 8000 (default for Gunicorn)
 EXPOSE 8000
 
-# Start the application using Gunicorn
+# Cache busting to force rebuild when commit changes
+ARG CACHE_BUST=1
+
+# Start the application using Gunicorn with increased timeout
 CMD ["sh", "-c", "gunicorn --bind 0.0.0.0:${PORT:-8000} --timeout 2400 --workers 2 AutomaticRAB.wsgi:application"]

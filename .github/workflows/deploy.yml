@@ -51,11 +51,13 @@ jobs:
         with:
           context: .
           push: true
+          cache-from: type=registry,ref=${{ env.DOCKER_IMAGE_NAME }}:${{ steps.set-env.outputs.TAG }}
+          cache-to: type=inline
+          build-args: |
+            CACHE_BUST=${{ github.sha }}
           tags: |
             ${{ env.DOCKER_IMAGE_NAME }}:${{ steps.set-env.outputs.TAG }}
             ${{ env.DOCKER_IMAGE_NAME }}:${{ steps.set-env.outputs.TAG }}-${{ github.sha }}
-          cache-from: type=registry,ref=${{ env.DOCKER_IMAGE_NAME }}:${{ steps.set-env.outputs.TAG }}
-          cache-to: type=inline
 
     outputs:
       environment: ${{ steps.set-env.outputs.ENVIRONMENT }}
@@ -83,26 +85,42 @@ jobs:
           port: 22
           envs: ENVIRONMENT,TAG,PORT,DOCKER_IMAGE
           script: |
-            # Navigate to app directory
+            echo "🚀 Deploying ${ENVIRONMENT} environment"
+
+            # Navigate to environment directory
             cd /home/${{ secrets.SSH_USERNAME }}/autorab-ppl-${ENVIRONMENT}
-            
+
             # Pull latest image
             docker pull ${DOCKER_IMAGE}
-            
+
             # Stop and remove existing container
             docker stop autorab-ppl-${ENVIRONMENT} 2>/dev/null || true
             docker rm autorab-ppl-${ENVIRONMENT} 2>/dev/null || true
-            
+
             # Run new container
             docker run -d \
               --name autorab-ppl-${ENVIRONMENT} \
               --restart unless-stopped \
               -p ${PORT}:8000 \
               --env-file .env \
-              -v /home/${{ secrets.SSH_USERNAME }}/autorab-ppl-${ENVIRONMENT}/media:/tmp/media \
+              -v /home/${{ secrets.SSH_USERNAME }}/autorab-ppl-${ENVIRONMENT}/media:/app/media \
+              -v /home/${{ secrets.SSH_USERNAME }}/autorab-ppl-${ENVIRONMENT}/tmp:/app/tmp \
               ${DOCKER_IMAGE}
-            
-            # Clean up old images for this environment only (keep last 3 versions)
+
+            # Clean up old images (keep last 3)
             docker images ghazafadhlilbaqi/autorab-ppl:${TAG}-* --format "{{.ID}}" | tail -n +4 | xargs -r docker rmi -f 2>/dev/null || true
-            
-            echo "Deployment of ${ENVIRONMENT} environment completed successfully!"
+
+            # Reload or restart Caddy reverse proxy
+            echo "🔄 Reloading Caddy configuration..."
+            if command -v caddy >/dev/null 2>&1; then
+              if pgrep caddy >/dev/null 2>&1; then
+                sudo caddy reload --config /etc/caddy/Caddyfile || sudo systemctl reload caddy || true
+              else
+                echo "Caddy not running, starting it..."
+                sudo systemctl start caddy || sudo caddy start
+              fi
+            else
+              echo "⚠️ Caddy not found — skipping reverse proxy reload."
+            fi
+
+            echo "✅ Deployment of ${ENVIRONMENT} environment completed successfully!"
