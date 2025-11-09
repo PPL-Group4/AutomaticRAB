@@ -9,6 +9,7 @@ from django.test import TestCase
 import pytest
 from target_bid import validators
 from target_bid.service_utils.budgetservice import TargetBudgetConverter
+from target_bid.service_utils.proportionadjustment import ProportionalAdjustmentCalculator
 from target_bid.validators import TargetBudgetInput, validate_target_budget_input
 from target_bid.services import (
 	RabJobItem,
@@ -599,3 +600,45 @@ class LockedItemRuleTests(TestCase):
         )
         result = self.evaluator.is_non_adjustable(unlocked_item)
         self.assertFalse(result)
+
+class ProportionalAdjustmentCalculatorTests(SimpleTestCase):
+    """Tests for computing the proportional adjustment factor."""
+
+    # ---------- Positive Cases ----------
+    def test_reducing_budget_returns_factor_below_one(self):
+        current = Decimal("1000000")
+        target = Decimal("800000")
+        factor = ProportionalAdjustmentCalculator.compute(current, target)
+        self.assertEqual(factor, Decimal("0.8000"))
+
+    def test_increasing_budget_returns_factor_above_one(self):
+        current = Decimal("1000000")
+        target = Decimal("1200000")
+        factor = ProportionalAdjustmentCalculator.compute(current, target)
+        self.assertEqual(factor, Decimal("1.2000"))
+
+    def test_same_budget_returns_factor_one(self):
+        current = Decimal("500000")
+        target = Decimal("500000")
+        factor = ProportionalAdjustmentCalculator.compute(current, target)
+        self.assertEqual(factor, Decimal("1.0000"))
+
+    # ---------- Negative / Error Cases ----------
+    def test_invalid_type_raises_type_error(self):
+        with self.assertRaises(TypeError):
+            ProportionalAdjustmentCalculator.compute("1000000", Decimal("800000"))
+
+    def test_zero_current_total_raises_value_error(self):
+        with self.assertRaises(ValueError):
+            ProportionalAdjustmentCalculator.compute(Decimal("0"), Decimal("800000"))
+
+    def test_negative_target_total_raises_value_error(self):
+        with self.assertRaises(ValueError):
+            ProportionalAdjustmentCalculator.compute(Decimal("1000000"), Decimal("-100"))
+
+    # ---------- Edge Case ----------
+    def test_very_small_difference_is_handled_precisely(self):
+        current = Decimal("1000000")
+        target = Decimal("999999.9")
+        factor = ProportionalAdjustmentCalculator.compute(current, target)
+        self.assertEqual(factor, Decimal("1.0000"))  # rounds to 4 decimals
