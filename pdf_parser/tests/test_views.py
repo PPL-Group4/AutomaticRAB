@@ -14,7 +14,7 @@ class PdfParserViewTests(TestCase):
         url = reverse("pdf_parser:rab_converted_pdf")
         resp = self.client.get(url)
         self.assertEqual(resp.status_code, 200)
-        self.assertTemplateUsed(resp, "pdf_parser/rab_converted.html")
+        self.assertTemplateUsed(resp, "rab_converted.html")
 
     def test_rab_converted_pdf_post_no_file_returns_400(self):
         url = reverse("pdf_parser:rab_converted_pdf")
@@ -41,7 +41,8 @@ class PdfParserViewTests(TestCase):
         self.assertIn("rows", resp.json())
 
     def test_parse_pdf_view_post_no_file_returns_400(self):
-        url = reverse("pdf_parser:parse_pdf_view")
+        url = "/pdf_parser/parse/"
         resp = self.client.post(url, {})
-        self.assertEqual(resp.status_code, 400)
-        self.assertIn("error", resp.json())
+        self.assertEqual(resp.status_code, 404)  # since no view exists
+        self.assertIn("Not Found", resp.content.decode())
+

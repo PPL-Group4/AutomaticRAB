@@ -3,7 +3,6 @@ from contextlib import suppress
 from decimal import Decimal, ROUND_HALF_UP
 from typing import Dict, Iterable
 
-from django.apps import apps
 from django.conf import settings
 
 ITEM_MODEL = getattr(settings, "COST_WEIGHT_ITEM_MODEL", "estimator.JobItem")

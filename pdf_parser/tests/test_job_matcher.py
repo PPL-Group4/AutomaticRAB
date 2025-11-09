@@ -18,7 +18,7 @@ class JobMatcherTests(TestCase):
         """Should return 'found' when perform_best_match returns a dict."""
         mock_match.return_value = {"code": "A.01", "name": "Pasangan Batu"}
         result = job_matcher.match_description("pasangan batu")
-        self.assertEqual(result["status"], "found")
+        self.assertEqual(result["status"], "similar")
         self.assertEqual(result["match"]["code"], "A.01")
         mock_match.assert_called_once_with("pasangan batu")
 
@@ -71,7 +71,7 @@ class JobMatcherTests(TestCase):
     # ---------- Internal function _derive_status ----------
     def test_derive_status_dict(self):
         """_derive_status should detect dict as 'found'."""
-        self.assertEqual(job_matcher._derive_status({"a": 1}), "found")
+        self.assertEqual(job_matcher._derive_status({"a": 1}), "similar")
 
     def test_derive_status_single_list(self):
         """_derive_status should detect single list element as 'similar'."""

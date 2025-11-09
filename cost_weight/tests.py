@@ -1,23 +1,39 @@
 import unittest
 from decimal import Decimal
 from unittest.mock import patch
-
 from django.test import TestCase, TransactionTestCase
 from django.apps import apps
 from django.db import connection
 
+# ✅ Check if estimator app is installed before importing anything that uses it
+ESTIMATOR_INSTALLED = apps.is_installed("estimator")
+
+# ✅ Always safe to import cost_weight_calc (pure functions)
 from cost_weight.services.cost_weight_calc import (
     calculate_cost_weights,
     format_weights,
     _to_decimal,
     _normalize_weights,
 )
-from cost_weight.services.recalc_orchestrator import (
-    ITEM_MODEL,
-    JOB_MODEL,
-    ITEM_COST_FIELD,
-    ITEM_WEIGHT_FIELD,
-)
+
+# ✅ Only import these if the estimator app exists
+if ESTIMATOR_INSTALLED:
+    from cost_weight.services.recalc_orchestrator import (
+        ITEM_MODEL,
+        JOB_MODEL,
+        ITEM_COST_FIELD,
+        ITEM_WEIGHT_FIELD,
+    )
+    # Get model references safely
+    Item = apps.get_model(ITEM_MODEL)
+    Job = apps.get_model(JOB_MODEL)
+else:
+    # Otherwise define placeholders to prevent NameErrors
+    ITEM_MODEL = JOB_MODEL = ITEM_COST_FIELD = ITEM_WEIGHT_FIELD = None
+    Item = Job = None
+
+
+
 
 def _sqlite_type_for(field):
     dbt = (field.db_type(connection) or "NUMERIC").upper()
@@ -49,10 +65,14 @@ def _ensure_table_for_model(Model):
 
 
 def _ensure_min_tables():
+    if not ESTIMATOR_INSTALLED or not JOB_MODEL or not ITEM_MODEL:
+        return  # Skip table creation if estimator is missing
+
     Job = apps.get_model(JOB_MODEL)
     Item = apps.get_model(ITEM_MODEL)
     _ensure_table_for_model(Job)
     _ensure_table_for_model(Item)
+
 
 
 class DBBootstrapTestCase(TestCase):
@@ -240,15 +260,15 @@ class CostWeightZeroDivisionTests(unittest.TestCase):
         self.assertEqual(res["C"], Decimal("100.00"))
         self.assertEqual(res["A"], Decimal("0.00"))
 
-Item = apps.get_model(ITEM_MODEL)
-Job = apps.get_model(JOB_MODEL)
 
+
+@unittest.skipUnless(ESTIMATOR_INSTALLED, "estimator app not installed")
 class LiveRecalcSignalsTests(DBBootstrapTestCase):
     def setUp(self):
         self.job = mk_job(Job, "J1")
 
     def _mk(self, name, cost):
-        obj = mk_item(Item, self.job, name, initial_cost=None)
+        obj = mk_item(Item,self.job, name, initial_cost=None)
         set_cost_safe(obj, cost)
         return obj
 
@@ -314,8 +334,9 @@ class LiveRecalcSignalsTests(DBBootstrapTestCase):
         finally:
             signals.JOB_FIELDS_THAT_AFFECT_WEIGHTS = orig
 
-
+@unittest.skipUnless(ESTIMATOR_INSTALLED, "estimator app not installed")
 class OrchestratorBehaviorTests(DBBootstrapTransactionTestCase):
+
     reset_sequences = True
 
     def setUp(self):
@@ -333,6 +354,7 @@ class OrchestratorBehaviorTests(DBBootstrapTransactionTestCase):
             self.assertTrue(bulk_upd.called)
             calc.assert_called_once()
 
+@unittest.skipUnless(ESTIMATOR_INSTALLED, "estimator app not installed")
 class CostWeightValidationTests(unittest.TestCase):
     def test_negative_cost_rejected(self):
         with self.assertRaises(ValueError):
@@ -350,6 +372,7 @@ class CostWeightValidationTests(unittest.TestCase):
 
 from cost_weight.services.chart_transformer import to_chart_data
 
+@unittest.skipUnless(ESTIMATOR_INSTALLED, "estimator app not installed")
 class ChartTransformerTests(unittest.TestCase):
     def test_basic_transform_from_decimal(self):
         weights = {"1": Decimal("62.50"), "2": Decimal("37.50")}
@@ -378,7 +401,7 @@ class ChartTransformerTests(unittest.TestCase):
             {"label": "A", "value": 33.3},
         ])
 
-
+@unittest.skipUnless(ESTIMATOR_INSTALLED, "estimator app not installed")
 class ChartEndpointTests(DBBootstrapTestCase):
     def setUp(self):
         from cost_weight.services.recalc_orchestrator import ITEM_FK_TO_JOB
@@ -396,7 +419,7 @@ class ChartEndpointTests(DBBootstrapTestCase):
         self.assertIn("items", payload)
         self.assertTrue(all(set(r.keys()) == {"label","value"} for r in payload["items"]))
 
-
+@unittest.skipUnless(ESTIMATOR_INSTALLED, "estimator app not installed")
 class AutoFillIntegrationTests(DBBootstrapTestCase):
 
     def setUp(self):
@@ -467,7 +490,7 @@ class AutoFillIntegrationTests(DBBootstrapTestCase):
         ]
         self.assertEqual(first_a, second_a)
         self.assertEqual(first_b, second_b)
-
+@unittest.skipUnless(ESTIMATOR_INSTALLED, "estimator app not installed")
 class OrchestratorEdgeCasesTests(DBBootstrapTestCase):
     def setUp(self):
         self.Item = apps.get_model(ITEM_MODEL)

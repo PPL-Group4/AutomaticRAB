@@ -20,6 +20,9 @@ load_dotenv()
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# Detect when Django is being executed via its test runner.
+RUNNING_TESTS = any(arg in sys.argv for arg in ["test", "pytest", "py.test"])
+
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
@@ -28,11 +31,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.getenv('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.getenv("DEBUG", "False") == "True" 
+DEBUG = os.getenv("DEBUG", "False") == "True"
 
 ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "localhost").split(",")
 
-CSRF_TRUSTED_ORIGINS = os.getenv("CSRF_TRUSTED_ORIGINS", "").split(",")
 
 # Application definition
 
@@ -50,7 +52,8 @@ INSTALLED_APPS = [
     'rencanakan_core',
     'automatic_price_matching',
     'cost_weight',
-    
+    'target_bid',
+
 ]
 
 MIDDLEWARE = [
@@ -95,8 +98,17 @@ DATABASES = {
         'PASSWORD': os.getenv('MYSQL_PASSWORD'),
         'HOST': os.getenv('MYSQL_HOST'),
         'PORT': os.getenv('MYSQL_PORT'),
+        'TEST': {
+            'MIRROR': 'default',
+        },
     }
 }
+
+# #if RUNNING_TESTS:
+#     DATABASES['default'] = {
+#         'ENGINE': 'django.db.backends.sqlite3',
+#         'NAME': BASE_DIR / 'test_db.sqlite3',
+#     }
 
 
 # Password validation
@@ -160,10 +172,6 @@ LOGGING = {
     "root": {"handlers": ["console"], "level": "DEBUG"},
 }
 
-# Use a simpler storage during tests to avoid Manifest errors, and
-# enable hashed filenames (manifest) only in production builds.
-RUNNING_TESTS = any(arg in sys.argv for arg in ["test", "pytest", "py.test"])  # Django test runner sets 'test'
-
 if RUNNING_TESTS:
     # During tests, Django doesn't run collectstatic; Manifest storage would raise
     # 'Missing staticfiles manifest entry'. Use the basic storage instead.
@@ -180,13 +188,16 @@ else:
         },
     }
 
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
-MEDIA_URL = '/media/'
+# Azure App Service File Upload Fix
+if not DEBUG:
+    import tempfile
 
-os.makedirs(MEDIA_ROOT, exist_ok=True)
+    # Use Azure's writable temp directory
+    MEDIA_ROOT = os.path.join(tempfile.gettempdir(), 'media')
+    MEDIA_URL = '/media/'
+    os.makedirs(MEDIA_ROOT, exist_ok=True)
 
-DATA_UPLOAD_MAX_MEMORY_SIZE = 52428800  # 50MB
-FILE_UPLOAD_MAX_MEMORY_SIZE = 52428800  # 50MB
-
-FILE_UPLOAD_TEMP_DIR = os.path.join(BASE_DIR, 'tmp')
-os.makedirs(FILE_UPLOAD_TEMP_DIR, exist_ok=True)
+    # Increase upload limits
+    DATA_UPLOAD_MAX_MEMORY_SIZE = 52428800  # 50MB
+    FILE_UPLOAD_MAX_MEMORY_SIZE = 52428800  # 50MB
+    FILE_UPLOAD_TEMP_DIR = tempfile.gettempdir()
