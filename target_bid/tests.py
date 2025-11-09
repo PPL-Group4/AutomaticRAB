@@ -9,7 +9,7 @@ from django.test import TestCase
 import pytest
 from target_bid import validators
 from target_bid.service_utils.budgetservice import TargetBudgetConverter
-from target_bid.service_utils.proportionadjustment import ProportionalAdjustmentCalculator
+from target_bid.service_utils.proportional_adjustment import ProportionalAdjustmentCalculator
 from target_bid.validators import TargetBudgetInput, validate_target_budget_input
 from target_bid.services import (
 	RabJobItem,
