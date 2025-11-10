@@ -18,7 +18,9 @@ def match_best_view(request):
         return JsonResponse({"error": "Invalid JSON"}, status=400)
 
     description = payload.get("description", "")
-    result = MatchingService.perform_best_match(description)
+    unit = payload.get("unit", None)  # Extract unit from request
+
+    result = MatchingService.perform_best_match(description, unit=unit)  # Pass unit to matching service
 
     if isinstance(result, dict) and result:
         if result.get("confidence", 1.0) == 1.0:
@@ -31,7 +33,6 @@ def match_best_view(request):
         status = f"found {len(result)} similar"
     else:
         status = "not found"
-
 
     return JsonResponse({"status": status, "match": result}, status=200)
 

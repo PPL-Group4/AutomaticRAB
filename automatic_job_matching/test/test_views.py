@@ -20,8 +20,8 @@ class MatchBestViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         data = response.json()
         self.assertEqual(data["match"]["code"], "X.01")
-        self.assertEqual(data["status"], "found")   
-        self.mock_best.assert_called_once_with("X.01")
+        self.assertEqual(data["status"], "found")
+        self.mock_best.assert_called_once_with("X.01", unit=None)
 
     def test_best_view_returns_fuzzy_when_no_exact(self):
         self.mock_best.return_value = {"id": 2, "code": "Y.01", "name": "Some Name"}
@@ -31,8 +31,8 @@ class MatchBestViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         data = response.json()
         self.assertEqual(data["match"]["code"], "Y.01")
-        self.assertEqual(data["status"], "found")  
-        self.mock_best.assert_called_once_with("Some Name")
+        self.assertEqual(data["status"], "found")
+        self.mock_best.assert_called_once_with("Some Name", unit=None)
 
     def test_best_view_returns_multiple_one_item(self):
         self.mock_best.return_value = [{"id": 2, "code": "Y.01", "name": "Some Name"}]
@@ -42,7 +42,7 @@ class MatchBestViewTests(TestCase):
         data = response.json()
         self.assertEqual(response.status_code, 200)
         self.assertEqual(len(data["match"]), 1)
-        self.assertEqual(data["status"], "similar")  
+        self.assertEqual(data["status"], "similar")
 
     def test_best_view_returns_multiple_more_than_one(self):
         self.mock_best.return_value = [
@@ -55,7 +55,7 @@ class MatchBestViewTests(TestCase):
         data = response.json()
         self.assertEqual(response.status_code, 200)
         self.assertEqual(len(data["match"]), 2)
-        self.assertEqual(data["status"], "found 2 similar")  
+        self.assertEqual(data["status"], "found 2 similar")
 
     def test_best_view_invalid_json_returns_400(self):
         url = reverse("match-best")
@@ -70,5 +70,122 @@ class MatchBestViewTests(TestCase):
         data = response.json()
         self.assertEqual(response.status_code, 200)
         self.assertIsNone(data["match"])
-        self.assertEqual(data["status"], "not found") 
-        self.mock_best.assert_called_once_with("")
+        self.assertEqual(data["status"], "not found")
+        self.mock_best.assert_called_once_with("", unit=None)
+
+    # NEW TESTS FOR UNIT PARAMETER
+    def test_best_view_with_unit_m2(self):
+        """Test that unit parameter is passed to matching service."""
+        self.mock_best.return_value = {"id": 10, "code": "A.4.4.3.35", "name": "Pemasangan 1m2 Lantai Keramik"}
+        url = reverse("match-best")
+        payload = {"description": "pemasangan keramik", "unit": "m2"}
+        response = self.client.post(url, json.dumps(payload), content_type="application/json")
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["match"]["code"], "A.4.4.3.35")
+        self.mock_best.assert_called_once_with("pemasangan keramik", unit="m2")
+
+    def test_best_view_with_unit_m3(self):
+        """Test with m3 unit."""
+        self.mock_best.return_value = {"id": 11, "code": "A.5.1", "name": "Galian tanah biasa"}
+        url = reverse("match-best")
+        payload = {"description": "galian tanah", "unit": "m3"}
+        response = self.client.post(url, json.dumps(payload), content_type="application/json")
+        self.assertEqual(response.status_code, 200)
+        self.mock_best.assert_called_once_with("galian tanah", unit="m3")
+
+    def test_best_view_with_unit_linear_m(self):
+        """Test with linear meter unit."""
+        self.mock_best.return_value = {"id": 12, "code": "A.7.2", "name": "Pipa PVC 3 inch"}
+        url = reverse("match-best")
+        payload = {"description": "pipa pvc", "unit": "m"}
+        response = self.client.post(url, json.dumps(payload), content_type="application/json")
+        self.assertEqual(response.status_code, 200)
+        self.mock_best.assert_called_once_with("pipa pvc", unit="m")
+
+    def test_best_view_with_unit_ls(self):
+        """Test with lump sum unit."""
+        self.mock_best.return_value = {"id": 13, "code": "AT.01-1", "name": "Mobilisasi alat"}
+        url = reverse("match-best")
+        payload = {"description": "mobilisasi alat", "unit": "Ls"}
+        response = self.client.post(url, json.dumps(payload), content_type="application/json")
+        self.assertEqual(response.status_code, 200)
+        self.mock_best.assert_called_once_with("mobilisasi alat", unit="Ls")
+
+    def test_best_view_with_unit_bh(self):
+        """Test with piece unit."""
+        self.mock_best.return_value = {"id": 14, "code": "A.9.1", "name": "Pintu panel"}
+        url = reverse("match-best")
+        payload = {"description": "pintu panel", "unit": "bh"}
+        response = self.client.post(url, json.dumps(payload), content_type="application/json")
+        self.assertEqual(response.status_code, 200)
+        self.mock_best.assert_called_once_with("pintu panel", unit="bh")
+
+    def test_best_view_with_empty_unit_string(self):
+        """Test that empty unit string is passed as empty string."""
+        self.mock_best.return_value = {"id": 15, "code": "A.1", "name": "Test"}
+        url = reverse("match-best")
+        payload = {"description": "test", "unit": ""}
+        response = self.client.post(url, json.dumps(payload), content_type="application/json")
+        self.assertEqual(response.status_code, 200)
+        self.mock_best.assert_called_once_with("test", unit="")
+
+    def test_best_view_unit_mismatch_returns_empty(self):
+        """Test that unit mismatch returns appropriate response."""
+        self.mock_best.return_value = []
+        url = reverse("match-best")
+        payload = {"description": "pemasangan keramik", "unit": "m"}
+        response = self.client.post(url, json.dumps(payload), content_type="application/json")
+        data = response.json()
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(data["status"], "not found")
+        self.assertEqual(data["match"], [])
+
+    def test_best_view_with_confidence_and_unit(self):
+        """Test response with confidence score and unit."""
+        self.mock_best.return_value = {
+            "id": 16,
+            "code": "A.1.1",
+            "name": "Test item",
+            "confidence": 0.92
+        }
+        url = reverse("match-best")
+        payload = {"description": "test", "unit": "m2"}
+        response = self.client.post(url, json.dumps(payload), content_type="application/json")
+        data = response.json()
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(data["status"], "similar")  # confidence < 1.0
+        self.assertEqual(data["match"]["confidence"], 0.92)
+
+    def test_best_view_multiple_results_with_unit(self):
+        """Test multiple results with unit parameter."""
+        self.mock_best.return_value = [
+            {"id": 17, "code": "A.1", "name": "Result 1"},
+            {"id": 18, "code": "A.2", "name": "Result 2"},
+            {"id": 19, "code": "A.3", "name": "Result 3"}
+        ]
+        url = reverse("match-best")
+        payload = {"description": "test", "unit": "m2"}
+        response = self.client.post(url, json.dumps(payload), content_type="application/json")
+        data = response.json()
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(data["status"], "found 3 similar")
+        self.assertEqual(len(data["match"]), 3)
+
+    def test_best_view_unit_with_special_characters(self):
+        """Test unit with special characters."""
+        self.mock_best.return_value = {"id": 20, "code": "A.1", "name": "Test"}
+        url = reverse("match-best")
+        payload = {"description": "test", "unit": "m²"}
+        response = self.client.post(url, json.dumps(payload), content_type="application/json")
+        self.assertEqual(response.status_code, 200)
+        self.mock_best.assert_called_once_with("test", unit="m²")
+
+    def test_best_view_unit_case_insensitive(self):
+        """Test that unit case is preserved."""
+        self.mock_best.return_value = {"id": 21, "code": "A.1", "name": "Test"}
+        url = reverse("match-best")
+        payload = {"description": "test", "unit": "M3"}
+        response = self.client.post(url, json.dumps(payload), content_type="application/json")
+        self.assertEqual(response.status_code, 200)
+        self.mock_best.assert_called_once_with("test", unit="M3")

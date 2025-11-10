@@ -29,77 +29,75 @@ class MatchingService:
             return None
 
     @staticmethod
-    def perform_fuzzy_match(description, min_similarity=0.6):
-        logger.info("perform_fuzzy_match called (len=%d, min_similarity=%.2f)",
-                    len(description), min_similarity)
-        
+    def perform_fuzzy_match(description, min_similarity=0.6, unit=None):
+        logger.info("perform_fuzzy_match called (len=%d, min_similarity=%.2f, unit=%s)",
+                    len(description), min_similarity, unit)
+
         try:
             matcher = FuzzyMatcher(MatchingService._shared_repo, min_similarity, scorer=FuzzyConfidenceScorer())
             confidence_result = getattr(matcher, 'match_with_confidence', None)
             if callable(confidence_result):
-                result = confidence_result(description)
+                result = confidence_result(description, unit=unit)
             else:
-                result = matcher.match(description)
+                result = matcher.match(description, unit=unit)
 
             logger.debug("Fuzzy match result: %s", result)
             return result
         except Exception as e:
             logger.error("Error in perform_fuzzy_match: %s", str(e), exc_info=True)
             return None
-    
+
     @staticmethod
-    def perform_multiple_match(description, limit=5, min_similarity=0.6):
-        logger.info("perform_multiple_match called (len=%d, limit=%d, min_similarity=%.2f)",
-                    len(description), limit, min_similarity)
-        
+    def perform_multiple_match(description, limit=5, min_similarity=0.6, unit=None):
+        logger.info("perform_multiple_match called (len=%d, limit=%d, min_similarity=%.2f, unit=%s)",
+                    len(description), limit, min_similarity, unit)
+
         try:
             matcher = FuzzyMatcher(MatchingService._shared_repo, min_similarity, scorer=FuzzyConfidenceScorer())
             confidence_multi = getattr(matcher, 'find_multiple_matches_with_confidence', None)
-            
+
             if callable(confidence_multi):
-                results = confidence_multi(description, limit)
+                results = confidence_multi(description, limit, unit=unit)
             else:
-                results = matcher.find_multiple_matches(description, limit)
-                
+                results = matcher.find_multiple_matches(description, limit, unit=unit)
+
             logger.debug("Multiple fuzzy match results count=%d", len(results))
             return results
         except Exception as e:
             logger.error("Error in perform_multiple_match: %s", str(e), exc_info=True)
             return []
-    
+
     @staticmethod
-    def perform_best_match(description: str):
-        logger.info("perform_best_match called (len=%d)", len(description))
+    def perform_best_match(description: str, unit: str = None):
+        logger.info("perform_best_match called (len=%d, unit=%s)", len(description), unit)
 
         translated_text = MatchingService.translator.translate_to_indonesian(description)
         description = translated_text or description
         description = AbbreviationService.expand(description)
-        
+
         try:
-            # Adaptive thresholds based on query complexity
             normalized = normalize_text(description)
-            
-            # Early return for empty/whitespace queries
+
             if not normalized or not normalized.strip():
                 logger.warning("Empty or whitespace-only query, returning None")
                 return None
-            
+
             word_count = len(normalized.split())
-            
+
             # Single-word material queries: return multiple matches
             if word_count == 1:
                 min_similarity = 0.25
                 limit = 5
                 logger.info("Single-word query detected → returning up to %d matches", limit)
-                
+
                 # Try exact first
                 exact_result = MatchingService.perform_exact_match(description)
                 if exact_result:
-                    return [exact_result]  # Wrap in list for consistency
-                
-                # Return multiple fuzzy matches
-                return MatchingService.perform_multiple_match(description, limit, min_similarity)
-            
+                    return [exact_result]
+
+                # Return multiple fuzzy matches with unit
+                return MatchingService.perform_multiple_match(description, limit, min_similarity, unit=unit)
+
             # Multi-word queries: return single best match
             min_similarity_single = 0.9
             min_similarity_multiple = 0.6
@@ -108,13 +106,14 @@ class MatchingService:
             # 1. Try exact
             result = MatchingService.perform_exact_match(description)
 
-            # 2. Try fuzzy
+            # 2. Try fuzzy with unit
             if not result:
-                result = MatchingService.perform_fuzzy_match(description, min_similarity_single)
+                result = MatchingService.perform_fuzzy_match(description, min_similarity_single, unit=unit)
 
-            # 3. Try multiple matches
+            # 3. Try multiple matches with unit
             if not result:
-                result = MatchingService.perform_multiple_match(description, limit, min_similarity_multiple)
+                result = MatchingService.perform_multiple_match(description, limit, min_similarity_multiple, unit=unit)
+
             return result
         except Exception as e:
             logger.error("Error in perform_best_match: %s", str(e), exc_info=True)
