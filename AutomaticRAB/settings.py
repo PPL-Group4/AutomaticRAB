@@ -32,6 +32,7 @@ DEBUG = os.getenv("DEBUG", "False") == "True"
 
 ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "localhost").split(",")
 
+CSRF_TRUSTED_ORIGINS = os.getenv("CSRF_TRUSTED_ORIGINS", "").split(",")
 
 # Application definition
 
@@ -179,16 +180,13 @@ else:
         },
     }
 
-# Azure App Service File Upload Fix
-if not DEBUG:
-    import tempfile
-    
-    # Use Azure's writable temp directory
-    MEDIA_ROOT = os.path.join(tempfile.gettempdir(), 'media')
-    MEDIA_URL = '/media/'
-    os.makedirs(MEDIA_ROOT, exist_ok=True)
-    
-    # Increase upload limits
-    DATA_UPLOAD_MAX_MEMORY_SIZE = 52428800  # 50MB
-    FILE_UPLOAD_MAX_MEMORY_SIZE = 52428800  # 50MB
-    FILE_UPLOAD_TEMP_DIR = tempfile.gettempdir()
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+MEDIA_URL = '/media/'
+
+os.makedirs(MEDIA_ROOT, exist_ok=True)
+
+DATA_UPLOAD_MAX_MEMORY_SIZE = 52428800  # 50MB
+FILE_UPLOAD_MAX_MEMORY_SIZE = 52428800  # 50MB
+
+FILE_UPLOAD_TEMP_DIR = os.path.join(BASE_DIR, 'tmp')
+os.makedirs(FILE_UPLOAD_TEMP_DIR, exist_ok=True)
