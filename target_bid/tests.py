@@ -803,3 +803,146 @@ class ProportionalAdjustmentCalculatorTests(SimpleTestCase):
         target = Decimal("999999.9")
         factor = ProportionalAdjustmentCalculator.compute(current, target)
         self.assertEqual(factor, Decimal("1.0000"))  # rounds to 4 decimals
+        self.assertEqual(factor, Decimal("1.0000"))  # rounds to 4 decimalsfrom django.test import SimpleTestCase
+
+class TargetBudgetConverterTests(SimpleTestCase):  # <-- this inheritance is key
+    """Covers conversion logic and validation in TargetBudgetConverter."""
+
+    def test_converter_rejects_non_decimal_current_total(self):
+        """Test that non-Decimal current_total raises TypeError."""
+        input_data = TargetBudgetInput(mode="percentage", value=Decimal("50"))
+
+        with pytest.raises(TypeError) as exc_info:
+            TargetBudgetConverter.to_nominal(input_data, 1000000)
+
+        assert "current_total" in str(exc_info.value)
+        assert "Decimal" in str(exc_info.value)
+
+    def test_converter_rejects_string_current_total(self):
+        """Test that string current_total raises TypeError."""
+        input_data = TargetBudgetInput(mode="absolute", value=Decimal("800000"))
+
+        with pytest.raises(TypeError) as exc_info:
+            TargetBudgetConverter.to_nominal(input_data, "1000000")
+
+        assert "current_total" in str(exc_info.value)
+
+    def test_converter_rejects_unsupported_mode(self):
+        """Test that unsupported mode raises ValueError."""
+        input_data = TargetBudgetInput(mode="custom", value=Decimal("100"))
+
+        with pytest.raises(ValueError) as exc_info:
+            TargetBudgetConverter.to_nominal(input_data, Decimal("1000000"))
+
+        assert "Unsupported mode" in str(exc_info.value)
+        assert "custom" in str(exc_info.value)
+
+class TargetBudgetConverterIntegrationTests(SimpleTestCase):
+    """Covers valid conversion paths for TargetBudgetConverter."""
+
+    def test_percentage_mode_calls_strategy_and_returns_decimal(self):
+        """Ensure converter delegates correctly to PercentageConversionStrategy."""
+        current_total = Decimal("1000000")
+        input_data = TargetBudgetInput(mode="percentage", value=Decimal("50"))
+        result = TargetBudgetConverter.to_nominal(input_data, current_total)
+        # Expected nominal: 50% of 1,000,000 = 500,000
+        self.assertEqual(result, Decimal("500000.00"))
+
+    def test_absolute_mode_calls_strategy_and_returns_same_value(self):
+        """Ensure absolute mode returns value unchanged."""
+        current_total = Decimal("1000000")
+        input_data = TargetBudgetInput(mode="absolute", value=Decimal("750000"))
+        result = TargetBudgetConverter.to_nominal(input_data, current_total)
+        self.assertEqual(result, Decimal("750000.00"))
+
+
+from decimal import Decimal
+import pytest
+from django.test import SimpleTestCase
+from target_bid.service_utils.budgetservice import adjust_unit_prices_preserving_volume
+
+
+class DummyItem:
+    """Simple mock object to simulate RabJobItem."""
+    def __init__(self, name, unit_price, volume):
+        self.name = name
+        self.unit_price = Decimal(unit_price)
+        self.volume = Decimal(volume)
+        self.total_price = self.unit_price * self.volume
+
+
+class AdjustUnitPricesPreservingVolumeTests(SimpleTestCase):
+    """Test suite for adjust_unit_prices_preserving_volume()."""
+
+    # ---------- POSITIVE TESTS ----------
+
+    def test_adjustment_scales_prices_correctly_and_preserves_volume(self):
+        """✅ Unit and total prices should be scaled proportionally, volume stays unchanged."""
+        item = DummyItem("Concrete", "100000", "10")
+        adjust_unit_prices_preserving_volume([item], Decimal("1.2"))
+
+        # Price scaled correctly
+        self.assertEqual(item.unit_price, Decimal("120000.0"))
+        self.assertEqual(item.total_price, Decimal("1200000.0"))
+        # Volume remains constant
+        self.assertEqual(item.volume, Decimal("10"))
+
+    def test_multiple_items_adjusted_independently(self):
+        """✅ Each item should adjust independently using the same factor."""
+        items = [
+            DummyItem("Steel", "50000", "5"),
+            DummyItem("Cement", "20000", "8"),
+        ]
+
+        adjust_unit_prices_preserving_volume(items, Decimal("1.1"))
+
+        self.assertEqual(items[0].unit_price, Decimal("55000.0"))
+        self.assertEqual(items[0].total_price, Decimal("275000.0"))
+        self.assertEqual(items[1].unit_price, Decimal("22000.0"))
+        self.assertEqual(items[1].total_price, Decimal("176000.0"))
+        self.assertEqual(items[0].volume, Decimal("5"))
+        self.assertEqual(items[1].volume, Decimal("8"))
+
+    def test_handles_missing_unit_price_or_volume_as_zero(self):
+        """✅ If unit_price or volume is None, treat as 0 gracefully."""
+        item = DummyItem("Unknown", "0", "0")
+        item.unit_price = None
+        item.volume = None
+
+        adjust_unit_prices_preserving_volume([item], Decimal("2.0"))
+
+        self.assertEqual(item.unit_price, Decimal("0"))
+        self.assertEqual(item.total_price, Decimal("0"))
+
+    # ---------- NEGATIVE TESTS ----------
+
+    def test_assertion_error_when_volume_changes_during_adjustment(self):
+        """❌ Should raise AssertionError if volume changes mid-calculation."""
+        item = DummyItem("Sand", "50000", "10")
+
+        # Monkey-patch to simulate mid-loop mutation (first call normal, second changed)
+        original_getattr = getattr
+
+        call_count = {"n": 0}
+
+        def fake_getattr(obj, name, default=None):
+            if name == "volume":
+                call_count["n"] += 1
+                # first call -> 10, second call -> 15
+                return Decimal("10") if call_count["n"] == 1 else Decimal("15")
+            return original_getattr(obj, name, default)
+
+        import builtins
+        builtins.getattr = fake_getattr
+
+        with pytest.raises(AssertionError) as exc_info:
+            adjust_unit_prices_preserving_volume([item], Decimal("1.2"))
+
+        builtins.getattr = original_getattr  # restore original function
+        self.assertIn("Volume changed unexpectedly", str(exc_info.value))
+
+    def test_adjustment_handles_empty_item_list_gracefully(self):
+        """✅ Should not raise any errors when given an empty list."""
+        adjust_unit_prices_preserving_volume([], Decimal("1.5"))  # should not raise
+
+
