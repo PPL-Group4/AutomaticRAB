@@ -983,6 +983,37 @@
     const selectableMatches = matches.filter(match => match && match.code);
     const fallbackMessages = matches.filter(match => !match || !match.code);
 
+    if (row.job_match && row.unit_mismatch === true) {
+      const alternatives = row.job_match;
+      if (Array.isArray(alternatives) && alternatives.length) {
+        const helper = document.createElement("div");
+        helper.className = "fw-semibold small mb-2 text-warning";
+        helper.textContent =
+          "⚠️ Tidak ditemukan kode yang sesuai dengan satuan. Berikut beberapa sugesti kode mirip (berbeda satuan):";
+        cell.appendChild(helper);
+
+        alternatives.forEach(match => {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className =
+            "btn btn-sm btn-outline-warning w-100 text-start match-option mb-1";
+          const label = buildMatchLabel(match);
+          button.dataset.label = label;
+          if (match.code) button.dataset.code = match.code;
+          button.textContent = label;
+          button.addEventListener("click", () =>
+            handleMatchSelection(match, row, analysisCell, statusCell, cell, button)
+          );
+          cell.appendChild(button);
+        });
+      }
+
+      renderManualInput(cell, row, analysisCell, statusCell, "Masukkan kode AHSP secara manual", {
+        noticeClass: "text-warning small mb-2",
+      });
+      return;
+    }
+
     if (row.job_match_status === "found" && selectableMatches.length === 1) {
       const match = selectableMatches[0];
       row.job_match_selected = match;
@@ -1311,6 +1342,10 @@
       if (!match || !match.code) {
         return;
       }
+      if (match.unit_mismatch) {
+        item.style.color = "#dc3545"; // red text
+        item.style.fontStyle = "italic";
+      }
       const item = document.createElement("button");
       item.type = "button";
       item.className = "dropdown-item text-wrap";
@@ -1371,18 +1406,30 @@
         "Content-Type": "application/json",
         Accept: "application/json",
       },
-      body: JSON.stringify(payload),
+      body: JSON.stringify({ description, unit: row.unit || null }),
     })
       .then(res => (res.ok ? res.json() : { match: [] }))
       .then(data => {
-        const { match } = data || {};
-        if (!match) {
-          return [];
+        // === Normal matches ===
+        if (data.match && Array.isArray(data.match) && data.match.length) {
+          const validMatches = data.match.filter(m => !m.unit_mismatch);
+          if (validMatches.length) {
+            row.unit_mismatch = false;
+            return validMatches;
+          }
         }
-        if (Array.isArray(match)) {
-          return match;
+
+        // === Unit mismatch alternatives ===
+        if (data.alternatives && Array.isArray(data.alternatives)) {
+          const msg =
+            data.message ||
+            "Tidak ditemukan kode yang sesuai dengan satuan. Berikut beberapa sugesti kode yang mirip tetapi tidak sesuai dengan satuan:";
+          showError(msg);
+          row.unit_mismatch = true;
+          return data.alternatives.map(a => ({ ...a, unit_mismatch: true }));
         }
-        return match.code ? [match] : [];
+
+        return [];
       })
       .catch(() => []);
   
@@ -1390,12 +1437,21 @@
     return request;
   }
 
+
   function fetchAndStoreSuggestions(row, query) {
     return fetchRemoteSuggestions(row, query).then(results => {
       updateRowLookup(row, results);
+
+      if (!results || !results.length) {
+        row.job_match = []; 
+      } else {
+        row.job_match = results;
+      }
+
       return Array.from(getMatchLookup(row).values());
     });
   }
+
 
   function findMatchByCode(row, code) {
     const lookup = getMatchLookup(row);

@@ -17,7 +17,7 @@ NO_FILE_UPLOADED_MSG = "No file uploaded"
 class PdfUploadHandler:
     """Template Method for handling PDF upload, temp save, parse, and response."""
 
-    def handle_upload(self, request, parser_fn):
+    def handle_upload(self, request, parser_fn, enable_profiling=False):
         file = request.FILES.get("pdf_file")
         if not file:
             return JsonResponse({"error": "No file uploaded"}, status=400)
@@ -30,23 +30,32 @@ class PdfUploadHandler:
                     tmp.write(chunk)
                 tmp_path = tmp.name
 
-            # Step 2 — Parse PDF using injected parser function
-            rows = parser_fn(tmp_path)
-            rows = _convert_decimals(rows)
+            # Step 2 — Optional profiling
+            if enable_profiling:
+                profiler = cProfile.Profile()
+                profiler.enable()
+                rows = parser_fn(tmp_path)
+                profiler.disable()
 
-            # Step 3 — Return parsed result
+                s = io.StringIO()
+                pstats.Stats(profiler, stream=s).sort_stats(pstats.SortKey.TIME).print_stats(15)
+                print(s.getvalue())  
+            else:
+                rows = parser_fn(tmp_path)
+
+            rows = _convert_decimals(rows)
             return JsonResponse({"rows": rows}, status=200)
 
         except Exception as e:
             return JsonResponse({"error": str(e), "rows": []}, status=500)
 
         finally:
-            # Step 4 — Clean up temp file
             if tmp_path and os.path.exists(tmp_path):
                 try:
                     os.unlink(tmp_path)
                 except OSError:
                     pass
+
 
 def _convert_decimals(obj):
     """Recursively convert Decimal objects to float for JSON serialization."""
@@ -66,8 +75,8 @@ def rab_converted_pdf(request):
 
     if request.method == "POST":
         handler = PdfUploadHandler()
-        return handler.handle_upload(request, parse_pdf_to_dtos)
-
+        return handler.handle_upload(request, parse_pdf_to_dtos, enable_profiling=True)
+    
     return HttpResponseNotAllowed(["GET", "POST"])
 
 
