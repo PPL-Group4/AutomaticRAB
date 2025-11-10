@@ -153,14 +153,18 @@ class RabJobItemService:
     def get_items_with_classification(
         self, rab_id: int
     ) -> tuple[List[RabJobItem], List[RabJobItem], List[tuple[RabJobItem, Optional[str]]]]:
-        rows = list(self._repository.for_rab(rab_id))
-        mapped = [self._mapper.map(row) for row in rows]
-        return _classify_items(mapped, self._non_adjustable_policy)
+        mapped = self.map_rows(self._repository.for_rab(rab_id))
+        return self.classify_mapped_items(mapped)
 
     def classify_mapped_items(
         self, mapped_items: Iterable[RabJobItem]
     ) -> tuple[List[RabJobItem], List[RabJobItem], List[tuple[RabJobItem, Optional[str]]]]:
         return _classify_items(list(mapped_items), self._non_adjustable_policy)
+
+    def map_rows(self, rows: Iterable[object]) -> List[RabJobItem]:
+        """Transform raw data rows into domain-level job items."""
+
+        return [self._mapper.map(row) for row in rows]
 
 
 _NON_ADJUSTABLE_NAME_LOOKUP = {
@@ -334,15 +338,16 @@ def fetch_rab_job_items(
     defaults to a Django-backed implementation.
     """
 
-    if queryset is not None:
-        mapper = RabJobItemMapper()
-        mapped = [mapper.map(row) for row in queryset]
-        policy = getattr(service, "_non_adjustable_policy", _DEFAULT_NON_ADJUSTABLE_POLICY)
-        if include_non_adjustable:
-            return _classify_items(mapped, policy)
-        return [item for item in mapped if not policy.is_non_adjustable(item)]
-
     selected_service = service or _DEFAULT_SERVICE
+
+    if queryset is not None:
+        mapped = selected_service.map_rows(queryset)
+        classification = selected_service.classify_mapped_items(mapped)
+        if include_non_adjustable:
+            return classification
+        adjustable, _, _ = classification
+        return adjustable
+
     if include_non_adjustable:
         return selected_service.get_items_with_classification(rab_id)
     return selected_service.get_items(rab_id)
