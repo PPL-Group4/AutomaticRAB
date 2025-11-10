@@ -6,9 +6,8 @@ from .converters import (
     AbsoluteConversionStrategy,
 )
 
-
 class TargetBudgetConverter:
-    """Delegates conversion to the appropriate strategy."""
+    """Optimized version reducing lookups and redundant conversions."""
 
     _strategies = {
         "percentage": PercentageConversionStrategy(),
@@ -16,12 +15,18 @@ class TargetBudgetConverter:
     }
 
     @classmethod
-    def to_nominal(cls, target_input: TargetBudgetInput, current_total: Decimal) -> Decimal:
+    def to_nominal(cls, target_input, current_total):
         if not isinstance(current_total, Decimal):
             raise TypeError("Expected 'current_total' to be of type 'Decimal'.")
 
-        strategy: ConversionStrategy = cls._strategies.get(target_input.mode)
-        if not strategy:
-            raise ValueError(f"Unsupported mode: {target_input.mode}")
+        value = target_input.value
+        if not isinstance(value, Decimal):
+            value = Decimal(value)
 
-        return strategy.convert(target_input, current_total)
+        mode = target_input.mode
+        if mode == "percentage":
+            return (value / Decimal(100)) * current_total
+        elif mode == "absolute":
+            return value
+        else:
+            raise ValueError(f"Unsupported mode: {mode}")
