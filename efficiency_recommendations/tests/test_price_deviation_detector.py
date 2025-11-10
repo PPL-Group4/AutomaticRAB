@@ -259,6 +259,149 @@ class TestPriceDeviationDetector(unittest.TestCase):
         assert message is not None
         assert len(message) > 0
 
+    # MESSAGE FORMATTING TESTS
+
+    def test_message_includes_deviation_percentage(self):
+        """Test that message includes deviation percentage"""
+        items = [{
+            'name': 'Semen',
+            'actual_price': Decimal('125000'),
+            'reference_price': Decimal('100000')
+        }]
+
+        result = self.detector.detect_deviations(items)
+        message = result[0]['message']
+
+        # Should include percentage (25.0% or +25.0%)
+        assert '25.0%' in message or '+25.0%' in message
+
+    def test_message_includes_actual_price(self):
+        """Test that message includes actual price with currency format"""
+        items = [{
+            'name': 'Bata',
+            'actual_price': Decimal('150000'),
+            'reference_price': Decimal('100000')
+        }]
+
+        result = self.detector.detect_deviations(items)
+        message = result[0]['message']
+
+        # Should include formatted actual price
+        assert 'Rp 150,000' in message or 'Rp150,000' in message or '150000' in message
+
+    def test_message_includes_reference_price(self):
+        """Test that message includes reference price with currency format"""
+        items = [{
+            'name': 'Cat',
+            'actual_price': Decimal('125000'),
+            'reference_price': Decimal('100000')
+        }]
+
+        result = self.detector.detect_deviations(items)
+        message = result[0]['message']
+
+        # Should include formatted reference price
+        assert 'Rp 100,000' in message or 'Rp100,000' in message or '100000' in message
+
+    def test_message_format_for_price_increase(self):
+        """Test message format shows price increase clearly"""
+        items = [{
+            'name': 'Keramik',
+            'actual_price': Decimal('130000'),
+            'reference_price': Decimal('100000')
+        }]
+
+        result = self.detector.detect_deviations(items)
+        message = result[0]['message']
+
+        # Should indicate increase with + sign or "higher"/"naik"
+        has_increase_indicator = (
+            '+30.0%' in message or 
+            'higher' in message.lower() or 
+            'naik' in message.lower() or
+            'lebih tinggi' in message.lower()
+        )
+        assert has_increase_indicator, f"Message should indicate price increase: {message}"
+
+    def test_message_format_for_price_decrease(self):
+        """Test message format shows price decrease clearly"""
+        items = [{
+            'name': 'Paku',
+            'actual_price': Decimal('70000'),
+            'reference_price': Decimal('100000')
+        }]
+
+        result = self.detector.detect_deviations(items)
+        message = result[0]['message']
+
+        # Should indicate decrease with - sign or "lower"/"turun"
+        has_decrease_indicator = (
+            '-30.0%' in message or 
+            'lower' in message.lower() or 
+            'turun' in message.lower() or
+            'lebih rendah' in message.lower()
+        )
+        assert has_decrease_indicator, f"Message should indicate price decrease: {message}"
+
+    def test_message_price_formatting_with_thousands_separator(self):
+        """Test that prices are formatted with thousands separator"""
+        items = [{
+            'name': 'Material Mahal',
+            'actual_price': Decimal('1500000'),
+            'reference_price': Decimal('1000000')
+        }]
+
+        result = self.detector.detect_deviations(items)
+        message = result[0]['message']
+
+        # Should have comma/dot separators for readability
+        has_separator = '1,500,000' in message or '1.500.000' in message
+        assert has_separator, f"Prices should be formatted with separators: {message}"
+
+    def test_message_readable_structure(self):
+        """Test that message has readable structure with all components"""
+        items = [{
+            'name': 'Besi Beton',
+            'actual_price': Decimal('180000'),
+            'reference_price': Decimal('100000')
+        }]
+
+        result = self.detector.detect_deviations(items)
+        message = result[0]['message']
+
+        # Message should contain all key components
+        assert 'Besi Beton' in message  # Item name
+        assert '80.0%' in message or '+80.0%' in message  # Percentage
+        # At least one price should be visible
+        has_price = 'Rp' in message or '180000' in message or '100000' in message
+        assert has_price, f"Message should include price information: {message}"
+
+    def test_message_format_consistency_multiple_items(self):
+        """Test that all messages follow consistent format"""
+        items = [
+            {
+                'name': 'Item A',
+                'actual_price': Decimal('120000'),
+                'reference_price': Decimal('100000')
+            },
+            {
+                'name': 'Item B',
+                'actual_price': Decimal('80000'),
+                'reference_price': Decimal('100000')
+            }
+        ]
+
+        result = self.detector.detect_deviations(items)
+
+        # Both messages should have similar structure
+        msg1 = result[0]['message']
+        msg2 = result[1]['message']
+
+        # Check both have percentages
+        assert '%' in msg1 and '%' in msg2
+        # Check both have item names
+        assert 'Item' in msg1 and 'Item' in msg2
+
     def test_percentage_calculation_precision(self):
         """Test precise percentage calculation"""
         items = [{
