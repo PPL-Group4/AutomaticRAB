@@ -22,6 +22,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Detect when Django is being executed via its test runner.
 RUNNING_TESTS = any(arg in sys.argv for arg in ["test", "pytest", "py.test"])
+FORCE_MYSQL_FOR_TESTS = os.getenv("TEST_USE_MYSQL", "False").lower() in {"1", "true", "yes"}
+FORCE_SQLITE_FOR_TESTS = os.getenv("TEST_USE_SQLITE", "False").lower() in {"1", "true", "yes"}
 
 
 # Quick-start development settings - unsuitable for production
@@ -102,10 +104,19 @@ DATABASES = {
 }
 
 if RUNNING_TESTS:
-    DATABASES['default'] = {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'test_db.sqlite3',
-    }
+    if FORCE_SQLITE_FOR_TESTS and not FORCE_MYSQL_FOR_TESTS:
+        DATABASES['default'] = {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'test_db.sqlite3',
+        }
+    else:
+        mysql_config = DATABASES['default'].copy()
+        test_db_name = os.getenv('MYSQL_TEST_NAME')
+        if test_db_name:
+            mysql_test_settings = mysql_config.get('TEST', {}).copy()
+            mysql_test_settings['NAME'] = test_db_name
+            mysql_config['TEST'] = mysql_test_settings
+        DATABASES['default'] = mysql_config
 
 
 # Password validation
