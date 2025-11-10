@@ -41,6 +41,46 @@ def _store_override(request: HttpRequest, row_key: str, payload: Dict[str, Any])
     request.session["rab_overrides"] = overrides
     request.session.modified = True
 
+def _parse_payload(request: HttpRequest) -> Optional[dict]:
+    """Safely parse JSON body."""
+    try:
+        return json.loads(request.body.decode() or "{}")
+    except Exception:
+        return None
+
+
+def _extract_fields(payload: dict) -> tuple[str, Optional[str], Any, Any, Optional[str]]:
+    """Extract and normalize input fields from payload."""
+    code = payload.get("code") or payload.get("kode") or ""
+    row_key = payload.get("row_key") or payload.get("rowKey")
+    volume_raw = payload.get("volume") or payload.get("qty") or payload.get("quantity")
+    unit_price_raw = payload.get("unit_price") or payload.get("unitPrice")
+    analysis_override = payload.get("analysis_code") or payload.get("analysisCode")
+    return code, row_key, volume_raw, unit_price_raw, analysis_override
+
+
+def _validate_numeric(volume_raw: Any, unit_price_raw: Any) -> Optional[tuple[Decimal, Optional[Decimal]]]:
+    """Validate and convert numeric inputs."""
+    volume = _safe_decimal(volume_raw)
+    unit_price = _safe_decimal(unit_price_raw)
+
+    # Reject invalid numeric input early
+    if (
+        (volume_raw not in (None, "", 0) and volume is None)
+        or (unit_price_raw not in (None, "", 0) and unit_price is None)
+    ):
+        return None
+
+    return volume or Decimal("0"), unit_price
+
+
+def _get_unit_price(code: str, unit_price: Optional[Decimal]) -> Optional[Decimal]:
+    """Fetch unit price if missing."""
+    if unit_price is None and isinstance(code, str) and code.strip():
+        retriever = AhspPriceRetriever(CombinedAhspSource())
+        unit_price = retriever.get_price_by_job_code(code)
+        logger.debug("resolved unit_price for code=%s -> %s", code, unit_price)
+    return unit_price
 
 @csrf_exempt
 @require_POST
@@ -49,37 +89,23 @@ def recompute_total_cost(request: HttpRequest):
     POST JSON: { "code": "A.1.1.4", "volume": 2.5 }
     Response JSON: { "unit_price": "1000.00", "total_cost": "2500.00" }
     """
-    try:
-        payload = json.loads(request.body.decode() or "{}")
-    except Exception:
+
+    payload = _parse_payload(request)
+    if payload is None:
         return JsonResponse({"error": "invalid_json"}, status=400)
 
-    code = payload.get("code") or payload.get("kode") or ""
-    row_key = payload.get("row_key") or payload.get("rowKey")
-    volume_raw = payload.get("volume", payload.get("qty", payload.get("quantity", None)))
-    unit_price_raw = payload.get("unit_price", payload.get("unitPrice"))
-    analysis_override = payload.get("analysis_code") or payload.get("analysisCode")
+    code, row_key, volume_raw, unit_price_raw, analysis_override = _extract_fields(payload)
 
-    volume = _safe_decimal(volume_raw) or Decimal("0")
-    unit_price = _safe_decimal(unit_price_raw)
-    # Reject invalid numeric input early
-    if (volume_raw not in (None, "", 0) and _safe_decimal(volume_raw) is None) or (
-            unit_price_raw not in (None, "", 0) and _safe_decimal(unit_price_raw) is None
-    ):
+    validated = _validate_numeric(volume_raw, unit_price_raw)
+    if validated is None:
         return JsonResponse({"error": "Invalid numeric input"}, status=400)
 
+    volume, unit_price = validated
     logger.debug("recompute_total_cost called with payload=%s", payload)
 
     try:
-        if unit_price is None and isinstance(code, str) and code.strip():
-            retriever = AhspPriceRetriever(CombinedAhspSource())
-            unit_price = retriever.get_price_by_job_code(code)
-            logger.debug("resolved unit_price for code=%s -> %s", code, unit_price)
-
-        if unit_price is None:
-            total = Decimal("0.00")
-        else:
-            total = (unit_price * volume).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        unit_price = _get_unit_price(code, unit_price)
+        total = (unit_price * volume).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP) if unit_price else Decimal("0.00")
 
         resp = {
             "unit_price": unit_price if unit_price is not None else None,
@@ -97,6 +123,7 @@ def recompute_total_cost(request: HttpRequest):
             _store_override(request, row_key, _serialize_decimals(stored_payload))
 
         return JsonResponse(_serialize_decimals(resp), status=200)
+
     except Exception as exc:
         logger.exception("recompute_total_cost failed")
         return JsonResponse({"error": "internal_error", "detail": str(exc)}, status=500)
