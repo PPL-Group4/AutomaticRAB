@@ -16,8 +16,7 @@ class ProportionalAdjustmentCalculator:
 
         try:
             factor = target_total / current_total
-        except (DivisionByZero, InvalidOperation):
+        except (DivisionByZero, InvalidOperation):  # pragma: no cover
             raise ValueError("Cannot compute adjustment factor (division error).")
-
         # keep 4-decimal precision for proportional scaling
         return factor.quantize(Decimal("0.0001"))
