@@ -34,6 +34,9 @@ def match_best_view(request):
     else:
         status = "not found"
 
+    if isinstance(result, dict) and "alternatives" in result:
+        return JsonResponse(result, status=200)
+
     return JsonResponse({"status": status, "match": result}, status=200)
 
 def job_matching_page(request):

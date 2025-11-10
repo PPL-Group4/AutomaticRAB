@@ -40,38 +40,56 @@ def _norm_name(s: str) -> str:
 def _filter_by_unit(candidates: List[AhsRow], user_unit: Optional[str]) -> List[AhsRow]:
     """Filter candidates by unit compatibility.
 
-    If user provides a unit, only return candidates whose inferred unit matches.
-    If no unit provided, return all candidates.
+    Priority:
+    1. If user provides a unit, it has highest priority.
+    2. If candidate’s inferred unit conflicts with the user’s unit → reject.
+    3. If user’s unit is empty, fall back to inferred filtering.
     """
     if not user_unit:
-        return candidates
+        return candidates  # No unit provided, skip filtering entirely
 
     normalized_user = normalize_unit(user_unit)
     if not normalized_user:
         logger.debug("User unit '%s' could not be normalized - skipping unit filter", user_unit)
         return candidates
 
-    filtered: List[AhsRow] = []
+    filtered = []
     for candidate in candidates:
         inferred = infer_unit_from_description(candidate.name)
-        if units_are_compatible(inferred, normalized_user):
+
+        # === user unit has higher priority ===
+        # If inferred unit is missing, accept (we trust user)
+        if not inferred:
             filtered.append(candidate)
-            logger.debug(
-                "Unit match: candidate=%r inferred=%s user=%s",
-                candidate.code,
-                inferred,
-                normalized_user,
-            )
-        else:
+            continue
+
+        # If inferred unit conflicts, skip
+        if not units_are_compatible(inferred, normalized_user):
             logger.debug(
                 "Unit mismatch: candidate=%r inferred=%s user=%s (filtered out)",
                 candidate.code,
                 inferred,
                 normalized_user,
             )
+            continue
 
-    logger.info("Filtered by unit '%s': %d/%d candidates remain", normalized_user, len(filtered), len(candidates))
+        # Otherwise, keep it
+        filtered.append(candidate)
+        logger.debug(
+            "Unit match: candidate=%r inferred=%s user=%s",
+            candidate.code,
+            inferred,
+            normalized_user,
+        )
+
+    logger.info(
+        "Filtered by unit (user=%s): %d/%d candidates remain",
+        normalized_user,
+        len(filtered),
+        len(candidates),
+    )
     return filtered
+
 
 class WordWeightConfig:
     """Dynamic word weight configuration based on AHSP construction database patterns."""
