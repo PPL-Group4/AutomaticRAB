@@ -55,7 +55,9 @@ class PriceDeviationDetector:
         item_name = item.get('name', 'Unknown Item')
         
         # Skip if missing data or zero reference price
-        if not actual_price or not reference_price or reference_price == 0:
+        if actual_price is None or reference_price is None:
+            return None
+        if reference_price <= 0:
             return None
         
         # Calculate deviation percentage

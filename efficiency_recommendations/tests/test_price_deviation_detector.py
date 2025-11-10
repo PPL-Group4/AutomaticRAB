@@ -478,3 +478,26 @@ class TestPriceDeviationDetector(unittest.TestCase):
         assert result[0]['item_name'] == 'Large Dev'
         assert result[1]['item_name'] == 'Medium Dev'
         assert result[2]['item_name'] == 'Small Dev'
+
+    def test_ignore_non_positive_reference_price(self):
+        """SCRUM-119: Items with non-positive reference_price are ignored."""
+        items = [
+            {'name': 'Neg Ref', 'actual_price': Decimal('120000'), 'reference_price': Decimal('-100000')},  # nonsensical
+            {'name': 'Zero Ref', 'actual_price': Decimal('120000'), 'reference_price': Decimal('0')},       # already covered
+            {'name': 'OK', 'actual_price': Decimal('120000'), 'reference_price': Decimal('100000')},
+        ]
+        result = self.detector.detect_deviations(items)
+        # Only the valid one should be considered -> 20% deviation
+        assert len(result) == 1
+        assert result[0]['item_name'] == 'OK'
+        assert result[0]['deviation_percentage'] == Decimal('20.0')
+
+
+    def test_ignore_missing_reference_price_key(self):
+        items = [
+            {'name': 'Missing Ref', 'actual_price': Decimal('120000')},  # no reference_price key
+            {'name': 'Valid', 'actual_price': Decimal('130000'), 'reference_price': Decimal('100000')},
+        ]
+        result = self.detector.detect_deviations(items)
+        assert len(result) == 1
+        assert result[0]['item_name'] == 'Valid'
