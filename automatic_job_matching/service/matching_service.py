@@ -13,13 +13,14 @@ logger = logging.getLogger(__name__)
 
 class MatchingService:
     translator = TranslationService()
-
+    _shared_repo = CombinedAhsRepository()
+    
     @staticmethod
     def perform_exact_match(description):
         logger.info("perform_exact_match called (len=%d)", len(description))
 
         try:
-            matcher = ExactMatcher(CombinedAhsRepository())
+            matcher = ExactMatcher(MatchingService._shared_repo)
             result = matcher.match(description)
             logger.debug("Exact match result: %s", result)
             return result
@@ -33,7 +34,7 @@ class MatchingService:
                     len(description), min_similarity, unit)
 
         try:
-            matcher = FuzzyMatcher(CombinedAhsRepository(), min_similarity, scorer=FuzzyConfidenceScorer())
+            matcher = FuzzyMatcher(MatchingService._shared_repo, min_similarity, scorer=FuzzyConfidenceScorer())
             confidence_result = getattr(matcher, 'match_with_confidence', None)
             if callable(confidence_result):
                 result = confidence_result(description, unit=unit)
@@ -52,7 +53,7 @@ class MatchingService:
                     len(description), limit, min_similarity, unit)
 
         try:
-            matcher = FuzzyMatcher(CombinedAhsRepository(), min_similarity, scorer=FuzzyConfidenceScorer())
+            matcher = FuzzyMatcher(MatchingService._shared_repo, min_similarity, scorer=FuzzyConfidenceScorer())
             confidence_multi = getattr(matcher, 'find_multiple_matches_with_confidence', None)
 
             if callable(confidence_multi):

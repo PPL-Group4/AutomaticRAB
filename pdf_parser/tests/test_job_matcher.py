@@ -15,12 +15,17 @@ class JobMatcherTests(TestCase):
 
     @patch("pdf_parser.services.job_matcher.MatchingService.perform_best_match")
     def test_found_exact_dict_match(self, mock_match):
-        """Should return 'found' when perform_best_match returns a dict."""
-        mock_match.return_value = {"code": "A.01", "name": "Pasangan Batu"}
+        """Should return 'found' when perform_best_match returns a dict with confidence=1.0."""
+        mock_match.return_value = {
+            "code": "A.01",
+            "name": "Pasangan Batu",
+            "confidence": 1.0,
+        }
         result = job_matcher.match_description("pasangan batu")
         self.assertEqual(result["status"], "found")
         self.assertEqual(result["match"]["code"], "A.01")
         mock_match.assert_called_once_with("pasangan batu")
+
 
     @patch("pdf_parser.services.job_matcher.MatchingService.perform_best_match")
     def test_found_similar_single_list(self, mock_match):
@@ -69,9 +74,15 @@ class JobMatcherTests(TestCase):
         mock_logger.exception.assert_called_once_with("Job matching failed for description")
 
     # ---------- Internal function _derive_status ----------
-    def test_derive_status_dict(self):
-        """_derive_status should detect dict as 'found'."""
-        self.assertEqual(job_matcher._derive_status({"a": 1}), "found")
+    def test_derive_status_dict_confidence_1(self):
+        """_derive_status should return 'found' if confidence == 1.0."""
+        match = {"code": "A.01", "name": "Pasangan Batu", "confidence": 1.0}
+        self.assertEqual(job_matcher._derive_status(match), "found")
+
+    def test_derive_status_dict_without_confidence(self):
+        """_derive_status should return 'similar' if confidence is missing or < 1.0."""
+        match = {"code": "A.01", "name": "Pasangan Batu"}
+        self.assertEqual(job_matcher._derive_status(match), "similar")
 
     def test_derive_status_single_list(self):
         """_derive_status should detect single list element as 'similar'."""
