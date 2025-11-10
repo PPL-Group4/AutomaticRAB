@@ -195,6 +195,7 @@ class RabJobItemHelperTests(SimpleTestCase):
 				"rab_item_header_name": "Header",
 				"custom_ahs_id": None,
 				"analysis_code": "AT.01",
+				"is_locked": None,
 			},
 		)
 
@@ -327,6 +328,36 @@ class FetchRabJobItemsTests(SimpleTestCase):
 		result = fetch_rab_job_items(77, service=StubService())
 		self.assertEqual(result, ["rab-77"])
 
+	def test_fetch_rab_job_items_include_non_adjustable_returns_split(self) -> None:
+		adjustable_row = SimpleNamespace(
+			id=20,
+			name="Item Adjustable",
+			unit=None,
+			rab_item_header=None,
+			price=100,
+			volume=2,
+			custom_ahs_id=None,
+			analysis_code=None,
+			is_locked=False,
+		)
+		locked_row = SimpleNamespace(
+			id=21,
+			name="Item Locked",
+			unit=None,
+			rab_item_header=None,
+			price=150,
+			volume=1,
+			custom_ahs_id=None,
+			analysis_code=None,
+			is_locked=True,
+		)
+		adjustable, locked, excluded = fetch_rab_job_items(
+			11, queryset=[adjustable_row, locked_row], include_non_adjustable=True
+		)
+		self.assertEqual(len(adjustable), 1)
+		self.assertEqual(len(locked), 1)
+		self.assertFalse(excluded)
+
 	def test_rab_job_item_service_maps_rows(self) -> None:
 		row = SimpleNamespace(
 			id=9,
@@ -396,6 +427,88 @@ class FetchRabJobItemsTests(SimpleTestCase):
 
 		self.assertEqual(service.get_items(1), [])
 
+	def test_service_groups_locked_items(self) -> None:
+		adjustable_row = SimpleNamespace(
+			id=10,
+			name="Pekerjaan Normal",
+			unit=None,
+			rab_item_header=None,
+			price=50,
+			volume=2,
+			custom_ahs_id=None,
+			analysis_code=None,
+			is_locked=False,
+		)
+		locked_row = SimpleNamespace(
+			id=11,
+			name="Pekerjaan Terkunci",
+			unit=None,
+			rab_item_header=None,
+			price=75,
+			volume=1,
+			custom_ahs_id=None,
+			analysis_code=None,
+			is_locked=True,
+		)
+		repository = SimpleNamespace(for_rab=lambda _: [adjustable_row, locked_row])
+		service = RabJobItemService(repository, RabJobItemMapper())
+
+		adjustable, locked, excluded = service.get_items_with_classification(42)
+		self.assertEqual(len(adjustable), 1)
+		self.assertEqual(len(locked), 1)
+		self.assertFalse(excluded)
+
+	def test_classify_mapped_items_respects_policy(self) -> None:
+		service = RabJobItemService(SimpleNamespace(for_rab=lambda _: []), RabJobItemMapper())
+		adjustable_item = RabJobItem(
+			rab_item_id=12,
+			name="Generic Work",
+			unit_name="m",
+			unit_price=Decimal("10"),
+			volume=Decimal("2"),
+			total_price=Decimal("20"),
+			rab_item_header_id=None,
+			rab_item_header_name=None,
+			custom_ahs_id=None,
+			analysis_code=None,
+			is_locked=False,
+		)
+		locked_item = RabJobItem(
+			rab_item_id=13,
+			name="Locked Work",
+			unit_name="m",
+			unit_price=Decimal("5"),
+			volume=Decimal("1"),
+			total_price=Decimal("5"),
+			rab_item_header_id=None,
+			rab_item_header_name=None,
+			custom_ahs_id=None,
+			analysis_code=None,
+			is_locked=True,
+		)
+
+		adjustable, locked, excluded = service.classify_mapped_items([adjustable_item, locked_item])
+		self.assertEqual(adjustable, [adjustable_item])
+		self.assertEqual(locked, [locked_item])
+		self.assertEqual(excluded, [])
+
+	def test_fetch_rab_job_items_uses_service_for_classification(self) -> None:
+		class StubService:
+			def __init__(self) -> None:
+				self.calls = []
+
+			def get_items_with_classification(self, rab_id: int):
+				self.calls.append(rab_id)
+				return (["a"], ["b"], [])
+
+			def get_items(self, rab_id: int):  # pragma: no cover - safeguard
+				raise AssertionError("should not call get_items when include_non_adjustable is true")
+
+		service = StubService()
+		result = fetch_rab_job_items(77, service=service, include_non_adjustable=True)
+		self.assertEqual(result, (["a"], ["b"], []))
+		self.assertEqual(service.calls, [77])
+
 
 class FetchRabJobItemsViewTests(SimpleTestCase):
 	def setUp(self) -> None:
@@ -415,13 +528,61 @@ class FetchRabJobItemsViewTests(SimpleTestCase):
 			custom_ahs_id=None,
 			analysis_code="AT.02",
 		)
-		with patch("target_bid.views.fetch_rab_job_items", return_value=[mock_item]) as mock_fetch:
+		with patch(
+			"target_bid.views.fetch_rab_job_items",
+			return_value=([mock_item], [], []),
+		) as mock_fetch:
 			response = fetch_rab_job_items_view(request, rab_id=99)
 
-		mock_fetch.assert_called_once_with(99)
+		mock_fetch.assert_called_once_with(99, include_non_adjustable=True)
 		self.assertEqual(response.status_code, 200)
 		self.assertEqual(response.data["rab_id"], 99)
-		self.assertEqual(response.data["items"], [mock_item.to_dict()])
+		expected = mock_item.to_dict()
+		expected["adjustment_status"] = "adjustable"
+		self.assertEqual(response.data["items"], [expected])
+		self.assertEqual(response.data["locked_items"], [])
+
+	def test_view_includes_locked_items_section(self) -> None:
+		request = self.factory.get("/target_bid/rabs/10/items/")
+		adjustable_item = RabJobItem(
+			rab_item_id=1,
+			name="Item A",
+			unit_name="m",
+			unit_price=Decimal("100"),
+			volume=Decimal("2"),
+			total_price=Decimal("200"),
+			rab_item_header_id=None,
+			rab_item_header_name=None,
+			custom_ahs_id=None,
+			analysis_code=None,
+			is_locked=False,
+		)
+		locked_item = RabJobItem(
+			rab_item_id=2,
+			name="Item B",
+			unit_name="m2",
+			unit_price=Decimal("150"),
+			volume=Decimal("1"),
+			total_price=Decimal("150"),
+			rab_item_header_id=None,
+			rab_item_header_name=None,
+			custom_ahs_id=None,
+			analysis_code=None,
+			is_locked=True,
+		)
+		with patch(
+			"target_bid.views.fetch_rab_job_items",
+			return_value=([adjustable_item], [locked_item], []),
+		):
+			response = fetch_rab_job_items_view(request, rab_id=10)
+
+		expected_adjustable = adjustable_item.to_dict()
+		expected_adjustable["adjustment_status"] = "adjustable"
+		expected_locked = locked_item.to_dict()
+		expected_locked["adjustment_status"] = "locked"
+		self.assertEqual(response.status_code, 200)
+		self.assertEqual(response.data["items"], [expected_adjustable])
+		self.assertEqual(response.data["locked_items"], [expected_locked])
 
 	def test_invalid_mode_rejected(self) -> None:
 		with self.assertRaises(ValidationError) as exc:
