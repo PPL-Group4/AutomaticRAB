@@ -1,17 +1,46 @@
 import csv
+import hashlib
 import logging
+import os
 import re
 from pathlib import Path
 from typing import List
+
+from automatic_job_matching.security import SecurityValidationError
 from automatic_job_matching.service.exact_matcher import AhsRow
 
 logger = logging.getLogger(__name__)
+security_logger = logging.getLogger("security.audit")
 
 class AhspCiptaKaryaRepository:
     def __init__(self):
         base_dir = Path(__file__).resolve().parent.parent
         self.csv_path = base_dir / "data" / "AHSP_CIPTA_KARYA.csv"
         self._cache = None
+        self._expected_hash = os.getenv("AHSP_CIPTA_KARYA_SHA256")
+        self._integrity_checked = False
+
+    def _validate_integrity(self) -> None:
+        if self._integrity_checked:
+            return
+
+        if not self._expected_hash:
+            security_logger.warning(
+                "Environment variable AHSP_CIPTA_KARYA_SHA256 not set; skipping CSV integrity validation."
+            )
+            self._integrity_checked = True
+            return
+
+        try:
+            with open(self.csv_path, mode="rb") as csv_file:
+                digest = hashlib.sha256(csv_file.read()).hexdigest()
+        except FileNotFoundError as exc:
+            raise SecurityValidationError("Reference CSV file is missing.") from exc
+
+        if digest != self._expected_hash:
+            raise SecurityValidationError("CSV integrity validation failed.")
+        security_logger.info("Verified integrity of %s", self.csv_path.name)
+        self._integrity_checked = True
 
     def _normalize_text(self, text: str) -> str:
         if not text:
@@ -37,6 +66,7 @@ class AhspCiptaKaryaRepository:
 
         rows = []
         try:
+            self._validate_integrity()
             with open(self.csv_path, mode="r", encoding="utf-8-sig") as f:
                 reader = csv.DictReader(f, delimiter=";")
 
@@ -63,6 +93,10 @@ class AhspCiptaKaryaRepository:
             logger.info(f"Loaded {len(rows)} normalized rows from {self.csv_path}")
         except FileNotFoundError:
             logger.error(f"CSV not found at {self.csv_path}")
+            self._cache = []
+        except SecurityValidationError as exc:
+            logger.error("CSV integrity validation failed: %s", exc)
+            security_logger.error("CSV integrity validation failed: %s", exc)
             self._cache = []
 
         return self._cache
