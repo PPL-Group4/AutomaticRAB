@@ -49,15 +49,7 @@ class PriceDeviationDetector:
         return deviations
     
     def _check_single_item(self, item: Dict) -> Optional[Dict]:
-        """
-        Check a single item for price deviation.
-        
-        Args:
-            item: Item dict with actual_price and reference_price
-        
-        Returns:
-            Deviation warning dict if deviation detected, None otherwise
-        """
+        """Check a single item for price deviation."""
         actual_price = item.get('actual_price')
         reference_price = item.get('reference_price')
         item_name = item.get('name', 'Unknown Item')
@@ -117,7 +109,27 @@ class PriceDeviationDetector:
         actual_price: Decimal,
         reference_price: Decimal
     ) -> str:
-        return f"Price deviation detected for '{item_name}'"
+        """Generate formatted warning message for price deviation."""
+        # Determine direction indicator
+        direction = "higher" if deviation_pct > 0 else "lower"
+        
+        # Format prices with thousand separators
+        actual_formatted = self._format_price(actual_price)
+        reference_formatted = self._format_price(reference_price)
+        
+        # Build comprehensive message
+        message = (
+            f"Price deviation detected for '{item_name}': "
+            f"{deviation_pct:+.1f}% {direction} than reference. "
+            f"Actual: Rp {actual_formatted}, "
+            f"Reference: Rp {reference_formatted}."
+        )
+        
+        return message
+    
+    def _format_price(self, price: Decimal) -> str:
+        """Format price with thousand separators."""
+        return f"{price:,.0f}"
 
 
 def detect_price_deviations(
