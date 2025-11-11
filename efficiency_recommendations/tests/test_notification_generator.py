@@ -175,3 +175,21 @@ class NotificationGeneratorTest(TestCase):
         self.assertEqual(result[0]['item_name'], 'First Item')
         self.assertEqual(result[1]['item_name'], 'Second Item')
         self.assertEqual(result[2]['item_name'], 'Third Item')
+
+    def test_no_duplicate_notifications(self):
+        """Test that each item generates only one notification (no duplicates)"""
+        items_with_status = [
+            {'name': 'Same Item', 'in_ahsp': False},
+            {'name': 'Same Item', 'in_ahsp': False},  # Duplicate item
+            {'name': 'Different Item', 'in_ahsp': False}
+        ]
+
+        result = generate_notifications(items_with_status)
+
+        # Should have 3 notifications (one per item, even if duplicate names)
+        # This is correct behavior - we notify per item, not per unique name
+        self.assertEqual(len(result), 3)
+
+        # All should be for items not in AHSP
+        for notification in result:
+            self.assertEqual(notification['type'], 'NOT_IN_DATABASE')
