@@ -24,6 +24,9 @@ import os
 
 from automatic_price_matching.views import recompute_total_cost
 
+def trigger_error(request):
+    division_by_zero = 1 / 0
+
 urlpatterns = [
     path('admin/', admin.site.urls),
     path("api/", include("automatic_job_matching.urls")),
@@ -33,6 +36,7 @@ urlpatterns = [
     path('automatic_price_matching/', include('automatic_price_matching.urls')),
     path("cost_weight/", include("cost_weight.urls")),
     path("api/recompute_total_cost/", recompute_total_cost),
+    path('sentry-debug/', trigger_error),
 ]
 
 if settings.DEBUG or os.getenv("DOCKER_ENV") == "True":

@@ -190,3 +190,13 @@ FILE_UPLOAD_MAX_MEMORY_SIZE = 52428800  # 50MB
 
 FILE_UPLOAD_TEMP_DIR = os.path.join(BASE_DIR, 'tmp')
 os.makedirs(FILE_UPLOAD_TEMP_DIR, exist_ok=True)
+
+import sentry_sdk
+from sentry_sdk.integrations.django import DjangoIntegration
+
+sentry_sdk.init(
+    dsn="https://b3f3e350111e3c6fc754a5408b0c26f3@o4510344475574272.ingest.us.sentry.io/4510344483831808",
+    integrations=[DjangoIntegration()],
+    traces_sample_rate=1.0,
+    send_default_pii=True,
+)
