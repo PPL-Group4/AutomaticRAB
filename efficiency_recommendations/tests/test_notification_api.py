@@ -46,10 +46,14 @@ class NotificationAPITest(TestCase):
 
     def test_api_returns_json_response(self):
         """Test that API returns JSON response with correct structure"""
-        url = reverse('efficiency_recommendations:notifications',
-                     kwargs={'job_id': self.job.id})
+        url = reverse(
+            'efficiency_recommendations:notifications',
+            kwargs={'job_id': self.job.id}
+        )
 
-        with patch('efficiency_recommendations.views.check_items_in_ahsp') as mock_check:
+        with patch(
+            'efficiency_recommendations.views.check_items_in_ahsp'
+        ) as mock_check:
             # Mock: all items found in AHSP
             mock_check.return_value = [
                 {'name': 'Pekerjaan Struktur', 'cost': Decimal('500000000'),
@@ -68,7 +72,6 @@ class NotificationAPITest(TestCase):
         self.assertIn('total_items', data)
         self.assertIn('items_not_in_ahsp', data)
         self.assertIn('notifications', data)
-
 
     @patch('efficiency_recommendations.views.check_items_in_ahsp')
     def test_api_returns_notifications_for_items_not_in_ahsp(self, mock_check):
@@ -96,8 +99,10 @@ class NotificationAPITest(TestCase):
             }
         ]
 
-        url = reverse('efficiency_recommendations:notifications',
-                     kwargs={'job_id': self.job.id})
+        url = reverse(
+            'efficiency_recommendations:notifications',
+            kwargs={'job_id': self.job.id}
+        )
         response = self.client.get(url)
 
         data = json.loads(response.content)
@@ -112,11 +117,15 @@ class NotificationAPITest(TestCase):
         self.assertEqual(notification['type'], 'NOT_IN_DATABASE')
         self.assertIn('item_name', notification)
         self.assertIn('message', notification)
-        self.assertIn('tidak ditemukan', notification['message'].lower())
-
+        self.assertIn(
+            'tidak ditemukan',
+            notification['message'].lower()
+        )
 
     @patch('efficiency_recommendations.views.check_items_in_ahsp')
-    def test_api_returns_empty_notifications_when_all_items_in_ahsp(self, mock_check):
+    def test_api_returns_empty_notifications_when_all_items_in_ahsp(
+        self, mock_check
+    ):
         """Test API returns empty notifications when all items are in AHSP"""
 
         # Mock: All items found in AHSP
@@ -129,8 +138,10 @@ class NotificationAPITest(TestCase):
              'weight_pct': Decimal('7.94'), 'in_ahsp': True},
         ]
 
-        url = reverse('efficiency_recommendations:notifications',
-                     kwargs={'job_id': self.job.id})
+        url = reverse(
+            'efficiency_recommendations:notifications',
+            kwargs={'job_id': self.job.id}
+        )
         response = self.client.get(url)
 
         data = json.loads(response.content)
@@ -142,8 +153,10 @@ class NotificationAPITest(TestCase):
 
     def test_api_returns_404_for_nonexistent_job(self):
         """Test API returns 404 for non-existent job ID"""
-        url = reverse('efficiency_recommendations:notifications',
-                     kwargs={'job_id': 99999})
+        url = reverse(
+            'efficiency_recommendations:notifications',
+            kwargs={'job_id': 99999}
+        )
         response = self.client.get(url)
 
         self.assertEqual(response.status_code, 404)
@@ -156,8 +169,10 @@ class NotificationAPITest(TestCase):
             total_cost=Decimal('0')
         )
 
-        url = reverse('efficiency_recommendations:notifications',
-                     kwargs={'job_id': empty_job.id})
+        url = reverse(
+            'efficiency_recommendations:notifications',
+            kwargs={'job_id': empty_job.id}
+        )
         response = self.client.get(url)
 
         data = json.loads(response.content)
@@ -170,8 +185,10 @@ class NotificationAPITest(TestCase):
 
     def test_only_get_method_allowed(self):
         """Test that only GET method is allowed"""
-        url = reverse('efficiency_recommendations:notifications',
-                     kwargs={'job_id': self.job.id})
+        url = reverse(
+            'efficiency_recommendations:notifications',
+            kwargs={'job_id': self.job.id}
+        )
 
         # POST should not be allowed
         response = self.client.post(url)
@@ -186,7 +203,9 @@ class NotificationAPITest(TestCase):
         self.assertEqual(response.status_code, 405)
 
         # GET should be allowed
-        with patch('efficiency_recommendations.views.check_items_in_ahsp') as mock:
+        with patch(
+            'efficiency_recommendations.views.check_items_in_ahsp'
+        ) as mock:
             mock.return_value = []
             response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
@@ -197,9 +216,11 @@ class NotificationAPITest(TestCase):
 
         mock_check.return_value = []
 
-        url = reverse('efficiency_recommendations:notifications',
-                     kwargs={'job_id': self.job.id})
-        response = self.client.get(url)
+        url = reverse(
+            'efficiency_recommendations:notifications',
+            kwargs={'job_id': self.job.id}
+        )
+        self.client.get(url)
 
         # Verify AHSP checker was called
         mock_check.assert_called_once()

@@ -1,9 +1,12 @@
-from django.shortcuts import render
 from django.http import JsonResponse, Http404
 from django.views.decorators.http import require_GET
 from cost_weight.models import TestJob
-from efficiency_recommendations.services.ahsp_availability_checker import check_items_in_ahsp
-from efficiency_recommendations.services.notification_generator import generate_notifications
+from efficiency_recommendations.services.ahsp_availability_checker import (
+    check_items_in_ahsp
+)
+from efficiency_recommendations.services.notification_generator import (
+    generate_notifications
+)
 
 
 @require_GET
