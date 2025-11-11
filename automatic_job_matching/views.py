@@ -7,6 +7,7 @@ import json
 import logging
 
 from automatic_job_matching.service.matching_service import MatchingService
+from automatic_job_matching.utils.monitoring import tag_match_event, log_unmatched_entry
 from automatic_job_matching.security import (
     SecurityValidationError,
     ensure_payload_size,
@@ -44,6 +45,7 @@ def match_best_view(request):
         security_logger.warning("Rejected payload on validation error: %s", exc)
         return JsonResponse({"error": "Invalid input"}, status=400)
 
+    tag_match_event(description, unit)
     result = MatchingService.perform_best_match(description, unit=unit)  # Pass unit to matching service
 
     if isinstance(result, dict) and result:
@@ -57,6 +59,7 @@ def match_best_view(request):
         status = f"found {len(result)} similar"
     else:
         status = "not found"
+        log_unmatched_entry(description, unit)
 
     if isinstance(result, dict) and "alternatives" in result:
         return JsonResponse(result, status=200)
