@@ -192,51 +192,55 @@ from decimal import Decimal
 import json
 from target_bid.service_utils.budgetservice import adjust_unit_prices_preserving_volume, TargetBudgetConverter
 from target_bid.validators import TargetBudgetInput
+
+
 @require_http_methods(["POST"])
 def apply_adjustment(request):
     try:
         data = json.loads(request.body)
-        mode = data.get("mode")  # "percentage" or "absolute"
+        mode = data.get("mode")
         value = Decimal(str(data.get("value", 0)))
         current_total = Decimal(str(data.get("current_total", 0)))
 
         if current_total <= 0:
             return JsonResponse({"error": "Current total must be positive"}, status=400)
 
-        #  Force percentage to be reduction-only
+        # Calculate adjustment factor
         if mode == "percentage":
-            reduction_pct = abs(value)  # Always positive
+            reduction_pct = abs(value)
             adjustment_factor = Decimal("1") - (reduction_pct / Decimal("100"))
             target_total = current_total * adjustment_factor
-        else:  # absolute mode
+        else:
             target_input = TargetBudgetInput(mode=mode, value=value)
             target_total = TargetBudgetConverter.to_nominal(target_input, current_total)
             adjustment_factor = target_total / current_total
 
-        # Get rows from session overrides
-        session_overrides = request.session.get("rab_overrides", {})
 
-        # Build item objects
+        original_data = request.session.get("rab_overrides", {})
+
+
+
+
+        # --- Rebuild fresh items every apply (no cascading) ---
         class Item:
             def __init__(self, row_key, volume, unit_price):
                 self.row_key = row_key
                 self.volume = Decimal(str(volume))
                 self.unit_price = Decimal(str(unit_price))
                 self.total_price = self.volume * self.unit_price
-                self.name = row_key
 
         items = [
             Item(k, v.get("volume", 0), v.get("unit_price", 0) or v.get("price", 0))
-            for k, v in session_overrides.items()
+            for k, v in original_data.items()
         ]
 
-        if not items:
-            return JsonResponse({"error": "No rows to adjust"}, status=400)
+        # --- Apply adjustment once ---
+        for item in items:
+            item.unit_price = item.unit_price * adjustment_factor
+            item.total_price = item.volume * item.unit_price
 
-        # Apply adjustment
-        adjust_unit_prices_preserving_volume(items, adjustment_factor)
-
-        # Update session
+        # Update session with adjusted values
+        session_overrides = request.session.get("rab_overrides", {})
         for item in items:
             session_overrides[item.row_key]["unit_price"] = float(item.unit_price)
             session_overrides[item.row_key]["price"] = float(item.unit_price)
