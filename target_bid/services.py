@@ -38,10 +38,13 @@ class RabJobItem:
             "rab_item_header_name": self.rab_item_header_name,
             "custom_ahs_id": self.custom_ahs_id,
             "analysis_code": self.analysis_code,
+            "is_locked": self.is_locked,
         }
 
 class LockedItemRule:
     """Marks RAB job items as non-adjustable if they are flagged as locked/inflexible."""
+
+    REASON_CODE = "locked"
 
     def decide(self, item: RabJobItem) -> Optional[bool]:
         # Some RAB models might store this as 'is_locked', 'locked', or 'inflexible'
@@ -144,9 +147,24 @@ class RabJobItemService:
         self._non_adjustable_policy = non_adjustable_policy or _DEFAULT_NON_ADJUSTABLE_POLICY
 
     def get_items(self, rab_id: int) -> List[RabJobItem]:
-        rows = self._repository.for_rab(rab_id)
-        mapped = [self._mapper.map(row) for row in rows]
-        return [item for item in mapped if not self._non_adjustable_policy.is_non_adjustable(item)]
+        adjustable, _, _ = self.get_items_with_classification(rab_id)
+        return adjustable
+
+    def get_items_with_classification(
+        self, rab_id: int
+    ) -> tuple[List[RabJobItem], List[RabJobItem], List[tuple[RabJobItem, Optional[str]]]]:
+        mapped = self.map_rows(self._repository.for_rab(rab_id))
+        return self.classify_mapped_items(mapped)
+
+    def classify_mapped_items(
+        self, mapped_items: Iterable[RabJobItem]
+    ) -> tuple[List[RabJobItem], List[RabJobItem], List[tuple[RabJobItem, Optional[str]]]]:
+        return _classify_items(list(mapped_items), self._non_adjustable_policy)
+
+    def map_rows(self, rows: Iterable[object]) -> List[RabJobItem]:
+        """Transform raw data rows into domain-level job items."""
+
+        return [self._mapper.map(row) for row in rows]
 
 
 _NON_ADJUSTABLE_NAME_LOOKUP = {
@@ -194,6 +212,8 @@ class DecisionRule(Protocol):
 class NameBlacklistRule:
     """Rejects job items whose normalised name appears in the blacklist."""
 
+    REASON_CODE = "name_blacklist"
+
     def __init__(self, blacklist: Sequence[str], normaliser: NameNormaliser) -> None:
         self._blacklist = set(blacklist)
         self._normaliser = normaliser
@@ -208,6 +228,8 @@ class NameBlacklistRule:
 class CustomAhsOverrideRule:
     """Allows custom AHS entries to remain adjustable regardless of codes."""
 
+    REASON_CODE = "custom_ahs_override"
+
     def decide(self, item: RabJobItem) -> Optional[bool]:
         if item.custom_ahs_id is not None:
             return False
@@ -216,6 +238,8 @@ class CustomAhsOverrideRule:
 
 class AnalysisCodeRule:
     """Marks items that provide an analysis code as non-adjustable."""
+
+    REASON_CODE = "analysis_code"
 
     def decide(self, item: RabJobItem) -> Optional[bool]:
         if item.analysis_code:
@@ -229,12 +253,17 @@ class NonAdjustableEvaluator:
     def __init__(self, rules: Sequence[DecisionRule]) -> None:
         self._rules = list(rules)
 
-    def is_non_adjustable(self, item: RabJobItem) -> bool:
+    def classify(self, item: RabJobItem) -> tuple[bool, Optional[str]]:
         for rule in self._rules:
             decision = rule.decide(item)
             if decision is not None:
-                return decision
-        return False
+                reason = getattr(rule, "REASON_CODE", None)
+                return decision, reason
+        return False, None
+
+    def is_non_adjustable(self, item: RabJobItem) -> bool:
+        decision, _ = self.classify(item)
+        return decision
 
 
 _DEFAULT_NAME_NORMALISER = NameNormaliser()
@@ -246,6 +275,27 @@ _DEFAULT_RULES: Sequence[DecisionRule] = (
     LockedItemRule(),
 )
 _DEFAULT_NON_ADJUSTABLE_POLICY = NonAdjustableEvaluator(_DEFAULT_RULES)
+
+
+def _classify_items(
+    items: Iterable[RabJobItem],
+    policy: NonAdjustableEvaluator,
+) -> tuple[List[RabJobItem], List[RabJobItem], List[tuple[RabJobItem, Optional[str]]]]:
+    adjustable: List[RabJobItem] = []
+    locked: List[RabJobItem] = []
+    excluded: List[tuple[RabJobItem, Optional[str]]] = []
+
+    for item in items:
+        decision, reason = policy.classify(item)
+        if decision:
+            if reason == LockedItemRule.REASON_CODE:
+                locked.append(item)
+            else:
+                excluded.append((item, reason))
+        else:
+            adjustable.append(item)
+
+    return adjustable, locked, excluded
 
 
 def _normalise_item_name(name: Optional[str]) -> str:
@@ -279,7 +329,8 @@ def fetch_rab_job_items(
     *,
     service: Optional[RabJobItemService] = None,
     queryset: Optional[Iterable] = None,
-) -> List[RabJobItem]:
+    include_non_adjustable: bool = False,
+):
     """Fetch job items and their unit prices for the given RAB.
 
     A queryset may be provided for backwards compatibility with callers that
@@ -287,11 +338,18 @@ def fetch_rab_job_items(
     defaults to a Django-backed implementation.
     """
 
-    if queryset is not None:
-        mapper = RabJobItemMapper()
-        return [mapper.map(row) for row in queryset]
-
     selected_service = service or _DEFAULT_SERVICE
+
+    if queryset is not None:
+        mapped = selected_service.map_rows(queryset)
+        classification = selected_service.classify_mapped_items(mapped)
+        if include_non_adjustable:
+            return classification
+        adjustable, _, _ = classification
+        return adjustable
+
+    if include_non_adjustable:
+        return selected_service.get_items_with_classification(rab_id)
     return selected_service.get_items(rab_id)
 
 
