@@ -49,7 +49,7 @@ class NotificationAPITest(TestCase):
         url = reverse('efficiency_recommendations:notifications',
                      kwargs={'job_id': self.job.id})
 
-        with patch('efficiency_recommendations.services.ahsp_availability_checker.check_items_in_ahsp') as mock_check:
+        with patch('efficiency_recommendations.views.check_items_in_ahsp') as mock_check:
             # Mock: all items found in AHSP
             mock_check.return_value = [
                 {'name': 'Pekerjaan Struktur', 'cost': Decimal('500000000'),
@@ -69,8 +69,8 @@ class NotificationAPITest(TestCase):
         self.assertIn('items_not_in_ahsp', data)
         self.assertIn('notifications', data)
 
-    
-    @patch('efficiency_recommendations.services.ahsp_availability_checker.check_items_in_ahsp')
+
+    @patch('efficiency_recommendations.views.check_items_in_ahsp')
     def test_api_returns_notifications_for_items_not_in_ahsp(self, mock_check):
         """Test API generates notifications for items NOT found in AHSP"""
 
@@ -114,8 +114,8 @@ class NotificationAPITest(TestCase):
         self.assertIn('message', notification)
         self.assertIn('tidak ditemukan', notification['message'].lower())
 
-    
-    @patch('efficiency_recommendations.services.ahsp_availability_checker.check_items_in_ahsp')
+
+    @patch('efficiency_recommendations.views.check_items_in_ahsp')
     def test_api_returns_empty_notifications_when_all_items_in_ahsp(self, mock_check):
         """Test API returns empty notifications when all items are in AHSP"""
 
@@ -186,12 +186,12 @@ class NotificationAPITest(TestCase):
         self.assertEqual(response.status_code, 405)
 
         # GET should be allowed
-        with patch('efficiency_recommendations.services.ahsp_availability_checker.check_items_in_ahsp') as mock:
+        with patch('efficiency_recommendations.views.check_items_in_ahsp') as mock:
             mock.return_value = []
             response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
 
-    @patch('efficiency_recommendations.services.ahsp_availability_checker.check_items_in_ahsp')
+    @patch('efficiency_recommendations.views.check_items_in_ahsp')
     def test_api_calls_ahsp_checker_with_correct_data(self, mock_check):
         """Test that API calls AHSP checker with correct item data"""
 
