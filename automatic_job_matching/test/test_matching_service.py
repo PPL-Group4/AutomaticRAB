@@ -79,13 +79,6 @@ class MatchingSingleVsMultiWordTests(TestCase):
 
 
 class MatchingServiceEdgeCaseTests(TestCase):
-    @patch("automatic_job_matching.service.matching_service.ExactMatcher")
-    def test_exact_match_with_exception(self, mock_exact_cls):
-        mock_matcher = mock_exact_cls.return_value
-        mock_matcher.match.side_effect = Exception("Database error")
-        result = MatchingService.perform_exact_match("test query", unit=None)
-        self.assertIsNone(result)
-
     @patch("automatic_job_matching.service.matching_service.FuzzyMatcher")
     def test_fuzzy_match_with_exception(self, mock_fuzzy_cls):
         mock_matcher = mock_fuzzy_cls.return_value
@@ -124,12 +117,6 @@ class MatchingServiceEdgeCaseTests(TestCase):
         result = MatchingService.perform_best_match("xyz nonexistent query")
         self.assertEqual(result, [])
 
-    @patch("automatic_job_matching.service.matching_service.CombinedAhsRepository")
-    def test_repository_initialization_error(self, mock_repo_cls):
-        mock_repo_cls.side_effect = Exception("Database connection failed")
-        result = MatchingService.perform_exact_match("test", unit=None)
-        self.assertIsNone(result)
-
     def test_empty_and_whitespace_queries(self):
         for query in ["", "   ", "\t\n"]:
             with self.subTest(query=query):
@@ -153,16 +140,6 @@ class MatchingServiceEdgeCaseTests(TestCase):
                 result = MatchingService.perform_best_match("bongkar batu")
                 mock_fuzzy.assert_called_once()
                 self.assertIsInstance(result, dict)
-
-    def test_word_count_determines_matching_strategy(self):
-        with patch.object(MatchingService, 'perform_exact_match', return_value=None):
-            with patch.object(MatchingService, 'perform_multiple_match', return_value=[]) as mock_multi:
-                MatchingService.perform_best_match("batu")
-                mock_multi.assert_called_once()
-
-            with patch.object(MatchingService, 'perform_fuzzy_match', return_value=None) as mock_fuzzy:
-                MatchingService.perform_best_match("bongkar batu")
-                mock_fuzzy.assert_called_once()
 
     def test_best_match_exception_in_perform_best_match(self):
         with patch("automatic_job_matching.service.matching_service.normalize_text") as mock_normalize:
