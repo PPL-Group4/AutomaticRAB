@@ -7,6 +7,7 @@ from efficiency_recommendations.services.ahsp_availability_checker import (
 from efficiency_recommendations.services.notification_generator import (
     generate_notifications
 )
+from efficiency_recommendations.services.warning_indicator_builder import build_indicator
 
 
 @require_GET
@@ -58,12 +59,26 @@ def get_job_notifications(request, job_id):
     # Generate notifications for items not in AHSP
     notifications = generate_notifications(items_with_status)
 
+    # Aggregate/indicator fields
+    total_items = len(items)
+    warning_count = len(notifications)
+    indicator = build_indicator(total_items, warning_count)
+
     # Build response
     response_data = {
         'job_id': job_id,
-        'total_items': len(items),
-        'items_not_in_ahsp': len(notifications),
-        'notifications': notifications
+        'total_items': total_items,
+        'items_not_in_ahsp': warning_count,
+        'notifications': notifications,
+        'has_warnings': warning_count > 0,
+        'warning_count': warning_count,
+        'warning_ratio': indicator['ratio'],
+        'indicator': {
+            'level': indicator['level'],
+            'label': indicator['label'],
+            'badge_color': indicator['badge_color'],
+            'icon': indicator['icon'],
+        }
     }
 
     return JsonResponse(response_data)
