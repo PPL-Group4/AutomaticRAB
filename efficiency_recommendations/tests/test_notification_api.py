@@ -234,3 +234,74 @@ class NotificationAPITest(TestCase):
         self.assertIn('name', first_item)
         self.assertIn('cost', first_item)
         self.assertIn('weight_pct', first_item)
+
+from unittest.mock import patch
+
+class NotificationUIIndicatorTest(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.job = TestJob.objects.create(name="UI Job", total_cost=Decimal('100'))
+        TestItem.objects.create(name="A", job=self.job, quantity=1, unit_price=10, weight_pct=10)
+        TestItem.objects.create(name="B", job=self.job, quantity=1, unit_price=20, weight_pct=20)
+        TestItem.objects.create(name="C", job=self.job, quantity=1, unit_price=70, weight_pct=70)
+
+    @patch('efficiency_recommendations.views.check_items_in_ahsp')
+    def test_indicator_none_when_no_warnings(self, mock_check):
+        mock_check.return_value = [
+            {'name': 'A', 'cost': Decimal('10'), 'weight_pct': Decimal('10'), 'in_ahsp': True},
+            {'name': 'B', 'cost': Decimal('20'), 'weight_pct': Decimal('20'), 'in_ahsp': True},
+            {'name': 'C', 'cost': Decimal('70'), 'weight_pct': Decimal('70'), 'in_ahsp': True},
+        ]
+        url = reverse('efficiency_recommendations:notifications', kwargs={'job_id': self.job.id})
+        res = self.client.get(url)
+        data = json.loads(res.content)
+
+        self.assertIn('has_warnings', data)
+        self.assertIn('warning_count', data)
+        self.assertIn('warning_ratio', data)
+        self.assertIn('indicator', data)
+
+        self.assertFalse(data['has_warnings'])
+        self.assertEqual(data['warning_count'], 0)
+        self.assertEqual(data['warning_ratio'], 0.0)
+        self.assertEqual(data['indicator']['level'], 'NONE')
+        self.assertEqual(data['indicator']['badge_color'], '#D1D5DB')
+        self.assertEqual(data['indicator']['icon'], 'check-circle')
+
+    @patch('efficiency_recommendations.views.check_items_in_ahsp')
+    def test_indicator_levels_by_ratio(self, mock_check):
+        # 2 of 3 not in AHSP → ratio ~0.666 → CRITICAL
+        mock_check.return_value = [
+            {'name': 'A', 'cost': Decimal('10'), 'weight_pct': Decimal('10'), 'in_ahsp': False},
+            {'name': 'B', 'cost': Decimal('20'), 'weight_pct': Decimal('20'), 'in_ahsp': False},
+            {'name': 'C', 'cost': Decimal('70'), 'weight_pct': Decimal('70'), 'in_ahsp': True},
+        ]
+        url = reverse('efficiency_recommendations:notifications', kwargs={'job_id': self.job.id})
+        res = self.client.get(url)
+        data = json.loads(res.content)
+
+        self.assertTrue(data['has_warnings'])
+        self.assertEqual(data['warning_count'], 2)
+        self.assertAlmostEqual(data['warning_ratio'], 2/3, places=3)
+
+        ind = data['indicator']
+        self.assertEqual(ind['level'], 'CRITICAL')
+        self.assertEqual(ind['badge_color'], '#DC2626')
+        self.assertEqual(ind['label'], '2 warnings')
+
+    @patch('efficiency_recommendations.views.check_items_in_ahsp')
+    def test_indicator_warn_threshold(self, mock_check):
+        # 1 of 3 → ratio ~0.333 → WARN
+        mock_check.return_value = [
+            {'name': 'A', 'cost': Decimal('10'), 'weight_pct': Decimal('10'), 'in_ahsp': False},
+            {'name': 'B', 'cost': Decimal('20'), 'weight_pct': Decimal('20'), 'in_ahsp': True},
+            {'name': 'C', 'cost': Decimal('70'), 'weight_pct': Decimal('70'), 'in_ahsp': True},
+        ]
+        url = reverse('efficiency_recommendations:notifications', kwargs={'job_id': self.job.id})
+        res = self.client.get(url)
+        data = json.loads(res.content)
+
+        ind = data['indicator']
+        self.assertEqual(ind['level'], 'WARN')
+        self.assertEqual(ind['badge_color'], '#F59E0B')
+        self.assertEqual(ind['icon'], 'alert-triangle')
