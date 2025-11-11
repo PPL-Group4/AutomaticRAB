@@ -90,6 +90,57 @@
     </div>
   </div>
 
+<!-- Target Budget Input Form -->
+<div class="card mt-4 p-3 shadow-sm" id="targetBudgetForm" style="display:none; max-width:600px;">
+  <h5 class="mb-3">🎯 Adjust RAB to Target Budget</h5>
+  <form id="adjustmentForm">
+    <div class="mb-3">
+      <label class="form-label fw-semibold">Target Budget Mode</label>
+      <div class="btn-group w-100" role="group">
+        <input type="radio" class="btn-check" name="targetMode" id="modePercentage" value="percentage" checked>
+        <label class="btn btn-outline-primary" for="modePercentage">Percentage (%)</label>
+
+        <input type="radio" class="btn-check" name="targetMode" id="modeAbsolute" value="absolute">
+        <label class="btn btn-outline-primary" for="modeAbsolute">Rupiah (Rp)</label>
+      </div>
+    </div>
+
+    <div class="mb-3">
+      <label for="targetValue" class="form-label">Target Value</label>
+      <input type="number" class="form-control" id="targetValue" step="0.01" required
+             placeholder="e.g., 10 for 10% or 100000000 for Rp 100M">
+      <div class="form-text" id="targetHint">Enter percentage reduction/increase (e.g., -10 for 10% cut)</div>
+    </div>
+
+    <button type="submit" class="btn btn-primary w-100">Apply Adjustment</button>
+  </form>
+</div>
+
+    <div class="card mt-4 p-3 shadow-sm" id="adjustedSummaryBox" style="display:none; max-width:600px;">
+  <h5 class="mb-3">📈 Adjusted RAB Summary</h5>
+  <div class="d-flex justify-content-between">
+    <span class="fw-semibold">Original Total</span>
+    <span id="originalTotal">Rp. 0</span>
+  </div>
+  <div class="d-flex justify-content-between">
+    <span class="fw-semibold">Target Budget</span>
+    <span id="targetBudget">Rp. 0</span>
+  </div>
+  <div class="d-flex justify-content-between">
+    <span class="fw-semibold">Adjustment Factor</span>
+    <span id="adjustmentFactor">–</span>
+  </div>
+  <div class="d-flex justify-content-between">
+    <span class="fw-semibold">Adjusted Total</span>
+    <span id="adjustedTotal">Rp. 0</span>
+  </div>
+  <div class="d-flex justify-content-between">
+    <span class="fw-semibold text-success">Difference</span>
+    <span id="differenceText">–</span>
+  </div>
+</div>
+
+
   <a href="#" class="btn btn-outline-primary mt-3">+ Tambah Kategori Pekerjaan / Pilih Referensi RAB</a>
 </div>
 {% endblock %}
@@ -112,6 +163,21 @@
   const dropdownRequestState = new WeakMap();
   const MANUAL_SUGGESTION_LIMIT = 12;
   const PRICE_OVERRIDE_CONFIRM_MESSAGE = "Harga ini diisi otomatis oleh sistem. Apakah Anda yakin ingin menimpa nilai tersebut secara manual?";
+function getCookie(name) {
+  let cookieValue = null;
+  if (document.cookie && document.cookie !== '') {
+    const cookies = document.cookie.split(';');
+    for (let i = 0; i < cookies.length; i++) {
+      const cookie = cookies[i].trim();
+      if (cookie.substring(0, name.length + 1) === (name + '=')) {
+        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+        break;
+      }
+    }
+  }
+  return cookieValue;
+}
+
 
   function showError(message) {
     const errorContainer = document.getElementById("errorContainer");
@@ -193,26 +259,170 @@
   }
 
   // ---------- MAIN TABLE RENDER ----------
-  function renderTables(rows, options = {}) {
-    const container = document.getElementById("rabTables");
-    container.innerHTML = "";
+ // Add this call after rendering tables
+function renderTables(rows, options = {}) {
+  const container = document.getElementById("rabTables");
+  container.innerHTML = "";
 
-    if (!Array.isArray(rows) || !rows.length) {
-      document.getElementById("grandTotalBox").style.display = "none";
-      showError("Tidak ada baris yang dapat ditampilkan");
+  if (!Array.isArray(rows) || !rows.length) {
+    document.getElementById("grandTotalBox").style.display = "none";
+    showError("Tidak ada baris yang dapat ditampilkan");
+    return;
+  }
+
+  const hasSections = rows.some(row => row && row.is_section);
+  if (hasSections) {
+    renderSectionedTables(rows, container);
+  } else {
+    renderFlatTable(rows, container);
+  }
+
+  document.getElementById("grandTotalBox").style.display = "block";
+  updateGrandTotalFromRows();
+
+  document.getElementById("targetBudgetForm").style.display = "block";
+
+
+}
+// Handle target budget mode switch
+document.querySelectorAll('input[name="targetMode"]').forEach(radio => {
+  radio.addEventListener("change", (e) => {
+    const hint = document.getElementById("targetHint");
+    if (e.target.value === "percentage") {
+      hint.textContent = "Enter percentage reduction/increase (e.g., -10 for 10% cut)";
+    } else {
+      hint.textContent = "Enter target budget in Rupiah (e.g., 100000000 for Rp 100M)";
+    }
+  });
+});
+
+// Handle adjustment form submission
+document.getElementById("adjustmentForm")?.addEventListener("submit", async (e) => {
+  e.preventDefault();
+
+  const mode = document.querySelector('input[name="targetMode"]:checked').value;
+  const value = parseFloat(document.getElementById("targetValue").value);
+
+  if (isNaN(value)) {
+    showError("Please enter a valid number");
+    return;
+  }
+
+  const grandText = document.getElementById("grandTotal").innerText
+    .replace(/[^\d,.-]/g, "")
+    .replace(/\./g, "")
+    .replace(",", ".");
+  const currentTotal = parseFloat(grandText) || 0;
+
+  if (currentTotal === 0) {
+    showError("Current total is zero. Please load RAB data first.");
+    return;
+  }
+
+  try {
+    showLoading();
+
+    const response = await fetch("{% url 'apply_adjustment' %}", {
+      method: "POST",
+      headers: {
+          "Content-Type": "application/json",
+          "X-CSRFToken": getCookie("csrftoken")
+      },
+      body: JSON.stringify({
+        mode: mode,
+        value: value,
+        current_total: currentTotal
+      })
+    });
+
+    const data = await response.json();
+    hideLoading();
+
+    if (!response.ok) {
+      showError(data.error || "Failed to apply adjustment");
       return;
     }
 
-    const hasSections = rows.some(row => row && row.is_section);
-    if (hasSections) {
-      renderSectionedTables(rows, container);
-    } else {
-      renderFlatTable(rows, container);
-    }
+    // Update summary
+    document.getElementById("originalTotal").innerText =
+      "Rp. " + data.original_total.toLocaleString("id-ID");
+    document.getElementById("targetBudget").innerText =
+      "Rp. " + data.target_total.toLocaleString("id-ID");
+    document.getElementById("adjustmentFactor").innerText =
+      data.adjustment_factor.toFixed(4);
+    document.getElementById("adjustedTotal").innerText =
+      "Rp. " + data.adjusted_total.toLocaleString("id-ID");
 
-    document.getElementById("grandTotalBox").style.display = "block";
-    updateGrandTotalFromRows();
+    const diff = data.adjusted_total - data.original_total;
+    const diffPct = ((diff / data.original_total) * 100).toFixed(2);
+    document.getElementById("differenceText").innerText =
+      `${diff >= 0 ? "+" : ""}Rp. ${diff.toLocaleString("id-ID")} (${diffPct}%)`;
+
+    // Show summary box
+    document.getElementById("adjustedSummaryBox").style.display = "block";
+
+    // Update prices in table
+    if (data.adjusted_rows) {
+      data.adjusted_rows.forEach(row => {
+        const tr = document.querySelector(`tr[data-row-key="${row.row_key}"]`);
+        if (!tr) return;
+
+        const priceInput = tr.querySelector(".price-input");
+        const totalCell = tr.querySelector(".total-cell");
+
+        if (priceInput) {
+          priceInput.value = row.unit_price;
+          priceInput.dataset.previousValue = row.unit_price;
+          updatePriceOriginUI(priceInput, "auto");
+        }
+
+        if (totalCell) {
+          totalCell.textContent = "Rp. " + parseFloat(row.total_price).toLocaleString("id-ID", {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+          });
+        }
+      });
+
+      updateGrandTotalFromRows(false); // Don't trigger chart update
+    }
+  } catch (err) {
+    hideLoading();
+    showError("Error: " + err.message);
   }
+});
+
+
+// Also call it after grand total updates
+function updateGrandTotalFromRows(shouldUpdateChart = true) {
+  let grand = 0;
+  document.querySelectorAll(".total-cell").forEach(cell => {
+    let text = cell.textContent.replace(/[^\d,.-]/g, "").replace(/\./g, "").replace(",", ".");
+    const val = parseFloat(text) || 0;
+    grand += val;
+  });
+
+  updateGrandTotal(grand);
+
+
+  if (shouldUpdateChart) {
+    if (chartUpdateTimeout) {
+      clearTimeout(chartUpdateTimeout);
+    }
+    chartUpdateTimeout = setTimeout(() => {
+      updateCostWeightChart();
+    }, 2000);
+  }
+}
+
+// Make sure the endpoint returns proper data
+// Your backend at /api/adjusted_summary/ should return:
+// {
+//   "current_total": 1000000,
+//   "target_total": 1200000,
+//   "factor": 1.2,
+//   "adjusted_total": 1200000
+// }
 
   function renderSectionedTables(rows, container) {
     let total = 0;
@@ -629,13 +839,27 @@
   }
 
   function updateGrandTotal(total) {
-    document.getElementById("grandTotal").innerText = "Rp. " + total.toLocaleString();
-    const ppn = total * 0.1;
-    document.getElementById("ppn").innerText = "Rp. " + ppn.toLocaleString();
-    document.getElementById("totalWithPpn").innerText = "Rp. " + (total + ppn).toLocaleString();
-    document.getElementById("terbilang").innerText =
-      total === 0 ? "NOL RUPIAH" : numberToWords(total + ppn).toUpperCase();
-  }
+  document.getElementById("grandTotal").innerText = "Rp. " + total.toLocaleString("id-ID", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  });
+
+  const ppn = total * 0.1;
+  document.getElementById("ppn").innerText = "Rp. " + ppn.toLocaleString("id-ID", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  });
+
+  const totalWithPpn = total + ppn;
+  document.getElementById("totalWithPpn").innerText = "Rp. " + totalWithPpn.toLocaleString("id-ID", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  });
+
+  document.getElementById("terbilang").innerText =
+    total === 0 ? "NOL RUPIAH" : numberToWords(totalWithPpn).toUpperCase();
+}
+
 
   function updateCostWeightChart() {
     // Collect all items with their costs
@@ -1322,5 +1546,7 @@
       }
     }
   }
+ const SUMMARY_ENDPOINT = "/api/adjusted_summary/";
+
 </script>
 {% endblock %}
