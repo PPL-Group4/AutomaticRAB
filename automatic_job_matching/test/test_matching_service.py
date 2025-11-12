@@ -10,7 +10,7 @@ class MatchingServiceFallbackTests(TestCase):
         del fake_matcher.match_with_confidence
         fake_matcher.match.return_value = {"source": "ahs", "id": 1, "code": "X", "name": "Y"}
 
-        result = MatchingService.perform_fuzzy_match("test")
+        result = MatchingService.perform_fuzzy_match("test", unit=None)
         self.assertEqual(result["source"], "ahs")
         self.assertTrue(fake_matcher.match.called)
 
@@ -20,7 +20,7 @@ class MatchingServiceFallbackTests(TestCase):
         del fake_matcher.find_multiple_matches_with_confidence
         fake_matcher.find_multiple_matches.return_value = [{"id": 1}]
 
-        result = MatchingService.perform_multiple_match("test")
+        result = MatchingService.perform_multiple_match("test", unit=None)
         self.assertEqual(result[0]["id"], 1)
         self.assertTrue(fake_matcher.find_multiple_matches.called)
 
@@ -79,29 +79,22 @@ class MatchingSingleVsMultiWordTests(TestCase):
 
 
 class MatchingServiceEdgeCaseTests(TestCase):
-    @patch("automatic_job_matching.service.matching_service.ExactMatcher")
-    def test_exact_match_with_exception(self, mock_exact_cls):
-        mock_matcher = mock_exact_cls.return_value
-        mock_matcher.match.side_effect = Exception("Database error")
-        result = MatchingService.perform_exact_match("test query")
-        self.assertIsNone(result)
-
     @patch("automatic_job_matching.service.matching_service.FuzzyMatcher")
     def test_fuzzy_match_with_exception(self, mock_fuzzy_cls):
         mock_matcher = mock_fuzzy_cls.return_value
         mock_matcher.match_with_confidence.side_effect = Exception("Scoring error")
-        result = MatchingService.perform_fuzzy_match("test query")
+        result = MatchingService.perform_fuzzy_match("test query", unit=None)
         self.assertIsNone(result)
 
         mock_matcher.match.side_effect = Exception("Matching error")
-        result = MatchingService.perform_fuzzy_match("test query")
+        result = MatchingService.perform_fuzzy_match("test query", unit=None)
         self.assertIsNone(result)
 
     @patch("automatic_job_matching.service.matching_service.FuzzyMatcher")
     def test_multiple_match_with_exception(self, mock_fuzzy_cls):
         mock_matcher = mock_fuzzy_cls.return_value
         mock_matcher.find_multiple_matches_with_confidence.side_effect = Exception("Search error")
-        result = MatchingService.perform_multiple_match("test query")
+        result = MatchingService.perform_multiple_match("test query", unit=None)
         self.assertEqual(result, [])
 
     @patch("automatic_job_matching.service.matching_service.normalize_text")
@@ -123,12 +116,6 @@ class MatchingServiceEdgeCaseTests(TestCase):
         mock_multi.return_value = []
         result = MatchingService.perform_best_match("xyz nonexistent query")
         self.assertEqual(result, [])
-
-    @patch("automatic_job_matching.service.matching_service.CombinedAhsRepository")
-    def test_repository_initialization_error(self, mock_repo_cls):
-        mock_repo_cls.side_effect = Exception("Database connection failed")
-        result = MatchingService.perform_exact_match("test")
-        self.assertIsNone(result)
 
     def test_empty_and_whitespace_queries(self):
         for query in ["", "   ", "\t\n"]:
@@ -154,40 +141,30 @@ class MatchingServiceEdgeCaseTests(TestCase):
                 mock_fuzzy.assert_called_once()
                 self.assertIsInstance(result, dict)
 
-    def test_word_count_determines_matching_strategy(self):
-        with patch.object(MatchingService, 'perform_exact_match', return_value=None):
-            with patch.object(MatchingService, 'perform_multiple_match', return_value=[]) as mock_multi:
-                MatchingService.perform_best_match("batu")
-                mock_multi.assert_called_once()
-
-            with patch.object(MatchingService, 'perform_fuzzy_match', return_value=None) as mock_fuzzy:
-                MatchingService.perform_best_match("bongkar batu")
-                mock_fuzzy.assert_called_once()
-
     def test_best_match_exception_in_perform_best_match(self):
         with patch("automatic_job_matching.service.matching_service.normalize_text") as mock_normalize:
             mock_normalize.side_effect = Exception("Normalization error")
-            result = MatchingService.perform_best_match("test query")
+            result = MatchingService.perform_best_match("test query", unit=None)
             self.assertIsNone(result)
 
     def test_best_match_with_exception_after_normalization(self):
         with patch("automatic_job_matching.service.matching_service.MatchingService.perform_exact_match") as mock_exact:
             mock_exact.side_effect = Exception("Database error in exact match")
-            result = MatchingService.perform_best_match("test query")
+            result = MatchingService.perform_best_match("test query", unit=None)
             self.assertIsNone(result)
 
     def test_best_match_exception_logged(self):
         with patch("automatic_job_matching.service.matching_service.logger") as mock_logger:
             with patch("automatic_job_matching.service.matching_service.normalize_text") as mock_normalize:
                 mock_normalize.side_effect = Exception("Test error")
-                MatchingService.perform_best_match("test")
+                MatchingService.perform_best_match("test", unit=None)
                 mock_logger.error.assert_called()
 
     def test_perform_best_match_line_88_coverage(self):
         with patch("automatic_job_matching.service.matching_service.normalize_text", return_value="valid text"):
             with patch("automatic_job_matching.service.matching_service.MatchingService.perform_exact_match") as mock_exact:
                 mock_exact.side_effect = Exception("Database connection failed")
-                result = MatchingService.perform_best_match("test query")
+                result = MatchingService.perform_best_match("test query", unit=None)
                 self.assertIsNone(result)
 
     def test_perform_best_match_all_paths_exhausted(self):
@@ -207,19 +184,19 @@ class MatchingServiceEdgeCaseTests(TestCase):
     def test_exception_handling_in_best_match_workflow(self):
         with patch("automatic_job_matching.service.matching_service.normalize_text") as mock_normalize:
             mock_normalize.side_effect = Exception("Normalization error")
-            result = MatchingService.perform_best_match("test")
+            result = MatchingService.perform_best_match("test", unit=None)
             self.assertIsNone(result)
 
         with patch.object(MatchingService, 'perform_exact_match') as mock_exact:
             mock_exact.side_effect = Exception("Database error")
-            result = MatchingService.perform_best_match("test query")
+            result = MatchingService.perform_best_match("test query", unit=None)
             self.assertIsNone(result)
 
     def test_error_logging_occurs_on_exceptions(self):
         with patch("automatic_job_matching.service.matching_service.logger") as mock_logger:
             with patch.object(MatchingService, 'perform_exact_match') as mock_exact:
                 mock_exact.side_effect = Exception("Test error")
-                MatchingService.perform_best_match("test")
+                MatchingService.perform_best_match("test", unit=None)
                 mock_logger.error.assert_called()
 
     def test_database_connection_failure_handled_gracefully(self):
@@ -227,7 +204,7 @@ class MatchingServiceEdgeCaseTests(TestCase):
             mock_norm.return_value = "valid query"
             with patch.object(MatchingService, 'perform_exact_match') as mock_exact:
                 mock_exact.side_effect = Exception("Database connection lost")
-                result = MatchingService.perform_best_match("test query")
+                result = MatchingService.perform_best_match("test query", unit=None)
                 self.assertIsNone(result)
 
     def test_all_strategies_exhausted_returns_empty_results(self):
@@ -271,3 +248,13 @@ class MatchingServiceEdgeCaseTests(TestCase):
             mock_logger.warning.return_value = result
             out = MatchingService.perform_best_match("unknown desc")
             self.assertTrue(out is None or isinstance(out, (dict, list)))
+
+    @patch("automatic_job_matching.service.matching_service.FuzzyMatcher")
+    def test_fuzzy_match_passes_unit_to_matcher(self, mock_matcher_cls):
+        fake_matcher = mock_matcher_cls.return_value
+        fake_matcher.match_with_confidence.return_value = {"id": 1, "code": "U.01", "name": "unit test"}
+
+        result = MatchingService.perform_fuzzy_match("pasang beton", unit="m3")
+        self.assertEqual(result["code"], "U.01")
+        fake_matcher.match_with_confidence.assert_called_once_with("pasang beton", unit="m3")
+

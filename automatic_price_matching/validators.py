@@ -8,6 +8,7 @@ from typing import Any, Dict, List, MutableMapping, Optional, TypedDict
 from django.core.exceptions import ValidationError
 
 from automatic_price_matching.total_cost import TotalCostCalculator
+from automatic_price_matching.normalization import canonicalize_job_code
 
 # ---------------------------------------------------------------------------
 # Regex patterns for identifying numeric formatting variants & disallowed
@@ -17,6 +18,7 @@ from automatic_price_matching.total_cost import TotalCostCalculator
 _THOUSAND_DOT_DECIMAL_COMMA = re.compile(r"^\d{1,3}(\.\d{3})+,\d+$")
 _THOUSAND_COMMA_DECIMAL_DOT = re.compile(r"^\d{1,3}(,\d{3})+\.\d+$")
 _MULTIPLICATION_PATTERN = re.compile(r"\d+\s*[xX]\s*\d+")
+_ROW_KEY_PATTERN = re.compile(r"^[A-Za-z0-9._:-]{1,128}$")
 
 
 # Typed representations -----------------------------------------------------
@@ -62,6 +64,68 @@ def _clean_string(
     if required and not text:
         errors[field].append("This field cannot be blank.")
     return text
+
+
+def _clean_job_code(
+    errors: MutableMapping[str, List[str]],
+    value: Any,
+    field: str,
+    *,
+    required: bool = False,
+) -> str:
+    """Return a canonical job code while enforcing safe characters."""
+    if value is None:
+        if required:
+            errors[field].append("This field cannot be null.")
+        return ""
+    if not isinstance(value, str):
+        errors[field].append("Expected a string value.")
+        return ""
+
+    raw_text = value.strip()
+    if required and not raw_text:
+        errors[field].append("This field cannot be blank.")
+        return ""
+    if not raw_text:
+        return ""
+
+    upper_text = raw_text.upper()
+    sanitized = re.sub(r"[^A-Za-z0-9.\-_/ ]", "", upper_text)
+    if sanitized != upper_text:
+        errors[field].append("Job code contains invalid characters.")
+        return ""
+    canonical = canonicalize_job_code(sanitized)
+    if not canonical:
+        errors[field].append("Job code must contain alphanumeric characters.")
+        return ""
+    if len(canonical) > 64:
+        errors[field].append("Job code is too long (max 64 characters).")
+        return ""
+    return canonical
+
+
+def _clean_row_key(
+    errors: MutableMapping[str, List[str]],
+    value: Any,
+) -> Optional[str]:
+    """Validate the optional row key used for session overrides."""
+    if value in (None, ""):
+        return None
+    if not isinstance(value, str):
+        errors["row_key"].append("Row key must be a string.")
+        return None
+
+    candidate = value.strip()
+    if not candidate:
+        errors["row_key"].append("Row key cannot be blank.")
+        return None
+    if len(candidate) > 128:
+        errors["row_key"].append("Row key is too long (max 128 characters).")
+        return None
+    if not _ROW_KEY_PATTERN.match(candidate):
+        errors["row_key"].append("Row key contains invalid characters.")
+        return None
+    return candidate
 
 
 def _append_number_error(
@@ -206,7 +270,7 @@ def validate_ahsp_payload(payload: Any) -> Dict[str, Any]:
     cleaned: Dict[str, Any] = {}
 
     # Simple string fields -------------------------------------------------
-    cleaned["code"] = _clean_string(errors, payload.get("code"), "code", required=True)
+    cleaned["code"] = _clean_job_code(errors, payload.get("code"), "code", required=True)
     cleaned["name"] = _clean_string(errors, payload.get("name"), "name", required=True)
     cleaned["unit"] = _clean_string(errors, payload.get("unit"), "unit")
 
@@ -228,6 +292,46 @@ def validate_ahsp_payload(payload: Any) -> Dict[str, Any]:
     cleaned["components"] = _clean_components(errors, payload.get("components", []))
 
     # Final error check ---------------------------------------------------
+    filtered_errors = {field: msgs for field, msgs in errors.items() if msgs}
+    if filtered_errors:
+        raise ValidationError(filtered_errors)
+    return cleaned
+
+
+def validate_recompute_payload(payload: Any) -> Dict[str, Any]:
+    """Validate payload submitted to ``recompute_total_cost`` endpoint."""
+    if payload is None:
+        raise ValidationError({"__all__": ["Payload cannot be null."]})
+    if not isinstance(payload, dict):
+        raise ValidationError({"__all__": ["Payload must be a JSON object."]})
+
+    errors: Dict[str, List[str]] = defaultdict(list)
+    cleaned: Dict[str, Any] = {}
+
+    row_key_src = payload.get("row_key", payload.get("rowKey"))
+    cleaned["row_key"] = _clean_row_key(errors, row_key_src)
+
+    code_src = payload.get("code") or payload.get("kode")
+    cleaned["code"] = _clean_job_code(errors, code_src, "code") if code_src not in (None, "") else ""
+
+    analysis_src = payload.get("analysis_code") or payload.get("analysisCode")
+    if analysis_src in (None, "") and cleaned["code"]:
+        cleaned["analysis_code"] = cleaned["code"]
+    else:
+        cleaned["analysis_code"] = _clean_job_code(errors, analysis_src, "analysis_code") if analysis_src not in (None, "") else ""
+
+    volume_src = payload.get("volume")
+    if volume_src is None:
+        volume_src = payload.get("qty", payload.get("quantity"))
+    cleaned["volume"] = _coerce_decimal(errors, volume_src, "volume")
+    unit_price_src = payload.get("unit_price", payload.get("unitPrice"))
+    cleaned["unit_price"] = _coerce_decimal(errors, unit_price_src, "unit_price")
+
+    if cleaned["volume"] is not None and cleaned["volume"] < 0:
+        errors["volume"].append("Volume cannot be negative.")
+    if cleaned["unit_price"] is not None and cleaned["unit_price"] < 0:
+        errors["unit_price"].append("Unit price cannot be negative.")
+
     filtered_errors = {field: msgs for field, msgs in errors.items() if msgs}
     if filtered_errors:
         raise ValidationError(filtered_errors)

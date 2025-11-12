@@ -2,14 +2,16 @@ from __future__ import annotations
 
 import json
 import logging
-from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
+from decimal import Decimal, ROUND_HALF_UP
 from typing import Any, Dict, Optional
 
+from django.core.exceptions import ValidationError
 from django.http import JsonResponse, HttpRequest
 from django.views.decorators.http import require_POST
 from django.views.decorators.csrf import csrf_exempt
 
 from .price_retrieval import AhspPriceRetriever, CombinedAhspSource
+from .validators import validate_recompute_payload
 
 logger = logging.getLogger(__name__)
 
@@ -22,17 +24,6 @@ def _serialize_decimals(obj: Dict[str, Any]) -> Dict[str, Any]:
         else:
             out[key] = value
     return out
-
-
-def _safe_decimal(value: Any) -> Optional[Decimal]:
-    if value is None or value == "":
-        return None
-    if isinstance(value, Decimal):
-        return value
-    try:
-        return Decimal(str(value))
-    except (InvalidOperation, ValueError, TypeError):
-        return None
 
 
 def _store_override(request: HttpRequest, row_key: str, payload: Dict[str, Any]) -> None:
@@ -49,32 +40,32 @@ def recompute_total_cost(request: HttpRequest):
     POST JSON: { "code": "A.1.1.4", "volume": 2.5 }
     Response JSON: { "unit_price": "1000.00", "total_cost": "2500.00" }
     """
+    if request.content_type and "application/json" not in request.content_type:
+        return JsonResponse({"error": "unsupported_media_type"}, status=415)
     try:
         payload = json.loads(request.body.decode() or "{}")
     except Exception:
         return JsonResponse({"error": "invalid_json"}, status=400)
 
-    code = payload.get("code") or payload.get("kode") or ""
-    row_key = payload.get("row_key") or payload.get("rowKey")
-    volume_raw = payload.get("volume", payload.get("qty", payload.get("quantity", None)))
-    unit_price_raw = payload.get("unit_price", payload.get("unitPrice"))
-    analysis_override = payload.get("analysis_code") or payload.get("analysisCode")
+    try:
+        cleaned_payload = validate_recompute_payload(payload)
+    except ValidationError as exc:
+        return JsonResponse({"error": "invalid_input", "detail": exc.message_dict}, status=400)
 
-    volume = _safe_decimal(volume_raw) or Decimal("0")
-    unit_price = _safe_decimal(unit_price_raw)
-    # Reject invalid numeric input early
-    if (volume_raw not in (None, "", 0) and _safe_decimal(volume_raw) is None) or (
-            unit_price_raw not in (None, "", 0) and _safe_decimal(unit_price_raw) is None
-    ):
-        return JsonResponse({"error": "Invalid numeric input"}, status=400)
+    canonical_code = cleaned_payload.get("analysis_code") or cleaned_payload.get("code")
+    row_key = cleaned_payload.get("row_key")
+    volume_value = cleaned_payload.get("volume")
+    unit_price = cleaned_payload.get("unit_price")
+    volume = volume_value if volume_value is not None else Decimal("0")
+    analysis_code_value = cleaned_payload.get("analysis_code") or cleaned_payload.get("code") or ""
 
     logger.debug("recompute_total_cost called with payload=%s", payload)
 
     try:
-        if unit_price is None and isinstance(code, str) and code.strip():
+        if unit_price is None and isinstance(canonical_code, str) and canonical_code.strip():
             retriever = AhspPriceRetriever(CombinedAhspSource())
-            unit_price = retriever.get_price_by_job_code(code)
-            logger.debug("resolved unit_price for code=%s -> %s", code, unit_price)
+            unit_price = retriever.get_price_by_job_code(canonical_code)
+            logger.debug("resolved unit_price for code=%s -> %s", canonical_code, unit_price)
 
         if unit_price is None:
             total = Decimal("0.00")
@@ -92,7 +83,7 @@ def recompute_total_cost(request: HttpRequest):
                 "unit_price": resp["unit_price"],
                 "total_price": resp["total_cost"],
                 "volume": volume,
-                "analysis_code": analysis_override or code,
+                "analysis_code": analysis_code_value,
             }
             _store_override(request, row_key, _serialize_decimals(stored_payload))
 
