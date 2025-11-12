@@ -42,7 +42,7 @@ if not SECRET_KEY:
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv("DEBUG", "False") == "True" 
 
-ALLOWED_HOSTS = _split_env_list(os.getenv("ALLOWED_HOSTS", "localhost"), "localhost")
+ALLOWED_HOSTS = _split_env_list(os.getenv("ALLOWED_HOSTS", "localhost, 127.0.0.1"), "localhost")
 
 CSRF_TRUSTED_ORIGINS = _split_env_list(os.getenv("CSRF_TRUSTED_ORIGINS", ""))
 
