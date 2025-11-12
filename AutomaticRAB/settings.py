@@ -47,7 +47,7 @@ if not SECRET_KEY:
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv("DEBUG", "False") == "True" 
 
-ALLOWED_HOSTS = _split_env_list(os.getenv("ALLOWED_HOSTS", "localhost"), "localhost")
+ALLOWED_HOSTS = _split_env_list(os.getenv("ALLOWED_HOSTS", "localhost, 127.0.0.1"), "localhost")
 
 CSRF_TRUSTED_ORIGINS = _split_env_list(os.getenv("CSRF_TRUSTED_ORIGINS", ""))
 
@@ -86,6 +86,7 @@ INSTALLED_APPS = [
     'rencanakan_core',
     'automatic_price_matching',
     'cost_weight',
+    'efficiency_recommendations',
     'target_bid',
     
 ]
@@ -280,3 +281,14 @@ DATA_UPLOAD_MAX_NUMBER_FIELDS = int(os.getenv("DATA_UPLOAD_MAX_NUMBER_FIELDS", "
 
 FILE_UPLOAD_TEMP_DIR = os.path.join(BASE_DIR, 'tmp')
 os.makedirs(FILE_UPLOAD_TEMP_DIR, exist_ok=True)
+
+import sentry_sdk
+from sentry_sdk.integrations.django import DjangoIntegration
+
+sentry_sdk.init(
+    dsn="https://ee22a1ffdc3029795e24cbf5e3e241ff@o4510344475574272.ingest.us.sentry.io/4510344491368448",
+    integrations=[DjangoIntegration()],
+    traces_sample_rate=1.0,
+    send_default_pii=True,
+    environment="development",
+)
