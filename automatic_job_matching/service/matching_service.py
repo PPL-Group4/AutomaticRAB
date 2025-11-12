@@ -138,10 +138,23 @@ class MatchingService:
                         "message": "No matches with the same unit found. Showing similar options with different units.",
                         "alternatives": alt_matches,
                     }
+                
+            if isinstance(result, dict):
+                result_unit = result.get("unit")
+                if unit and result_unit and result_unit != unit:
+                    result["unit_mismatch"] = True
+                else:
+                    result["unit_mismatch"] = False
+
+                if result.get("unit_mismatch"):
+                    result["status"] = "unit_mismatch"
+                elif result.get("confidence", 1.0) == 1.0:
+                    result["status"] = "found"
+                else:
+                    result["status"] = "similar"
 
             return result
 
         except Exception as e:
             logger.error("Error in perform_best_match: %s", str(e), exc_info=True)
             return None
-

@@ -1045,6 +1045,14 @@
     return status.replace(/(^|\s)\w/g, letter => letter.toUpperCase());
   }
 
+  function getBestConfidenceMatch(matches) {
+    if (!Array.isArray(matches) || !matches.length) return null;
+    return matches.reduce((best, m) => {
+      if (!m || typeof m.confidence !== "number") return best;
+      return !best || m.confidence > best.confidence ? m : best;
+    }, null);
+  }
+
   function populateMatchCell(cell, row, analysisCell, statusCell) {
     cell.innerHTML = "";
 
@@ -1053,24 +1061,42 @@
       errorNotice.className = "text-danger small mb-2";
       errorNotice.textContent = row.job_match_error ? `Error: ${row.job_match_error}` : "Error";
       cell.appendChild(errorNotice);
-      renderManualInput(cell, row, analysisCell, statusCell, "Masukkan kode AHSP secara manual", {
-        noticeClass: "text-warning small mb-2"
+      renderManualInput(cell, row, analysisCell, statusCell, "", {
+        noticeClass: selectableMatches.length ? "text-muted small mb-2" : "text-warning small mb-2"
       });
       return;
     }
 
     const matches = normalizeMatches(row.job_match);
     const lookup = updateRowLookup(row, matches);
-    const selectableMatches = matches.filter(match => match && match.code);
-    const fallbackMessages = matches.filter(match => !match || !match.code);
+    const selectableMatches = matches.filter(m => m && m.code);
+    const fallbackMessages = matches.filter(m => !m || !m.code);
 
-    if (row.job_match && row.unit_mismatch === true) {
+    // === ALTERNATIVES / UNIT MISMATCH CASE ===
+    if (row.unit_mismatch === true) {
+      statusCell.textContent = "Not found (no same-unit match)";
+      statusCell.classList.remove("text-success");
+      statusCell.classList.add("text-danger");
+
+      analysisCell.textContent = "";
+
+      const tr = analysisCell.closest("tr");
+      if (tr) {
+        const priceInput = tr.querySelector(".price-input");
+        if (priceInput) {
+          priceInput.value = "0";
+          priceInput.dataset.referencePrice = "";
+          priceInput.dataset.manualConfirmed = "true";
+          updatePriceOriginUI(priceInput, "manual");
+        }
+      }
+
       const alternatives = row.job_match;
       if (Array.isArray(alternatives) && alternatives.length) {
         const helper = document.createElement("div");
         helper.className = "fw-semibold small mb-2 text-warning";
         helper.textContent =
-          "⚠️ Tidak ditemukan kode yang sesuai dengan satuan. Berikut beberapa sugesti kode mirip (berbeda satuan):";
+          "Sugesti dengan unit berbeda";
         cell.appendChild(helper);
 
         alternatives.forEach(match => {
@@ -1089,18 +1115,22 @@
         });
       }
 
-      renderManualInput(cell, row, analysisCell, statusCell, "Masukkan kode AHSP secara manual", {
-        noticeClass: "text-warning small mb-2",
+      renderManualInput(cell, row, analysisCell, statusCell, "", {
+        noticeClass: selectableMatches.length ? "text-muted small mb-2" : "text-warning small mb-2"
       });
+
       return;
     }
 
-    if (row.job_match_status === "found" && selectableMatches.length === 1) {
+    // === FOUND CASES ===
+    if (selectableMatches.length === 1) {
+      // ✅ Automatically match the single result
       const match = selectableMatches[0];
       row.job_match_selected = match;
       row.analysis_code = match.code;
       analysisCell.textContent = match.code;
-      statusCell.textContent = "Dipilih";
+      statusCell.textContent = "Dipilih (Auto)";
+      statusCell.classList.remove("text-danger");
       statusCell.classList.add("text-success");
 
       const span = document.createElement("span");
@@ -1109,51 +1139,72 @@
       cell.appendChild(span);
 
       const tr = analysisCell.closest("tr");
-      if (tr) {
-        setTimeout(() => setPriceForRow(match, tr), 0);
+      if (tr) setTimeout(() => setPriceForRow(match, tr), 0);
+    }
+
+    else if (selectableMatches.length > 1) {
+      // ✅ Automatically pick the one with highest confidence
+      const bestMatch = getBestConfidenceMatch(selectableMatches);
+      if (bestMatch) {
+        row.job_match_selected = bestMatch;
+        row.analysis_code = bestMatch.code;
+        analysisCell.textContent = bestMatch.code;
+        statusCell.textContent = "Dipilih (Auto)";
+        statusCell.classList.remove("text-danger");
+        statusCell.classList.add("text-success");
+
+        const span = document.createElement("span");
+        span.className = "text-success fw-semibold";
+        span.textContent = buildMatchLabel(bestMatch);
+        cell.appendChild(span);
+
+        const tr = analysisCell.closest("tr");
+        if (tr) setTimeout(() => setPriceForRow(bestMatch, tr), 0);
       }
 
-      return;
-    }
-
-    if (!selectableMatches.length && !fallbackMessages.length) {
-      renderManualInput(cell, row, analysisCell, statusCell, "Masukkan kode AHSP secara manual", {
-        noticeClass: "text-warning small mb-2"
-      });
-      return;
-    }
-
-    if (selectableMatches.length) {
+      // Still render all available buttons for manual re-selection
       const helper = document.createElement("div");
       helper.className = "fw-semibold small mb-2 text-dark";
-      helper.textContent = "Pilih kode yang sesuai atau gunakan input manual:";
+      helper.textContent = "Sugesti lain:";
       cell.appendChild(helper);
 
       selectableMatches.forEach(match => {
         const button = document.createElement("button");
         button.type = "button";
-        button.className = "btn btn-sm btn-outline-primary w-100 text-start match-option mb-1";
+        button.className =
+          "btn btn-sm btn-outline-primary w-100 text-start match-option mb-1";
         const label = buildMatchLabel(match);
         button.dataset.label = label;
-        if (match.code) {
-          button.dataset.code = match.code;
-        }
+        if (match.code) button.dataset.code = match.code;
         button.textContent = label;
-        button.addEventListener("click", () => {
-          handleMatchSelection(match, row, analysisCell, statusCell, cell, button);
-        });
+
+        // Mark the automatically selected one visually
+        if (bestMatch && match.code === bestMatch.code) {
+          button.classList.remove("btn-outline-primary");
+          button.classList.add("btn-success");
+          button.textContent = `Dipilih: ${button.dataset.label}`;
+        }
+
+        button.addEventListener("click", () =>
+          handleMatchSelection(match, row, analysisCell, statusCell, cell, button)
+        );
         cell.appendChild(button);
       });
     }
 
-    const manualLabel = fallbackMessages.length
-      ? (fallbackMessages[0] && fallbackMessages[0].match_status ? fallbackMessages[0].match_status : "Masukkan kode AHSP secara manual")
-      : "Masukkan kode AHSP secara manual";
+    else {
+      // No matches, fallback to manual
+      statusCell.textContent = "Not found";
+      statusCell.classList.add("text-danger");
+    }
 
-    renderManualInput(cell, row, analysisCell, statusCell, manualLabel, {
+    // Always show manual input for all cases
+    renderManualInput(cell, row, analysisCell, statusCell, "", {
       noticeClass: selectableMatches.length ? "text-muted small mb-2" : "text-warning small mb-2"
     });
+
   }
+
 
   function normalizeMatches(matchData) {
     if (!matchData) {
@@ -1214,8 +1265,8 @@
     const input = document.createElement("input");
     input.type = "text";
     input.className = "form-control";
-    input.placeholder = options.placeholder || "Masukkan kode AHSP";
-    input.value = row.analysis_code || "";
+    input.placeholder = "Masukkan kode AHSP secara manual";
+    input.value = "";
     input.autocomplete = "off";
 
     const dropdown = document.createElement("div");
@@ -1226,10 +1277,6 @@
     dropdown.style.left = "0";
     dropdown.style.top = "100%";
     dropdown.style.zIndex = "1000";
-
-    const updateNotice = (message) => {
-      notice.textContent = message || label || "Needs Manual Input";
-    };
 
     const button = document.createElement("button");
     button.type = "button";
@@ -1271,11 +1318,7 @@
       row.job_match_status = "manual";
       updateRowLookup(row, matched ? [matched] : []);
 
-      if (matched && matched.name) {
-        updateNotice(`Manual: ${matched.name}`);
-      } else {
-        updateNotice(label);
-      }
+      // updateNotice("Masukkan kode AHSP secara manual");
 
       analysisCell.textContent = value;
       statusCell.textContent = "Manual";
@@ -1461,62 +1504,71 @@
   function fetchRemoteSuggestions(row, query, limit = MANUAL_SUGGESTION_LIMIT) {
     const trimmedQuery = (query || "").trim();
     const description = trimmedQuery || (row.description || "").trim();
-  
     if (!description) {
       return Promise.resolve([]);
     }
-  
-    // Extract unit from row
+
     const unit = (row.unit || row.sat || "").trim();
-  
-    // Include unit in cache key if present
+
+    // === Prevent outdated async responses ===
+    const requestToken = Symbol("match-request");
+    row._lastRequestToken = requestToken;
+
+    // === Build cache key (include unit) ===
     const cacheKey = unit ? `${description}|${unit}|${limit}` : `${description}|${limit}`;
     if (suggestionCache.has(cacheKey)) {
       return suggestionCache.get(cacheKey);
     }
-  
-    // Build payload with unit
+
+    // === Build payload ===
     const payload = { description };
-    if (unit) {
-      payload.unit = unit;
-    }
-  
+    if (unit) payload.unit = unit;
+
     const request = fetch(MATCH_ENDPOINT, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Accept: "application/json",
       },
-      body: JSON.stringify({ description, unit: row.unit || null }),
+      body: JSON.stringify(payload),
     })
       .then(res => (res.ok ? res.json() : { match: [] }))
       .then(data => {
-        // === Normal matches ===
-        if (data.match && Array.isArray(data.match) && data.match.length) {
-          const validMatches = data.match.filter(m => !m.unit_mismatch);
+        // 🧠 Ignore stale responses
+        if (row._lastRequestToken !== requestToken) {
+          console.debug("⚠️ Ignored stale match response for:", description);
+          return [];
+        }
+
+        // === Unit mismatch alternatives ===
+        if (data.alternatives && Array.isArray(data.alternatives)) {
+          row.unit_mismatch = true;
+          return data.alternatives.map(a => ({ ...a, unit_mismatch: true }));
+        }
+
+        // === Normal matches (same-unit) ===
+        if (data.match) {
+          const matchList = Array.isArray(data.match) ? data.match : [data.match];
+          const validMatches = matchList.filter(m => m && !m.unit_mismatch);
           if (validMatches.length) {
             row.unit_mismatch = false;
             return validMatches;
           }
         }
 
-        // === Unit mismatch alternatives ===
-        if (data.alternatives && Array.isArray(data.alternatives)) {
-          const msg =
-            data.message ||
-            "Tidak ditemukan kode yang sesuai dengan satuan. Berikut beberapa sugesti kode yang mirip tetapi tidak sesuai dengan satuan:";
-          showError(msg);
-          row.unit_mismatch = true;
-          return data.alternatives.map(a => ({ ...a, unit_mismatch: true }));
-        }
-
+        // === No results ===
+        row.unit_mismatch = false;
         return [];
       })
-      .catch(() => []);
-  
+      .catch(err => {
+        console.warn("Fetch error in fetchRemoteSuggestions:", err);
+        return [];
+      });
+
     suggestionCache.set(cacheKey, request);
     return request;
   }
+
 
 
   function fetchAndStoreSuggestions(row, query) {
@@ -1576,6 +1628,16 @@
     const priceInput = tr.querySelector(".price-input");
     const totalCell = tr.querySelector(".total-cell");
     if (!priceInput) return;
+
+    if (match && match.unit_mismatch === true) {
+      const priceWrapper = priceInput.closest(".price-origin-wrapper");
+      if (priceWrapper) {
+        priceInput.value = "";
+        priceInput.dataset.referencePrice = "";
+        updatePriceOriginUI(priceInput, "manual");
+      }
+      return;
+    }
 
     // prefer any price present on match object (various keys)
     const possiblePrice = match && (match.unit_price ?? match.price ?? match.unitPrice ?? match.unitPriceRp ?? null);
