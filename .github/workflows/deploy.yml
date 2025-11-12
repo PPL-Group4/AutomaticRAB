@@ -17,25 +17,33 @@ env:
 jobs:
   build:
     runs-on: ubuntu-latest
-    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
+    if: |
+      (github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch') &&
+      (github.event_name == 'workflow_dispatch' || 
+       github.event.workflow_run.head_branch == 'main' || 
+       github.event.workflow_run.head_branch == 'staging' || 
+       github.event.workflow_run.head_branch == 'development')
     permissions:
       contents: read
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_branch || github.ref }}
 
       - name: Set environment based on branch
         id: set-env
         run: |
-          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+          BRANCH="${{ github.event.workflow_run.head_branch || github.ref }}"
+          if [[ "$BRANCH" == "refs/heads/main" ]] || [[ "$BRANCH" == "main" ]]; then
             echo "ENVIRONMENT=production" >> $GITHUB_OUTPUT
             echo "TAG=production" >> $GITHUB_OUTPUT
             echo "PORT=8000" >> $GITHUB_OUTPUT
-          elif [[ "${{ github.ref }}" == "refs/heads/staging" ]]; then
+          elif [[ "$BRANCH" == "refs/heads/staging" ]] || [[ "$BRANCH" == "staging" ]]; then
             echo "ENVIRONMENT=staging" >> $GITHUB_OUTPUT
             echo "TAG=staging" >> $GITHUB_OUTPUT
             echo "PORT=8001" >> $GITHUB_OUTPUT
-          elif [[ "${{ github.ref }}" == "refs/heads/development" ]]; then
+          elif [[ "$BRANCH" == "refs/heads/development" ]] || [[ "$BRANCH" == "development" ]]; then
             echo "ENVIRONMENT=development" >> $GITHUB_OUTPUT
             echo "TAG=development" >> $GITHUB_OUTPUT
             echo "PORT=8002" >> $GITHUB_OUTPUT
