@@ -4,4 +4,5 @@ from target_bid import views
 urlpatterns = [
     path("rabs/<int:rab_id>/items/", views.fetch_rab_job_items_view, name="fetch_rab_job_items_view"),
     path("cheaper-suggestions/", views.cheaper_suggestions_view, name="cheaper_suggestions_view"),
+    path("ahs/<str:ahs_code>/optimize/", views.optimize_ahs_materials_view, name="optimize_ahs_materials_view"),
 ]
