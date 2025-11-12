@@ -3,6 +3,26 @@
 
 {% block content %}
 <style>
+    .warning-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: .4rem;
+    font-size: .8rem;
+    padding: .25rem .5rem;
+    border-radius: 999px;
+    border: 1px solid transparent;
+    background: #fff7ed;          
+    color: #b45309;               
+  }
+
+  .warning-chip.critical {
+    background: #fef2f2;          
+    color: #b91c1c;               
+  }
+  .warning-chip .dot {
+    width: .5rem; height: .5rem; border-radius: 999px; background:#f59e0b;
+  }
+  .warning-chip.critical .dot { background:#ef4444; }
   .price-origin-wrapper {
     width: 100%;
   }
@@ -89,6 +109,8 @@
       </div>
     </div>
   </div>
+
+  {% include "efficiency_recommendations/recommendations_panel.html" %}
 
   <a href="#" class="btn btn-outline-primary mt-3">+ Tambah Kategori Pekerjaan / Pilih Referensi RAB</a>
 </div>
@@ -276,7 +298,7 @@
 
         const rows = data.rows || data.excel_standard || data.excel_apendo;
         if (rows) {
-          renderTables(rows, { sourceType: "excel" });
+          renderTables(rows, { sourceType: "excel", jobId: data.job_id });
           fileInput.value = "";
         } else {
           showError("Gagal memproses file: " + (data.error || "Terjadi kesalahan yang tidak diketahui"));
@@ -307,7 +329,7 @@
         hideLoading();
 
         if (Array.isArray(data.rows) && data.rows.length) {
-          renderTables(data.rows, { sourceType: "pdf" });
+          renderTables(data.rows, { sourceType: "pdf", jobId: data.job_id });
           fileInput.value = "";
         } else {
           showError("Gagal memproses file: " + (data.error || "Tidak ada baris yang ditemukan"));
@@ -346,6 +368,7 @@
     let currentTable = null;
     let tbody = null;
     let bujakCounter = 0;
+    const matchPromises = []; 
 
     rows.forEach((row, rowIndex) => {
       const skipKeywords = ["PAJAK", "JUMLAH SETELAH PAJAK", "DIBULATKAN", "TERBILANG"];
@@ -373,13 +396,14 @@
               <th>Volume</th>
               <th>SAT</th>
               <th>Harga Satuan (Rp.)</th>
-              <th>Jumlah </th>
+              <th>Jumlah</th>
             </tr>
           </thead>
         `;
         const newBody = document.createElement("tbody");
         table.appendChild(newBody);
         container.appendChild(table);
+
         currentTable = table;
         tbody = newBody;
       }
@@ -400,6 +424,7 @@
         strong.textContent = row.description || "";
         titleCell.appendChild(strong);
         tr.appendChild(titleCell);
+
         tbody.appendChild(tr);
         return;
       }
@@ -416,6 +441,7 @@
         emphasis.textContent = row.description || "";
         titleCell.appendChild(emphasis);
         tr.appendChild(titleCell);
+
         tbody.appendChild(tr);
         return;
       }
@@ -427,13 +453,31 @@
       const tr = buildDataRow(row, rowIndex);
       tbody.appendChild(tr);
       total += parseCurrencyNumber(row.total_price);
+
+      matchPromises.push((async () => {
+        const matchCell = tr.querySelector("td:nth-child(5)");
+        const analysisCell = tr.querySelector(".analysis-code-cell");
+        const statusCell = tr.querySelector("td:nth-child(4)");
+
+        try {
+          const results = await fetchAndStoreSuggestions(row, row.description || "");
+          populateMatchCell(matchCell, row, analysisCell, statusCell);
+        } catch (err) {
+          console.warn("Match fetch failed for row:", row.description, err);
+        }
+      })());
+    });
+
+    Promise.all(matchPromises).then(() => {
+      console.log("✅ All sectioned table matches complete");
     });
 
     updateGrandTotal(total);
   }
-
+  
   function renderFlatTable(rows, container) {
     let total = 0;
+
     const table = document.createElement("table");
     table.classList.add("table", "table-bordered", "table-sm", "align-middle", "mb-4");
     table.innerHTML = `
@@ -451,6 +495,7 @@
         </tr>
       </thead>
     `;
+
     const tbody = document.createElement("tbody");
     table.appendChild(tbody);
     container.appendChild(table);
@@ -458,6 +503,7 @@
     rows.forEach((row, rowIndex) => {
       if (row.job_match_status === "skipped" && (!row.is_section || row.is_section === undefined)) {
         const tr = document.createElement("tr");
+
         const numberCell = document.createElement("td");
         numberCell.textContent = row.number || "";
         tr.appendChild(numberCell);
@@ -471,11 +517,36 @@
 
         tr.classList.add("table-secondary", "fw-semibold");
         tbody.appendChild(tr);
-        return; 
+        return;
       }
+
       const tr = buildDataRow(row, rowIndex, { flatNumbering: true });
       tbody.appendChild(tr);
       total += parseCurrencyNumber(row.total_price);
+    });
+
+    const matchPromises = rows.map(async (row, rowIndex) => {
+      if (row.is_section || row.job_match_status === "skipped") return;
+
+      const tr = table.querySelector(
+        `tr[data-row-key="${sanitizeRowKey(row.row_key || row.rowKey, `row-${rowIndex}`)}"]`
+      );
+      if (!tr) return;
+
+      const matchCell = tr.querySelector("td:nth-child(5)");
+      const analysisCell = tr.querySelector(".analysis-code-cell");
+      const statusCell = tr.querySelector("td:nth-child(4)");
+
+      try {
+        const results = await fetchAndStoreSuggestions(row, row.description || "");
+        populateMatchCell(matchCell, row, analysisCell, statusCell);
+      } catch (err) {
+        console.warn("Match fetch failed for row:", row.description, err);
+      }
+    });
+
+    Promise.all(matchPromises).then(() => {
+      console.log("✅ All matching complete");
     });
 
     updateGrandTotal(total);
@@ -493,6 +564,16 @@
 
     const descriptionCell = document.createElement("td");
     descriptionCell.textContent = row.description || "";
+    const descInner = document.createElement("div");
+    descInner.className = "d-flex flex-column";
+    const title = document.createElement("div");
+    title.textContent = row.description || "";
+    const warnHost = document.createElement("div");
+    warnHost.className = "price-warning-host mt-1"; 
+    descInner.appendChild(title);
+    descInner.appendChild(warnHost);
+    descriptionCell.textContent = "";
+    descriptionCell.appendChild(descInner);
     tr.appendChild(descriptionCell);
 
     const analysisCell = document.createElement("td");
@@ -1502,6 +1583,8 @@
       const num = parseFloat(String(possiblePrice).replace(/[^0-9.-]/g, ""));
       if (!Number.isNaN(num)) {
         priceInput.value = num;
+        priceInput.dataset.referencePrice = String(num);  
+        updatePriceWarningForRow(tr);   
         priceInput.dataset.previousValue = priceInput.value;
         priceInput.dataset.manualConfirmed = "false";
         updatePriceOriginUI(priceInput, "auto");
@@ -1584,6 +1667,7 @@
             const precise = parseFloat(data.total_cost) || 0;
             totalCell.textContent = "Rp. " + precise.toLocaleString("id-ID", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
             updateGrandTotalFromRows(false); // Don't reset chart timer from backend callback
+            updatePriceWarningForRow(row);
           }
         }
       }
@@ -1597,5 +1681,89 @@
       }
     }
   }
+  function computeDeviationInfo(actual, reference) {
+  const ref = parseFloat(reference);
+  const act = parseFloat(actual);
+  if (!isFinite(ref) || ref <= 0 || !isFinite(act)) return null;
+
+  const pct = ((act - ref) / ref) * 100; 
+  const absPct = Math.abs(pct);
+
+  let level = null;
+  if (absPct > 50) level = "CRITICAL";
+  else if (absPct > 20) level = "WARN";
+  else if (absPct > 10) level = "MODERATE";
+  else level = "NONE";
+
+  return { pct, absPct, level, direction: pct >= 0 ? "higher" : "lower" };
+}
+
+function renderWarningChip(host, info) {
+  host.innerHTML = "";
+  if (!info || info.level === "NONE") return;
+
+  const chip = document.createElement("span");
+  chip.className = "warning-chip" + (info.level === "CRITICAL" ? " critical" : "");
+  const dot = document.createElement("span");
+  dot.className = "dot";
+  const text = document.createElement("span");
+
+  const dirText = info.pct >= 0 ? "lebih tinggi" : "lebih rendah";
+  text.textContent = `Harga ${info.absPct.toFixed(1)}% ${dirText} dari database`;
+
+  chip.appendChild(dot);
+  chip.appendChild(text);
+  host.appendChild(chip);
+}
+
+function updatePriceWarningForRow(tr) {
+  if (!tr) return;
+  const priceInput = tr.querySelector(".price-input");
+  const host = tr.querySelector(".price-warning-host");
+  if (!priceInput || !host) return;
+
+  const reference = priceInput.dataset.referencePrice;
+  if (!reference) { host.innerHTML = ""; return; }
+
+  const info = computeDeviationInfo(priceInput.value, reference);
+  renderWarningChip(host, info);
+}
+</script>
+
+<!-- Include Efficiency Recommendations JavaScript -->
+<script src="{% static 'efficiency_recommendations/recommendations.js' %}"></script>
+<script>
+  // Initialize efficiency recommendations after table is rendered
+  // This will be called when data is loaded
+  let currentTestJobId = null;
+
+  // Hook into the existing renderTables function to trigger recommendations
+  const originalRenderTables = renderTables;
+  renderTables = function(rows, options = {}) {
+    // Call original function
+    originalRenderTables(rows, options);
+    
+    // Extract job_id from response if available
+    if (options.jobId) {
+      currentTestJobId = options.jobId;
+      // Initialize recommendations panel
+      if (window.EfficiencyRecommendations) {
+        window.EfficiencyRecommendations.init(currentTestJobId);
+      }
+    }
+  };
+
+  // Also trigger refresh when price inputs change
+  document.addEventListener('input', function(event) {
+    if (event.target.classList.contains('price-input')) {
+      // Debounce the refresh to avoid too many API calls
+      if (window.EfficiencyRecommendations && currentTestJobId) {
+        clearTimeout(window.refreshRecommendationsTimeout);
+        window.refreshRecommendationsTimeout = setTimeout(() => {
+          window.EfficiencyRecommendations.refresh();
+        }, 2000); // Wait 2 seconds after last price change
+      }
+    }
+  });
 </script>
 {% endblock %}

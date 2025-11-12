@@ -35,6 +35,7 @@ urlpatterns = [
     path("", lambda request: redirect("job-matching")),
     path('automatic_price_matching/', include('automatic_price_matching.urls')),
     path("cost_weight/", include("cost_weight.urls")),
+    path("efficiency_recommendations/", include("efficiency_recommendations.urls")),
     path("api/recompute_total_cost/", recompute_total_cost),
     path('sentry-debug/', trigger_error),
 ]
