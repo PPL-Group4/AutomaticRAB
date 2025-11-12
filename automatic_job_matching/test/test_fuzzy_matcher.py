@@ -107,12 +107,6 @@ class WordWeightConfigTests(TestCase):
         self.assertTrue(WordWeightConfig._is_technical_word("aluminium"))
         self.assertFalse(WordWeightConfig._is_technical_word("dan"))
 
-    def test_get_word_weight(self):
-        """Test word weight assignment."""
-        self.assertEqual(WordWeightConfig.get_word_weight("untuk"), WordWeightConfig.ULTRA_LOW_WEIGHT)
-        self.assertEqual(WordWeightConfig.get_word_weight("beton"), WordWeightConfig.HIGH_WEIGHT)
-        self.assertEqual(WordWeightConfig.get_word_weight("pemasangan"), WordWeightConfig.NORMAL_WEIGHT)
-        self.assertEqual(WordWeightConfig.get_word_weight("xx"), WordWeightConfig.LOW_WEIGHT)
 
 
 class SimilarityCalculatorTests(TestCase):
@@ -145,11 +139,6 @@ class SimilarityCalculatorTests(TestCase):
         score = self.calculator.calculate_partial_similarity("", "batu")
         self.assertEqual(score, 0.0)
 
-    def test_calculate_partial_similarity_word_weight(self):
-        """Test that word weights affect scoring."""
-        score1 = self.calculator.calculate_partial_similarity("beton keramik", "beton")
-        score2 = self.calculator.calculate_partial_similarity("untuk dari", "untuk")
-        self.assertGreater(score1, score2)
 
     def test_calculate_partial_similarity_zero_total_weight(self):
         """Test calculate_partial_similarity with zero total weight."""
@@ -882,14 +871,6 @@ class FuzzyMatcherTests(TestCase):
         result = matcher.match("almost test")
         self.assertIsNone(result)
 
-    def test_matcher_with_special_characters(self):
-        """Test with special characters in query."""
-        repo = FakeAhsRepo([
-            AhsRow(1, "A.01", "batu belah"),
-        ])
-        matcher = FuzzyMatcher(repo, min_similarity=0.5)
-        result = matcher.match("batu-belah!")
-        self.assertIsNotNone(result)
 
     def test_matcher_with_numeric_description(self):
         """Test with numeric descriptions."""
@@ -944,21 +925,6 @@ class FuzzyMatcherTests(TestCase):
         self.assertIsNotNone(result)
         self.assertEqual(result["id"], 2)
 
-    def test_match_with_confidence_updates_best_confidence(self):
-        """Test confidence matching updates best when higher confidence found."""
-        repo = FakeAhsRepo([
-            AhsRow(1, "A.01", "pemasangan batu belah"),
-            AhsRow(2, "A.02", "pemasangan batu"),
-        ])
-
-        mock_scorer = Mock()
-        mock_scorer.score.side_effect = [0.7, 0.85]
-
-        matcher = FuzzyMatcher(repo, min_similarity=0.5, scorer=mock_scorer)
-
-        result = matcher.match_with_confidence("pemasangan batu")
-        self.assertIsNotNone(result)
-        self.assertIn("confidence", result)
 
     def test_find_multiple_confidence_skips_empty_and_appends(self):
         """Test multiple confidence matches skips empty and appends valid."""

@@ -30,6 +30,11 @@ LOG_DIR = BASE_DIR / "logs"
 LOG_DIR.mkdir(exist_ok=True)
 SECURITY_LOG_FILE = LOG_DIR / "security.log"
 
+# Detect when Django is being executed via its test runner.
+RUNNING_TESTS = any(arg in sys.argv for arg in ["test", "pytest", "py.test"])
+FORCE_MYSQL_FOR_TESTS = os.getenv("TEST_USE_MYSQL", "False").lower() in {"1", "true", "yes"}
+FORCE_SQLITE_FOR_TESTS = os.getenv("TEST_USE_SQLITE", "False").lower() in {"1", "true", "yes"}
+
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
@@ -82,6 +87,7 @@ INSTALLED_APPS = [
     'automatic_price_matching',
     'cost_weight',
     'efficiency_recommendations',
+    'target_bid',
     
 ]
 
@@ -143,8 +149,31 @@ DATABASES = {
         'PASSWORD': os.getenv('MYSQL_PASSWORD'),
         'HOST': os.getenv('MYSQL_HOST'),
         'PORT': os.getenv('MYSQL_PORT'),
-    }
+    },
+    'scraper': {
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': 'ScraperDB',
+        'USER': os.getenv('MYSQL_USER'), 
+        'PASSWORD': os.getenv('MYSQL_PASSWORD'),
+        'HOST': os.getenv('MYSQL_HOST'),
+        'PORT': os.getenv('MYSQL_PORT'),
+    },
 }
+
+if RUNNING_TESTS:
+    if FORCE_SQLITE_FOR_TESTS and not FORCE_MYSQL_FOR_TESTS:
+        DATABASES['default'] = {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'test_db.sqlite3',
+        }
+    else:
+        mysql_config = DATABASES['default'].copy()
+        test_db_name = os.getenv('MYSQL_TEST_NAME')
+        if test_db_name:
+            mysql_test_settings = mysql_config.get('TEST', {}).copy()
+            mysql_test_settings['NAME'] = test_db_name
+            mysql_config['TEST'] = mysql_test_settings
+        DATABASES['default'] = mysql_config
 
 
 # Password validation
@@ -224,10 +253,6 @@ LOGGING = {
     },
     "root": {"handlers": ["console"], "level": "DEBUG"},
 }
-
-# Use a simpler storage during tests to avoid Manifest errors, and
-# enable hashed filenames (manifest) only in production builds.
-RUNNING_TESTS = any(arg in sys.argv for arg in ["test", "pytest", "py.test"])  # Django test runner sets 'test'
 
 if RUNNING_TESTS:
     # During tests, Django doesn't run collectstatic; Manifest storage would raise
