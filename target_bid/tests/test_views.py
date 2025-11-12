@@ -2,7 +2,11 @@ from decimal import Decimal
 from django.test import SimpleTestCase
 from rest_framework.test import APIRequestFactory
 from unittest.mock import patch
-from target_bid.views import fetch_rab_job_items_view, cheaper_suggestions_view
+from target_bid.views import (
+    fetch_rab_job_items_view,
+    cheaper_suggestions_view,
+    optimize_ahs_materials_view,
+)
 from target_bid.models.rab_job_item import RabJobItem
 
 
@@ -43,3 +47,77 @@ class CheaperSuggestionsViewTests(SimpleTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data[0]["name"], "Steel")
         mock_get.assert_called_once()
+
+
+class OptimizeAhsMaterialsViewTests(SimpleTestCase):
+    def setUp(self):
+        self.factory = APIRequestFactory()
+
+    @patch("target_bid.views.optimize_ahs_price")
+    def test_returns_payload(self, mock_optimize):
+        mock_optimize.return_value = {"ahs_code": "AHS-01", "replacements": []}
+        request = self.factory.post(
+            "/target_bid/ahs/AHS-01/optimize/",
+            {"target_budget": "80%", "mode": "percentage"},
+            format="json",
+        )
+        response = optimize_ahs_materials_view(request, ahs_code="AHS-01")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["ahs_code"], "AHS-01")
+
+        args, kwargs = mock_optimize.call_args
+        self.assertEqual(args[0], "AHS-01")
+        self.assertEqual(kwargs["material_limit"], 2)
+        self.assertIsNotNone(kwargs["target_input"])
+        self.assertEqual(kwargs["target_input"].mode, "percentage")
+        self.assertEqual(kwargs["target_input"].value, Decimal("80"))
+
+    @patch("target_bid.views.optimize_ahs_price", return_value=None)
+    def test_returns_not_found_when_breakdown_missing(self, mock_optimize):
+        request = self.factory.post(
+            "/target_bid/ahs/UNKNOWN/optimize/",
+            {},
+            format="json",
+        )
+        response = optimize_ahs_materials_view(request, ahs_code="UNKNOWN")
+
+        self.assertEqual(response.status_code, 404)
+        mock_optimize.assert_called_once()
+
+    def test_rejects_non_integer_limit(self):
+        request = self.factory.post(
+            "/target_bid/ahs/AHS-01/optimize/",
+            {"material_limit": "two"},
+            format="json",
+        )
+        response = optimize_ahs_materials_view(request, ahs_code="AHS-01")
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("material_limit", response.data)
+
+    @patch("target_bid.views.optimize_ahs_price")
+    def test_requires_mode_when_target_budget_present(self, mock_optimize):
+        request = self.factory.post(
+            "/target_bid/ahs/AHS-01/optimize/",
+            {"target_budget": "100000"},
+            format="json",
+        )
+        response = optimize_ahs_materials_view(request, ahs_code="AHS-01")
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("mode", response.data)
+        mock_optimize.assert_not_called()
+
+    @patch("target_bid.views.optimize_ahs_price")
+    def test_invalid_target_budget_raises_validation_error(self, mock_optimize):
+        request = self.factory.post(
+            "/target_bid/ahs/AHS-01/optimize/",
+            {"target_budget": "abc", "mode": "absolute"},
+            format="json",
+        )
+        response = optimize_ahs_materials_view(request, ahs_code="AHS-01")
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("target_budget", response.data)
+        mock_optimize.assert_not_called()

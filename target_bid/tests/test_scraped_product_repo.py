@@ -67,3 +67,17 @@ class ScrapedProductRepositoryTests(SimpleTestCase):
         self.repo.find_cheaper_same_unit = fake_find_cheaper_same_unit
         results = self.repo.find_cheaper_same_unit("tidak ada", "kg", 9999)
         self.assertEqual(results, [])
+
+    def test_brand_price_csv_alternatives_are_returned(self):
+        repo = ScrapedProductRepository()
+        repo.sources = []  # avoid hitting external DBs
+
+        results = repo.find_cheaper_same_unit(
+            "Kaso 5/7 kayu kelas II",
+            "m3",
+            10000000,
+        )
+
+        self.assertTrue(results)
+        self.assertTrue(any(item.get("source") == "material_brand_prices" for item in results))
+        self.assertTrue(all(item["price"] < 10000000 for item in results))
