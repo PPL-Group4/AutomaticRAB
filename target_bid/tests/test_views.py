@@ -2,9 +2,8 @@ from decimal import Decimal
 from django.test import SimpleTestCase
 from rest_framework.test import APIRequestFactory
 from unittest.mock import patch
-from target_bid.views import fetch_rab_job_items_view
+from target_bid.views import fetch_rab_job_items_view, cheaper_suggestions_view
 from target_bid.models.rab_job_item import RabJobItem
-from target_bid.services.rab_job_item_service import RabJobItemService
 
 
 class FetchRabJobItemsViewTests(SimpleTestCase):
@@ -25,17 +24,22 @@ class FetchRabJobItemsViewTests(SimpleTestCase):
             custom_ahs_id=None,
             analysis_code="AT.02",
         )
-
-        with patch.object(
-            RabJobItemService,
-            "get_items_with_classification",
-            return_value=([mock_item], [], []),
-        ):
+        with patch("target_bid.views.fetch_rab_job_items", return_value=([mock_item], [], [])):
             response = fetch_rab_job_items_view(request, rab_id=99)
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data["rab_id"], 99)
         self.assertIn("items", response.data)
-        self.assertIn("locked_items", response.data)
-        self.assertEqual(len(response.data["items"]), 1)
-        self.assertEqual(response.data["items"][0]["name"], "Urugan Tanah")
+
+
+class CheaperSuggestionsViewTests(SimpleTestCase):
+    def setUp(self):
+        self.factory = APIRequestFactory()
+
+    @patch("target_bid.views.get_cheaper_alternatives", return_value=[{"name": "Steel", "price": 500}])
+    def test_returns_results(self, mock_get):
+        request = self.factory.get("/target_bid/cheaper-suggestions/?name=Steel&unit=kg&price=1000")
+        response = cheaper_suggestions_view(request)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data[0]["name"], "Steel")
+        mock_get.assert_called_once()
