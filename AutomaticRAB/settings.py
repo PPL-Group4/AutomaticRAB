@@ -100,7 +100,15 @@ DATABASES = {
         'PASSWORD': os.getenv('MYSQL_PASSWORD'),
         'HOST': os.getenv('MYSQL_HOST'),
         'PORT': os.getenv('MYSQL_PORT'),
-    }
+    },
+    'scraper': {
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': 'ScraperDB',
+        'USER': os.getenv('MYSQL_USER'), 
+        'PASSWORD': os.getenv('MYSQL_PASSWORD'),
+        'HOST': os.getenv('MYSQL_HOST'),
+        'PORT': os.getenv('MYSQL_PORT'),
+    },
 }
 
 if RUNNING_TESTS:
