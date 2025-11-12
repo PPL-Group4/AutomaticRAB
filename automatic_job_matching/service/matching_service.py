@@ -13,13 +13,14 @@ logger = logging.getLogger(__name__)
 
 class MatchingService:
     translator = TranslationService()
-
+    _shared_repo = CombinedAhsRepository()
+    
     @staticmethod
     def perform_exact_match(description):
         logger.info("perform_exact_match called (len=%d)", len(description))
 
         try:
-            matcher = ExactMatcher(CombinedAhsRepository())
+            matcher = ExactMatcher(MatchingService._shared_repo)
             result = matcher.match(description)
             logger.debug("Exact match result: %s", result)
             return result
@@ -33,7 +34,7 @@ class MatchingService:
                     len(description), min_similarity, unit)
 
         try:
-            matcher = FuzzyMatcher(CombinedAhsRepository(), min_similarity, scorer=FuzzyConfidenceScorer())
+            matcher = FuzzyMatcher(MatchingService._shared_repo, min_similarity, scorer=FuzzyConfidenceScorer())
             confidence_result = getattr(matcher, 'match_with_confidence', None)
             if callable(confidence_result):
                 result = confidence_result(description, unit=unit)
@@ -52,7 +53,7 @@ class MatchingService:
                     len(description), limit, min_similarity, unit)
 
         try:
-            matcher = FuzzyMatcher(CombinedAhsRepository(), min_similarity, scorer=FuzzyConfidenceScorer())
+            matcher = FuzzyMatcher(MatchingService._shared_repo, min_similarity, scorer=FuzzyConfidenceScorer())
             confidence_multi = getattr(matcher, 'find_multiple_matches_with_confidence', None)
 
             if callable(confidence_multi):
@@ -83,7 +84,7 @@ class MatchingService:
 
             word_count = len(normalized.split())
 
-            # Single-word material queries: return multiple matches
+            # === Single-word material queries ===
             if word_count == 1:
                 min_similarity = 0.25
                 limit = 5
@@ -94,10 +95,24 @@ class MatchingService:
                 if exact_result:
                     return [exact_result]
 
-                # Return multiple fuzzy matches with unit
-                return MatchingService.perform_multiple_match(description, limit, min_similarity, unit=unit)
+                # Try fuzzy/multiple with unit
+                primary = MatchingService.perform_multiple_match(description, limit, min_similarity, unit=unit)
+                if primary:
+                    return primary
 
-            # Multi-word queries: return single best match
+                # Fallback: try again ignoring unit
+                alt_matches = MatchingService.perform_multiple_match(description, limit, min_similarity, unit=None)
+                if alt_matches:
+                    for m in alt_matches:
+                        m["unit_mismatch"] = True
+                    return {
+                        "message": "No matches with the same unit found. Showing similar options with different units.",
+                        "alternatives": alt_matches,
+                    }
+
+                return None
+
+            # === Multi-word queries ===
             min_similarity_single = 0.9
             min_similarity_multiple = 0.6
             limit = 10
@@ -113,7 +128,33 @@ class MatchingService:
             if not result:
                 result = MatchingService.perform_multiple_match(description, limit, min_similarity_multiple, unit=unit)
 
+            # === Fallback: no matches at all, try ignoring unit ===
+            if not result:
+                alt_matches = MatchingService.perform_multiple_match(description, limit, min_similarity_multiple, unit=None)
+                if alt_matches:
+                    for m in alt_matches:
+                        m["unit_mismatch"] = True
+                    return {
+                        "message": "No matches with the same unit found. Showing similar options with different units.",
+                        "alternatives": alt_matches,
+                    }
+                
+            if isinstance(result, dict):
+                result_unit = result.get("unit")
+                if unit and result_unit and result_unit != unit:
+                    result["unit_mismatch"] = True
+                else:
+                    result["unit_mismatch"] = False
+
+                if result.get("unit_mismatch"):
+                    result["status"] = "unit_mismatch"
+                elif result.get("confidence", 1.0) == 1.0:
+                    result["status"] = "found"
+                else:
+                    result["status"] = "similar"
+
             return result
+
         except Exception as e:
             logger.error("Error in perform_best_match: %s", str(e), exc_info=True)
             return None

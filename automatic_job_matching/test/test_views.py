@@ -1,7 +1,7 @@
+import json
 from django.test import TestCase, Client
 from unittest.mock import patch
 from django.urls import reverse
-import json
 
 class MatchBestViewTests(TestCase):
     def setUp(self):
@@ -189,3 +189,30 @@ class MatchBestViewTests(TestCase):
         response = self.client.post(url, json.dumps(payload), content_type="application/json")
         self.assertEqual(response.status_code, 200)
         self.mock_best.assert_called_once_with("test", unit="M3")
+
+
+class AhsBreakdownViewTests(TestCase):
+    def setUp(self):
+        self.client = Client()
+
+    def test_breakdown_returns_totals_for_known_code(self):
+        url = reverse("ahs-breakdown", args=["1.1.1.1"])
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["code"], "1.1.1.1")
+        self.assertIn("breakdown", payload)
+        totals = payload["breakdown"]["totals"]
+        self.assertAlmostEqual(totals["labor"], 127600.0)
+        self.assertAlmostEqual(totals["materials"], 588215.63)
+        self.assertGreater(len(payload["breakdown"]["components"]["materials"]), 0)
+        self.assertNotIn("labor", payload["breakdown"]["components"])
+        self.assertNotIn("equipment", payload["breakdown"]["components"])
+
+    def test_breakdown_returns_404_for_unknown_code(self):
+        url = reverse("ahs-breakdown", args=["ZZ.99.999"])
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, 404)
+        self.assertIn("error", response.json())
