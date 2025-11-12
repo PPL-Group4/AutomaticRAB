@@ -98,6 +98,7 @@ jobs:
           cache-to: type=inline
           build-args: |
             CACHE_BUST=${{ github.sha }}
+            DJANGO_BUILD_CONFIG=temporary-collectstatic-config
           tags: |
             ${{ env.DOCKER_IMAGE_NAME }}:${{ steps.set-env.outputs.TAG }}
             ${{ env.DOCKER_IMAGE_NAME }}:${{ steps.set-env.outputs.TAG }}-${{ github.sha }}

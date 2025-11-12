@@ -32,8 +32,10 @@ COPY . /app/
 # Create directories for uploads
 RUN mkdir -p /app/media /app/tmp && chmod -R 777 /app/media /app/tmp
 
-# Collect static files
-RUN python manage.py collectstatic --noinput
+# Collectstatic requires Django settings which need a SECRET_KEY env var
+# We use a temporary non-sensitive value only during build (not used at runtime)
+ARG DJANGO_BUILD_CONFIG
+RUN SECRET_KEY=${DJANGO_BUILD_CONFIG:-temporary-build-value} python manage.py collectstatic --noinput
 
 # Expose port 8000 (default for Gunicorn)
 EXPOSE 8000
