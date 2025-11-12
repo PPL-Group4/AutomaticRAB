@@ -7,6 +7,10 @@ from efficiency_recommendations.services.ahsp_availability_checker import (
 from efficiency_recommendations.services.notification_generator import (
     generate_notifications
 )
+from efficiency_recommendations.services.warning_indicator_builder import build_indicator
+from decimal import Decimal
+from . import items_with_status
+from . import items
 
 
 @require_GET
@@ -58,12 +62,84 @@ def get_job_notifications(request, job_id):
     # Generate notifications for items not in AHSP
     notifications = generate_notifications(items_with_status)
 
+    # Aggregate/indicator fields
+    total_items = len(items)
+    warning_count = len(notifications)
+    indicator = build_indicator(total_items, warning_count)
+
     # Build response
+    response_data = {
+        'job_id': job_id,
+        'total_items': total_items,
+        'items_not_in_ahsp': warning_count,
+        'notifications': notifications,
+        'has_warnings': warning_count > 0,
+        'warning_count': warning_count,
+        'warning_ratio': indicator['ratio'],
+        'indicator': {
+            'level': indicator['level'],
+            'label': indicator['label'],
+            'badge_color': indicator['badge_color'],
+            'icon': indicator['icon'],
+        }
+    }
+
+    return JsonResponse(response_data)
+
+def _build_warning_indicator(total_items: int, warning_count: int):
+    if total_items <= 0:
+        ratio = 0.0
+    else:
+        ratio = float(Decimal(warning_count) / Decimal(total_items))
+
+    if warning_count == 0:
+        return {
+            "has_warnings": False,
+            "warning_count": 0,
+            "warning_ratio": 0.0,
+            "indicator": {
+                "level": "NONE",
+                "badge_color": "#D1D5DB",   # gray-300
+                "icon": "check-circle",
+                "label": "No warnings"
+            }
+        }
+
+    if ratio > 0.5:
+        level = "CRITICAL"; color = "#DC2626"; icon = "x-octagon"
+    elif ratio > 0.2:
+        level = "WARN";     color = "#F59E0B"; icon = "alert-triangle"
+    else:
+        level = "INFO";     color = "#2563EB"; icon = "info"
+
+    return {
+        "has_warnings": True,
+        "warning_count": warning_count,
+        "warning_ratio": ratio,
+        "indicator": {
+            "level": level,
+            "badge_color": color,
+            "icon": icon,
+            "label": f"{warning_count} warnings"
+        }
+    }
+
+@require_GET
+def get_job_notifications(request, job_id):
+    ...
+    notifications = generate_notifications(items_with_status)
+
+    indicator = _build_warning_indicator(len(items), len(notifications))
+
     response_data = {
         'job_id': job_id,
         'total_items': len(items),
         'items_not_in_ahsp': len(notifications),
-        'notifications': notifications
+        'notifications': notifications,
+        'has_warnings': indicator['has_warnings'],
+        'warning_count': indicator['warning_count'],
+        'warning_ratio': indicator['warning_ratio'],
+        'indicator': indicator['indicator'],
     }
 
     return JsonResponse(response_data)
