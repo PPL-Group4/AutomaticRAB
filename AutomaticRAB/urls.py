@@ -17,8 +17,15 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import include, path
 from django.shortcuts import redirect
+from django.conf import settings
+from django.conf.urls.static import static
+import os
+
 
 from automatic_price_matching.views import recompute_total_cost
+
+def trigger_error(request):
+    division_by_zero = 1 / 0
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -30,5 +37,8 @@ urlpatterns = [
     path("cost_weight/", include("cost_weight.urls")),
     path("efficiency_recommendations/", include("efficiency_recommendations.urls")),
     path("api/recompute_total_cost/", recompute_total_cost),
+    path('sentry-debug/', trigger_error),
 ]
 
+if settings.DEBUG or os.getenv("DOCKER_ENV") == "True":
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
