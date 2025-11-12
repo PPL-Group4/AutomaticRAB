@@ -2,6 +2,7 @@ from django.http import JsonResponse
 from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
 from django.core.exceptions import ValidationError
+from decimal import Decimal
 
 from rest_framework.decorators import api_view, parser_classes
 from rest_framework.parsers import MultiPartParser
@@ -12,6 +13,7 @@ from openpyxl import load_workbook
 from .services.header_mapper import map_headers, find_header_row
 from .services.reader import preview_file
 from .services.validators import validate_excel_file
+from cost_weight.models import TestJob, TestItem
 
 # Template constant
 EXCEL_UPLOAD_TEMPLATE = 'excel_upload.html'
@@ -72,6 +74,8 @@ def preview_rows(request):
     Accepts either:
       - file (legacy, for frontend JS)
       - excel_standard / excel_apendo / pdf_file (extended, from git)
+    
+    Also creates a TestJob for cost weight analysis and returns job_id
     """
     if request.method != "POST":
         return JsonResponse({"detail": "Method not allowed"}, status=405)
@@ -93,11 +97,24 @@ def preview_rows(request):
             validate_excel_file(legacy_file)
             rows = preview_file(legacy_file)
             _apply_preview_overrides(rows, session_overrides)
+            
+            # Create TestJob from rows
+            job = _create_test_job_from_rows(rows, legacy_file.name)
+            
             results["rows"] = rows
+            results["job_id"] = job.id
 
         # === Extended path ===
         if excel_standard:
             validate_excel_file(excel_standard)
+            excel_rows = preview_file(excel_standard)
+            _apply_preview_overrides(excel_rows, session_overrides)
+            
+            # Create TestJob from rows
+            job = _create_test_job_from_rows(excel_rows, excel_standard.name)
+            
+            results["excel_standard"] = excel_rows
+            results["job_id"] = job.id
             excel_rows = preview_file(excel_standard)
             _apply_preview_overrides(excel_rows, session_overrides)
             results["excel_standard"] = excel_rows
@@ -198,3 +215,50 @@ def _apply_preview_overrides(rows, overrides):
         total_price = data.get("total_price")
         if total_price is not None:
             row["total_price"] = total_price
+
+
+def _create_test_job_from_rows(rows, filename="Uploaded File"):
+    """
+    Create TestJob and TestItems from parsed rows
+    Returns the created TestJob instance
+    """
+    # Create job
+    job = TestJob.objects.create(name=f"RAB - {filename}")
+    
+    # Create items from rows (skip section headers)
+    for row in rows:
+        # Skip section/category rows
+        if row.get("is_section") or row.get("job_match_status") == "skipped":
+            continue
+            
+        description = row.get("description", "Unknown Item")
+        if not description or description.strip() == "":
+            continue
+            
+        # Parse quantity and price
+        try:
+            quantity = Decimal(str(row.get("volume", 0)))
+            if quantity <= 0:
+                quantity = Decimal("1")
+        except (ValueError, TypeError, KeyError):
+            quantity = Decimal("1")
+            
+        try:
+            unit_price = Decimal(str(row.get("price", 0)))
+            if unit_price < 0:
+                unit_price = Decimal("0")
+        except (ValueError, TypeError, KeyError):
+            unit_price = Decimal("0")
+        
+        # Create item
+        TestItem.objects.create(
+            job=job,
+            name=description,
+            quantity=quantity,
+            unit_price=unit_price
+        )
+    
+    # Calculate totals and weights
+    job.calculate_totals()
+    
+    return job

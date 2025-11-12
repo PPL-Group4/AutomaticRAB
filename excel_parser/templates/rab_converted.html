@@ -110,6 +110,8 @@
     </div>
   </div>
 
+  {% include "efficiency_recommendations/recommendations_panel.html" %}
+
   <a href="#" class="btn btn-outline-primary mt-3">+ Tambah Kategori Pekerjaan / Pilih Referensi RAB</a>
 </div>
 {% endblock %}
@@ -296,7 +298,7 @@
 
         const rows = data.rows || data.excel_standard || data.excel_apendo;
         if (rows) {
-          renderTables(rows, { sourceType: "excel" });
+          renderTables(rows, { sourceType: "excel", jobId: data.job_id });
           fileInput.value = "";
         } else {
           showError("Gagal memproses file: " + (data.error || "Terjadi kesalahan yang tidak diketahui"));
@@ -327,7 +329,7 @@
         hideLoading();
 
         if (Array.isArray(data.rows) && data.rows.length) {
-          renderTables(data.rows, { sourceType: "pdf" });
+          renderTables(data.rows, { sourceType: "pdf", jobId: data.job_id });
           fileInput.value = "";
         } else {
           showError("Gagal memproses file: " + (data.error || "Tidak ada baris yang ditemukan"));
@@ -1726,5 +1728,42 @@ function updatePriceWarningForRow(tr) {
   const info = computeDeviationInfo(priceInput.value, reference);
   renderWarningChip(host, info);
 }
+</script>
+
+<!-- Include Efficiency Recommendations JavaScript -->
+<script src="{% static 'efficiency_recommendations/recommendations.js' %}"></script>
+<script>
+  // Initialize efficiency recommendations after table is rendered
+  // This will be called when data is loaded
+  let currentTestJobId = null;
+
+  // Hook into the existing renderTables function to trigger recommendations
+  const originalRenderTables = renderTables;
+  renderTables = function(rows, options = {}) {
+    // Call original function
+    originalRenderTables(rows, options);
+    
+    // Extract job_id from response if available
+    if (options.jobId) {
+      currentTestJobId = options.jobId;
+      // Initialize recommendations panel
+      if (window.EfficiencyRecommendations) {
+        window.EfficiencyRecommendations.init(currentTestJobId);
+      }
+    }
+  };
+
+  // Also trigger refresh when price inputs change
+  document.addEventListener('input', function(event) {
+    if (event.target.classList.contains('price-input')) {
+      // Debounce the refresh to avoid too many API calls
+      if (window.EfficiencyRecommendations && currentTestJobId) {
+        clearTimeout(window.refreshRecommendationsTimeout);
+        window.refreshRecommendationsTimeout = setTimeout(() => {
+          window.EfficiencyRecommendations.refresh();
+        }, 2000); // Wait 2 seconds after last price change
+      }
+    }
+  });
 </script>
 {% endblock %}
