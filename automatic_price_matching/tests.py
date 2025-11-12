@@ -70,6 +70,14 @@ class AhspValidationTests(SimpleTestCase):
 
 		self.assertIn("code", ctx.exception.message_dict)
 
+	def test_rejects_code_with_dangerous_characters(self) -> None:
+		payload = {"code": "AT.01; DROP TABLE", "name": "Galian Tanah", "unit": "m3", "volume": 1}
+
+		with self.assertRaises(ValidationError) as ctx:
+			self.validate(payload)
+
+		self.assertIn("code", ctx.exception.message_dict)
+
 	def test_rejects_invalid_numeric_volume(self) -> None:
 		payload = {"code": "AT.01.001", "name": "Galian Tanah", "unit": "m3", "volume": "many"}
 
@@ -286,6 +294,48 @@ class AhspValidationTests(SimpleTestCase):
 		self.assertIsNone(cleaned["total_cost"])
 
 
+class RecomputePayloadValidationTests(SimpleTestCase):
+	def setUp(self) -> None:
+		super().setUp()
+		from automatic_price_matching.validators import validate_recompute_payload  # noqa: WPS433
+
+		self.validate = validate_recompute_payload
+
+	def test_accepts_valid_payload(self) -> None:
+		payload = {
+			"row_key": "row-001",
+			"code": "at-01/001",
+			"analysis_code": "AT.01.001",
+			"volume": "2.50",
+			"unit_price": "1000",
+		}
+		cleaned = self.validate(payload)
+		self.assertEqual(cleaned["row_key"], "row-001")
+		self.assertEqual(cleaned["code"], "AT.01.001")
+		self.assertEqual(cleaned["analysis_code"], "AT.01.001")
+		self.assertEqual(cleaned["volume"], Decimal("2.50"))
+		self.assertEqual(cleaned["unit_price"], Decimal("1000"))
+
+	def test_invalid_row_key_rejected(self) -> None:
+		with self.assertRaises(ValidationError) as ctx:
+			self.validate({"row_key": "bad<script>", "volume": 1})
+		self.assertIn("row_key", ctx.exception.message_dict)
+
+	def test_negative_numbers_disallowed(self) -> None:
+		with self.assertRaises(ValidationError) as ctx:
+			self.validate({"volume": -1, "unit_price": 2})
+		self.assertIn("volume", ctx.exception.message_dict)
+
+	def test_analysis_code_defaults_to_code(self) -> None:
+		cleaned = self.validate({"code": "AB 01", "volume": 1})
+		self.assertEqual(cleaned["analysis_code"], "AB.01")
+
+	def test_rejects_injection_in_code(self) -> None:
+		with self.assertRaises(ValidationError) as ctx:
+			self.validate({"code": "1; DROP TABLE", "volume": 1})
+		self.assertIn("code", ctx.exception.message_dict)
+
+
 class TotalCostCalculatorTests(SimpleTestCase):
 	def test_calculates_when_both_decimals(self) -> None:
 		result = TotalCostCalculator.calculate(Decimal("10"), Decimal("3.333"))
@@ -489,6 +539,19 @@ class RecomputeTotalCostTDDTests(TestCase):
         response = self.client.post(self.url, json.dumps(payload), content_type="application/json")
         self.assertEqual(response.status_code, 400)
         self.assertIn("error", response.json())
+
+    def test_invalid_row_key_returns_error(self):
+        payload = {"row_key": "bad<script>", "volume": 1, "unit_price": 1}
+        response = self.client.post(self.url, json.dumps(payload), content_type="application/json")
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("detail", response.json())
+        self.assertIn("row_key", response.json()["detail"])
+
+    def test_invalid_code_characters_rejected(self):
+        payload = {"code": "1; DROP TABLE", "volume": 1, "unit_price": 1}
+        response = self.client.post(self.url, json.dumps(payload), content_type="application/json")
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("code", response.json().get("detail", {}))
 
     def test_missing_fields_should_default_to_zero(self):
         """🔴 Should still work when one field is missing."""

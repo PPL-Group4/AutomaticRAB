@@ -1,3 +1,4 @@
+--prefer-binary
 asgiref==3.9.1
 Django==5.2.6
 et_xmlfile==2.0.0
@@ -32,5 +33,5 @@ langdetect==1.0.9
 pytest
 pytest-django
 selenium>=4.25.0
-
+matplotlib
 

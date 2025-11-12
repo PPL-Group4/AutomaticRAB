@@ -45,6 +45,14 @@
     background-color: #fff5e6;
     border-color: rgba(255, 193, 7, 0.45);
   }
+
+  table th:nth-child(8),
+  table td:nth-child(8) {
+    width: 100px;          /* adjust to fit your layout */
+    max-width: 100px;
+    min-width: 100px;
+    text-align: justify;     /* keeps prices neatly aligned */
+  }
 </style>
 <div class="section-box position-relative">
   <h5 class="section-title">RAB Preview</h5>
@@ -124,6 +132,133 @@
   const dropdownRequestState = new WeakMap();
   const MANUAL_SUGGESTION_LIMIT = 12;
   const PRICE_OVERRIDE_CONFIRM_MESSAGE = "Harga ini diisi otomatis oleh sistem. Apakah Anda yakin ingin menimpa nilai tersebut secara manual?";
+  const SAFE_ROW_KEY_PATTERN = /^[A-Za-z0-9._:-]{1,128}$/;
+  const SAFE_NUMERIC_PATTERN = /^-?\d{0,12}(?:[.,]\d{0,4})?$/;
+  const UNSAFE_CODE_PATTERN = /[<>]/;
+
+  function sanitizeRowKey(value, fallback = null) {
+    if (typeof value !== "string") {
+      return fallback;
+    }
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return fallback;
+    }
+    return SAFE_ROW_KEY_PATTERN.test(trimmed) ? trimmed : fallback;
+  }
+
+  function canonicalizeFrontendCode(value) {
+    if (typeof value !== "string") {
+      return "";
+    }
+    let text = value.trim().toUpperCase();
+    if (!text) {
+      return "";
+    }
+    text = text.replace(/[-_/ ]+/g, ".");
+    text = text.replace(/[^A-Z0-9.]/g, "");
+    text = text.replace(/\.{2,}/g, ".");
+    while (text.includes("..")) {
+      text = text.replace("..", ".");
+    }
+    return text.replace(/^\.+|\.+$/g, "");
+  }
+  function toDecimalString(value) {
+    if (!Number.isFinite(value)) {
+      return "";
+    }
+    const fixed = Number(value).toFixed(6);
+    return fixed.replace(/\.0+$/, "").replace(/(\.\d*?[1-9])0+$/, "$1").replace(/\.$/, "");
+  }
+
+
+  function normaliseNumericInput(value, { allowBlank = false } = {}) {
+    if (value === undefined || value === null) {
+      return allowBlank ? undefined : 0;
+    }
+    if (typeof value === "string") {
+      const trimmed = value.trim();
+      if (!trimmed) {
+        return allowBlank ? undefined : 0;
+      }
+      if (!SAFE_NUMERIC_PATTERN.test(trimmed)) {
+        return null;
+      }
+      value = parseFloat(trimmed.replace(",", "."));
+    }
+    if (!Number.isFinite(value)) {
+      return null;
+    }
+    if (value < 0) {
+      return null;
+    }
+    if (Math.abs(value) > 1_000_000_000_000) {
+      return null;
+    }
+    return Number(value);
+  }
+
+  function enforceValidNumericInput(inputEl, fieldLabel, { allowBlank = false } = {}) {
+    if (!inputEl) {
+      return { value: 0, isValid: true, provided: false };
+    }
+    const raw = String(inputEl.value ?? "").trim();
+    if (!raw) {
+      inputEl.classList.remove("is-invalid");
+      return { value: 0, isValid: true, provided: false };
+    }
+    if (!SAFE_NUMERIC_PATTERN.test(raw)) {
+      inputEl.classList.add("is-invalid");
+      showError(`${fieldLabel} mengandung karakter tidak valid.`);
+      return { value: 0, isValid: false, provided: false };
+    }
+    const numeric = parseFloat(raw.replace(",", "."));
+    if (!Number.isFinite(numeric) || numeric < 0 || Math.abs(numeric) > 1_000_000_000_000) {
+      inputEl.classList.add("is-invalid");
+      showError(`${fieldLabel} harus berupa angka non-negatif yang wajar.`);
+      return { value: 0, isValid: false, provided: false };
+    }
+    inputEl.classList.remove("is-invalid");
+    return { value: numeric, isValid: true, provided: true };
+  }
+
+  function buildRecomputePayload({ rowKey, code, volume, unitPrice }) {
+    const errors = [];
+    const payload = {};
+
+    const safeRowKey = sanitizeRowKey(rowKey);
+    if (rowKey && !safeRowKey) {
+      errors.push("Row key tidak valid.");
+    } else if (safeRowKey) {
+      payload.row_key = safeRowKey;
+    }
+
+    const safeCode = canonicalizeFrontendCode(code || "");
+    if (code && !safeCode) {
+      errors.push("Kode pekerjaan mengandung karakter tidak sah.");
+    } else if (safeCode) {
+      payload.code = safeCode;
+      payload.analysis_code = safeCode;
+    }
+
+    const safeVolume = normaliseNumericInput(volume);
+    if (safeVolume === null) {
+      errors.push("Volume harus berupa angka non-negatif.");
+    } else {
+      payload.volume = toDecimalString(safeVolume);
+    }
+
+    if (unitPrice !== undefined) {
+      const safeUnit = normaliseNumericInput(unitPrice, { allowBlank: true });
+      if (safeUnit === null) {
+        errors.push("Harga satuan harus berupa angka non-negatif.");
+      } else if (safeUnit !== undefined) {
+        payload.unit_price = toDecimalString(safeUnit);
+      }
+    }
+
+    return errors.length ? { errors } : { payload };
+  }
 
   function showError(message) {
     const errorContainer = document.getElementById("errorContainer");
@@ -231,6 +366,7 @@
     let currentTable = null;
     let tbody = null;
     let bujakCounter = 0;
+    const matchPromises = []; 
 
     rows.forEach((row, rowIndex) => {
       const skipKeywords = ["PAJAK", "JUMLAH SETELAH PAJAK", "DIBULATKAN", "TERBILANG"];
@@ -257,14 +393,15 @@
               <th>Hasil AHSP</th>
               <th>Volume</th>
               <th>SAT</th>
-              <th>Harga Sat (Rp.)</th>
-              <th>Jumlah (Rp.)</th>
+              <th>Harga Satuan (Rp.)</th>
+              <th>Jumlah</th>
             </tr>
           </thead>
         `;
         const newBody = document.createElement("tbody");
         table.appendChild(newBody);
         container.appendChild(table);
+
         currentTable = table;
         tbody = newBody;
       }
@@ -285,6 +422,7 @@
         strong.textContent = row.description || "";
         titleCell.appendChild(strong);
         tr.appendChild(titleCell);
+
         tbody.appendChild(tr);
         return;
       }
@@ -301,6 +439,7 @@
         emphasis.textContent = row.description || "";
         titleCell.appendChild(emphasis);
         tr.appendChild(titleCell);
+
         tbody.appendChild(tr);
         return;
       }
@@ -312,13 +451,31 @@
       const tr = buildDataRow(row, rowIndex);
       tbody.appendChild(tr);
       total += parseCurrencyNumber(row.total_price);
+
+      matchPromises.push((async () => {
+        const matchCell = tr.querySelector("td:nth-child(5)");
+        const analysisCell = tr.querySelector(".analysis-code-cell");
+        const statusCell = tr.querySelector("td:nth-child(4)");
+
+        try {
+          const results = await fetchAndStoreSuggestions(row, row.description || "");
+          populateMatchCell(matchCell, row, analysisCell, statusCell);
+        } catch (err) {
+          console.warn("Match fetch failed for row:", row.description, err);
+        }
+      })());
+    });
+
+    Promise.all(matchPromises).then(() => {
+      console.log("✅ All sectioned table matches complete");
     });
 
     updateGrandTotal(total);
   }
-
+  
   function renderFlatTable(rows, container) {
     let total = 0;
+
     const table = document.createElement("table");
     table.classList.add("table", "table-bordered", "table-sm", "align-middle", "mb-4");
     table.innerHTML = `
@@ -332,18 +489,62 @@
           <th>Volume</th>
           <th>SAT</th>
           <th>Harga Sat (Rp.)</th>
-          <th>Jumlah (Rp.)</th>
+          <th>Jumlah </th>
         </tr>
       </thead>
     `;
+
     const tbody = document.createElement("tbody");
     table.appendChild(tbody);
     container.appendChild(table);
 
     rows.forEach((row, rowIndex) => {
+      if (row.job_match_status === "skipped" && (!row.is_section || row.is_section === undefined)) {
+        const tr = document.createElement("tr");
+
+        const numberCell = document.createElement("td");
+        numberCell.textContent = row.number || "";
+        tr.appendChild(numberCell);
+
+        const titleCell = document.createElement("td");
+        titleCell.colSpan = 8;
+        const strong = document.createElement("strong");
+        strong.textContent = row.description || "";
+        titleCell.appendChild(strong);
+        tr.appendChild(titleCell);
+
+        tr.classList.add("table-secondary", "fw-semibold");
+        tbody.appendChild(tr);
+        return;
+      }
+
       const tr = buildDataRow(row, rowIndex, { flatNumbering: true });
       tbody.appendChild(tr);
       total += parseCurrencyNumber(row.total_price);
+    });
+
+    const matchPromises = rows.map(async (row, rowIndex) => {
+      if (row.is_section || row.job_match_status === "skipped") return;
+
+      const tr = table.querySelector(
+        `tr[data-row-key="${sanitizeRowKey(row.row_key || row.rowKey, `row-${rowIndex}`)}"]`
+      );
+      if (!tr) return;
+
+      const matchCell = tr.querySelector("td:nth-child(5)");
+      const analysisCell = tr.querySelector(".analysis-code-cell");
+      const statusCell = tr.querySelector("td:nth-child(4)");
+
+      try {
+        const results = await fetchAndStoreSuggestions(row, row.description || "");
+        populateMatchCell(matchCell, row, analysisCell, statusCell);
+      } catch (err) {
+        console.warn("Match fetch failed for row:", row.description, err);
+      }
+    });
+
+    Promise.all(matchPromises).then(() => {
+      console.log("✅ All matching complete");
     });
 
     updateGrandTotal(total);
@@ -351,8 +552,9 @@
 
   function buildDataRow(row, rowIndex, options = {}) {
     const tr = document.createElement("tr");
-    const rowKey = row.row_key || row.rowKey || `row-${rowIndex}`;
-    tr.dataset.rowKey = rowKey;
+    const sanitizedRowKey = sanitizeRowKey(row.row_key || row.rowKey, `row-${rowIndex}`);
+    tr.dataset.rowKey = sanitizedRowKey || `row-${rowIndex}`;
+    const rowKey = tr.dataset.rowKey;
 
     const numberCell = document.createElement("td");
     numberCell.textContent = options.flatNumbering ? (row.number || rowIndex + 1) : (row.number || "");
@@ -570,8 +772,14 @@
     const priceInput = row.querySelector(".price-input");
     const totalCell = row.querySelector(".total-cell");
 
-    const volume = parseFloat(volumeInput.value) || 0;
-    const price = parseFloat(priceInput.value) || 0;
+    const volumeCheck = enforceValidNumericInput(volumeInput, "Volume");
+    const priceCheck = enforceValidNumericInput(priceInput, "Harga satuan", { allowBlank: true });
+    if (!volumeCheck.isValid || !priceCheck.isValid) {
+      return;
+    }
+
+    const volume = volumeCheck.value;
+    const price = priceCheck.provided ? priceCheck.value : 0;
 
     // Instant UI update (no delay)
     const total = volume * price;
@@ -589,13 +797,21 @@
       // Backend recomputation (precise rounding & persistence)
       try {
         const analysisCell = row.querySelector(".analysis-code-cell");
-        const code = analysisCell ? analysisCell.textContent.trim() : "";
+        const rawCode = analysisCell ? analysisCell.textContent.trim() : "";
         const rowKey = row.dataset.rowKey || null;
-        const payload = { row_key: rowKey, volume, unit_price: price };
-        if (code) {
-          payload.code = code;
-          payload.analysis_code = code;
+        const payloadResult = buildRecomputePayload({
+          rowKey,
+          code: rawCode,
+          volume,
+          unitPrice: priceCheck.provided ? price : undefined,
+        });
+
+        if (payloadResult.errors) {
+          showError(payloadResult.errors.join(" "));
+          return;
         }
+
+        const payload = payloadResult.payload;
 
         const response = await fetch(RECOMPUTE_ENDPOINT, {
           method: "POST",
@@ -846,6 +1062,37 @@
     const selectableMatches = matches.filter(match => match && match.code);
     const fallbackMessages = matches.filter(match => !match || !match.code);
 
+    if (row.job_match && row.unit_mismatch === true) {
+      const alternatives = row.job_match;
+      if (Array.isArray(alternatives) && alternatives.length) {
+        const helper = document.createElement("div");
+        helper.className = "fw-semibold small mb-2 text-warning";
+        helper.textContent =
+          "⚠️ Tidak ditemukan kode yang sesuai dengan satuan. Berikut beberapa sugesti kode mirip (berbeda satuan):";
+        cell.appendChild(helper);
+
+        alternatives.forEach(match => {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className =
+            "btn btn-sm btn-outline-warning w-100 text-start match-option mb-1";
+          const label = buildMatchLabel(match);
+          button.dataset.label = label;
+          if (match.code) button.dataset.code = match.code;
+          button.textContent = label;
+          button.addEventListener("click", () =>
+            handleMatchSelection(match, row, analysisCell, statusCell, cell, button)
+          );
+          cell.appendChild(button);
+        });
+      }
+
+      renderManualInput(cell, row, analysisCell, statusCell, "Masukkan kode AHSP secara manual", {
+        noticeClass: "text-warning small mb-2",
+      });
+      return;
+    }
+
     if (row.job_match_status === "found" && selectableMatches.length === 1) {
       const match = selectableMatches[0];
       row.job_match_selected = match;
@@ -958,10 +1205,6 @@
 
   function renderManualInput(cell, row, analysisCell, statusCell, label, options = {}) {
     cell.style.position = "relative";
-    const notice = document.createElement("div");
-    notice.className = options.noticeClass || "text-warning small mb-2";
-    notice.textContent = label || "Needs Manual Input";
-    cell.appendChild(notice);
 
     const group = document.createElement("div");
     group.className = options.groupClass || "input-group input-group-sm manual-match-group";
@@ -991,9 +1234,28 @@
     button.className = "btn btn-primary";
     button.textContent = "Gunakan";
 
+    const warnIfUnsafeCode = (value) => {
+      if (!value || !UNSAFE_CODE_PATTERN.test(value)) {
+        input.classList.remove("is-invalid");
+        delete input.dataset.warnedUnsafeCode;
+        return false;
+      }
+      input.classList.add("is-invalid");
+      if (input.dataset.warnedUnsafeCode !== "true") {
+        showError("Kode AHSP tidak boleh mengandung karakter < atau >.");
+        input.dataset.warnedUnsafeCode = "true";
+      }
+      return true;
+    };
+
     const applyManual = async () => {
       const value = input.value.trim();
       if (!value) {
+        input.focus();
+        return;
+      }
+
+      if (warnIfUnsafeCode(value)) {
         input.focus();
         return;
       }
@@ -1049,6 +1311,7 @@
     const triggerDropdown = () => showDropdown(input, dropdown, row, label);
     input.addEventListener("focus", triggerDropdown);
     input.addEventListener("input", () => {
+      warnIfUnsafeCode(input.value);
       clearTimeout(dropdownDebounce);
       dropdownDebounce = setTimeout(triggerDropdown, 200);
     });
@@ -1062,7 +1325,9 @@
       event.preventDefault();
     });
 
-    group.appendChild(input);
+  warnIfUnsafeCode(input.value);
+
+  group.appendChild(input);
     group.appendChild(button);
     cell.appendChild(group);
     cell.appendChild(dropdown);
@@ -1156,6 +1421,10 @@
       if (!match || !match.code) {
         return;
       }
+      if (match.unit_mismatch) {
+        item.style.color = "#dc3545"; // red text
+        item.style.fontStyle = "italic";
+      }
       const item = document.createElement("button");
       item.type = "button";
       item.className = "dropdown-item text-wrap";
@@ -1190,47 +1459,78 @@
   function fetchRemoteSuggestions(row, query, limit = MANUAL_SUGGESTION_LIMIT) {
     const trimmedQuery = (query || "").trim();
     const description = trimmedQuery || (row.description || "").trim();
-
+  
     if (!description) {
       return Promise.resolve([]);
     }
-
-    const cacheKey = `${description}|${limit}`;
+  
+    // Extract unit from row
+    const unit = (row.unit || row.sat || "").trim();
+  
+    // Include unit in cache key if present
+    const cacheKey = unit ? `${description}|${unit}|${limit}` : `${description}|${limit}`;
     if (suggestionCache.has(cacheKey)) {
       return suggestionCache.get(cacheKey);
     }
-
+  
+    // Build payload with unit
+    const payload = { description };
+    if (unit) {
+      payload.unit = unit;
+    }
+  
     const request = fetch(MATCH_ENDPOINT, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Accept: "application/json",
       },
-      body: JSON.stringify({ description }),
+      body: JSON.stringify({ description, unit: row.unit || null }),
     })
       .then(res => (res.ok ? res.json() : { match: [] }))
       .then(data => {
-        const { match } = data || {};
-        if (!match) {
-          return [];
+        // === Normal matches ===
+        if (data.match && Array.isArray(data.match) && data.match.length) {
+          const validMatches = data.match.filter(m => !m.unit_mismatch);
+          if (validMatches.length) {
+            row.unit_mismatch = false;
+            return validMatches;
+          }
         }
-        if (Array.isArray(match)) {
-          return match;
+
+        // === Unit mismatch alternatives ===
+        if (data.alternatives && Array.isArray(data.alternatives)) {
+          const msg =
+            data.message ||
+            "Tidak ditemukan kode yang sesuai dengan satuan. Berikut beberapa sugesti kode yang mirip tetapi tidak sesuai dengan satuan:";
+          showError(msg);
+          row.unit_mismatch = true;
+          return data.alternatives.map(a => ({ ...a, unit_mismatch: true }));
         }
-        return match.code ? [match] : [];
+
+        return [];
       })
       .catch(() => []);
-
+  
     suggestionCache.set(cacheKey, request);
     return request;
   }
 
+
   function fetchAndStoreSuggestions(row, query) {
     return fetchRemoteSuggestions(row, query).then(results => {
       updateRowLookup(row, results);
+
+      if (!results || !results.length) {
+        row.job_match = []; 
+      } else {
+        row.job_match = results;
+      }
+
       return Array.from(getMatchLookup(row).values());
     });
   }
+
 
   function findMatchByCode(row, code) {
     const lookup = getMatchLookup(row);
@@ -1257,6 +1557,15 @@
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     });
+  }
+
+  function showMatchingSpinner(priceCell) {
+    priceCell.innerHTML = `
+      <div class="d-flex align-items-center justify-content-center text-secondary" style="gap:6px; font-size: 0.85rem;">
+        <div class="spinner-border spinner-border-sm text-secondary" role="status" style="width: 0.9rem; height: 0.9rem;"></div>
+        <span>Matching...</span>
+      </div>
+    `;
   }
 
   // ---------------- NEW: setPriceForRow helper ----------------
@@ -1286,12 +1595,41 @@
     const code = match && match.code ? match.code : "";
     if (!code) return;
 
-    const volume = volumeInput ? (parseFloat(volumeInput.value) || 0) : 0;
-    const rowKey = tr.dataset.rowKey || null;
-    const payload = { code, volume, row_key: rowKey };
-    if (code) {
-      payload.analysis_code = code;
+    const priceCell = priceInput.closest("td");
+    const priceWrapper = priceInput.closest(".price-origin-wrapper");
+    if (priceCell) {
+      if (priceWrapper && priceWrapper.parentElement === priceCell) {
+        priceCell.removeChild(priceWrapper);
+      }
+      showMatchingSpinner(priceCell);
     }
+
+    const rawVolumeValue = volumeInput ? volumeInput.value : 0;
+    const safeVolume = normaliseNumericInput(rawVolumeValue);
+    if (safeVolume === null) {
+      showError("Volume harus berupa angka non-negatif.");
+      if (priceCell) {
+        priceCell.innerHTML = "";
+        if (priceWrapper) {
+          priceCell.appendChild(priceWrapper);
+        }
+      }
+      return;
+    }
+    const volume = safeVolume === undefined ? 0 : safeVolume;
+    const rowKey = tr.dataset.rowKey || null;
+    const payloadResult = buildRecomputePayload({ rowKey, code, volume });
+    if (payloadResult.errors) {
+      showError(payloadResult.errors.join(" "));
+      if (priceCell) {
+        priceCell.innerHTML = "";
+        if (priceWrapper) {
+          priceCell.appendChild(priceWrapper);
+        }
+      }
+      return;
+    }
+    const payload = payloadResult.payload;
 
     try {
       const resp = await fetch(RECOMPUTE_ENDPOINT, {
@@ -1299,6 +1637,14 @@
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
+
+      if (priceCell) {
+        priceCell.innerHTML = "";
+        if (priceWrapper) {
+          priceCell.appendChild(priceWrapper);
+        }
+      }
+
       if (!resp.ok) {
         return;
       }
@@ -1325,6 +1671,12 @@
       }
     } catch (err) {
       console.warn("Failed to fetch unit price for code:", code, err);
+      if (priceCell) {
+        priceCell.innerHTML = "";
+        if (priceWrapper) {
+          priceCell.appendChild(priceWrapper);
+        }
+      }
     }
   }
   function computeDeviationInfo(actual, reference) {
