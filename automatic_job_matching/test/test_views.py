@@ -68,10 +68,9 @@ class MatchBestViewTests(TestCase):
         url = reverse("match-best")
         response = self.client.post(url, json.dumps({}), content_type="application/json")
         data = response.json()
-        self.assertEqual(response.status_code, 200)
-        self.assertIsNone(data["match"])
-        self.assertEqual(data["status"], "not found")
-        self.mock_best.assert_called_once_with("", unit=None)
+        # The view now requires description and returns 400 for missing description
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("error", data)
 
     # NEW TESTS FOR UNIT PARAMETER
     def test_best_view_with_unit_m2(self):
@@ -122,13 +121,14 @@ class MatchBestViewTests(TestCase):
         self.mock_best.assert_called_once_with("pintu panel", unit="bh")
 
     def test_best_view_with_empty_unit_string(self):
-        """Test that empty unit string is passed as empty string."""
+        """Test that empty unit string is passed as None (sanitized)."""
         self.mock_best.return_value = {"id": 15, "code": "A.1", "name": "Test"}
         url = reverse("match-best")
         payload = {"description": "test", "unit": ""}
         response = self.client.post(url, json.dumps(payload), content_type="application/json")
         self.assertEqual(response.status_code, 200)
-        self.mock_best.assert_called_once_with("test", unit="")
+        # sanitize_unit converts empty string to None
+        self.mock_best.assert_called_once_with("test", unit=None)
 
     def test_best_view_unit_mismatch_returns_empty(self):
         """Test that unit mismatch returns appropriate response."""
@@ -173,13 +173,13 @@ class MatchBestViewTests(TestCase):
         self.assertEqual(len(data["match"]), 3)
 
     def test_best_view_unit_with_special_characters(self):
-        """Test unit with special characters."""
-        self.mock_best.return_value = {"id": 20, "code": "A.1", "name": "Test"}
+        """Test unit with special characters - m² is NOT allowed by security validation."""
         url = reverse("match-best")
         payload = {"description": "test", "unit": "m²"}
         response = self.client.post(url, json.dumps(payload), content_type="application/json")
-        self.assertEqual(response.status_code, 200)
-        self.mock_best.assert_called_once_with("test", unit="m²")
+        # The security validation rejects units with special characters like ²
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("error", response.json())
 
     def test_best_view_unit_case_insensitive(self):
         """Test that unit case is preserved."""
