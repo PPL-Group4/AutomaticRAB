@@ -42,6 +42,6 @@ jobs:
 
       - name: Run tests
         run: |
-          # Use --keepdb to reuse the test database if it already exists and avoid creation errors
           # Use --noinput to prevent Django from prompting to delete existing DB in non-interactive CI
-          python manage.py test --verbosity 2 --keepdb --noinput
+          # Don't use --keepdb in CI as it can cause issues with stale test databases
+          python manage.py test --verbosity 2 --noinput
