@@ -346,6 +346,7 @@
     let currentTable = null;
     let tbody = null;
     let bujakCounter = 0;
+    const matchPromises = []; 
 
     rows.forEach((row, rowIndex) => {
       const skipKeywords = ["PAJAK", "JUMLAH SETELAH PAJAK", "DIBULATKAN", "TERBILANG"];
@@ -373,13 +374,14 @@
               <th>Volume</th>
               <th>SAT</th>
               <th>Harga Satuan (Rp.)</th>
-              <th>Jumlah </th>
+              <th>Jumlah</th>
             </tr>
           </thead>
         `;
         const newBody = document.createElement("tbody");
         table.appendChild(newBody);
         container.appendChild(table);
+
         currentTable = table;
         tbody = newBody;
       }
@@ -400,6 +402,7 @@
         strong.textContent = row.description || "";
         titleCell.appendChild(strong);
         tr.appendChild(titleCell);
+
         tbody.appendChild(tr);
         return;
       }
@@ -416,6 +419,7 @@
         emphasis.textContent = row.description || "";
         titleCell.appendChild(emphasis);
         tr.appendChild(titleCell);
+
         tbody.appendChild(tr);
         return;
       }
@@ -427,13 +431,31 @@
       const tr = buildDataRow(row, rowIndex);
       tbody.appendChild(tr);
       total += parseCurrencyNumber(row.total_price);
+
+      matchPromises.push((async () => {
+        const matchCell = tr.querySelector("td:nth-child(5)");
+        const analysisCell = tr.querySelector(".analysis-code-cell");
+        const statusCell = tr.querySelector("td:nth-child(4)");
+
+        try {
+          const results = await fetchAndStoreSuggestions(row, row.description || "");
+          populateMatchCell(matchCell, row, analysisCell, statusCell);
+        } catch (err) {
+          console.warn("Match fetch failed for row:", row.description, err);
+        }
+      })());
+    });
+
+    Promise.all(matchPromises).then(() => {
+      console.log("✅ All sectioned table matches complete");
     });
 
     updateGrandTotal(total);
   }
-
+  
   function renderFlatTable(rows, container) {
     let total = 0;
+
     const table = document.createElement("table");
     table.classList.add("table", "table-bordered", "table-sm", "align-middle", "mb-4");
     table.innerHTML = `
@@ -451,6 +473,7 @@
         </tr>
       </thead>
     `;
+
     const tbody = document.createElement("tbody");
     table.appendChild(tbody);
     container.appendChild(table);
@@ -458,6 +481,7 @@
     rows.forEach((row, rowIndex) => {
       if (row.job_match_status === "skipped" && (!row.is_section || row.is_section === undefined)) {
         const tr = document.createElement("tr");
+
         const numberCell = document.createElement("td");
         numberCell.textContent = row.number || "";
         tr.appendChild(numberCell);
@@ -471,11 +495,36 @@
 
         tr.classList.add("table-secondary", "fw-semibold");
         tbody.appendChild(tr);
-        return; 
+        return;
       }
+
       const tr = buildDataRow(row, rowIndex, { flatNumbering: true });
       tbody.appendChild(tr);
       total += parseCurrencyNumber(row.total_price);
+    });
+
+    const matchPromises = rows.map(async (row, rowIndex) => {
+      if (row.is_section || row.job_match_status === "skipped") return;
+
+      const tr = table.querySelector(
+        `tr[data-row-key="${sanitizeRowKey(row.row_key || row.rowKey, `row-${rowIndex}`)}"]`
+      );
+      if (!tr) return;
+
+      const matchCell = tr.querySelector("td:nth-child(5)");
+      const analysisCell = tr.querySelector(".analysis-code-cell");
+      const statusCell = tr.querySelector("td:nth-child(4)");
+
+      try {
+        const results = await fetchAndStoreSuggestions(row, row.description || "");
+        populateMatchCell(matchCell, row, analysisCell, statusCell);
+      } catch (err) {
+        console.warn("Match fetch failed for row:", row.description, err);
+      }
+    });
+
+    Promise.all(matchPromises).then(() => {
+      console.log("✅ All matching complete");
     });
 
     updateGrandTotal(total);
