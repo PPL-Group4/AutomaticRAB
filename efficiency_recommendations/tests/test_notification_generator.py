@@ -186,9 +186,13 @@ class NotificationGeneratorTest(TestCase):
 
         result = generate_notifications(items_with_status)
 
-        # Should have 3 notifications (one per item, even if duplicate names)
-        # This is correct behavior - we notify per item, not per unique name
-        self.assertEqual(len(result), 3)
+        # The service deduplicates by item name, so we expect 2 unique notifications
+        self.assertEqual(len(result), 2)
+
+        # Check that we have notifications for the unique items
+        notification_names = [n['item_name'] for n in result]
+        self.assertIn('Same Item', notification_names)
+        self.assertIn('Different Item', notification_names)
 
         # All should be for items not in AHSP
         for notification in result:

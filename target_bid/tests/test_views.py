@@ -28,8 +28,13 @@ class FetchRabJobItemsViewTests(SimpleTestCase):
             custom_ahs_id=None,
             analysis_code="AT.02",
         )
-        with patch("target_bid.views.fetch_rab_job_items", return_value=([mock_item], [], [])):
-            response = fetch_rab_job_items_view(request, rab_id=99)
+        mock_service = patch("target_bid.views.RabJobItemService")
+        mock_service_instance = mock_service.start()
+        mock_service_instance.return_value.get_items_with_classification.return_value = ([mock_item], [], [])
+        
+        response = fetch_rab_job_items_view(request, rab_id=99)
+        
+        mock_service.stop()
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data["rab_id"], 99)
