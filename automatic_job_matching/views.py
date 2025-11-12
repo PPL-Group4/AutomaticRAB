@@ -1,9 +1,10 @@
+import json
+import logging
 from django.http import JsonResponse
 from django.shortcuts import render
 from rest_framework.decorators import api_view
-import json
-import logging
 
+from automatic_job_matching.service.ahs_breakdown_service import get_ahs_breakdown
 from automatic_job_matching.service.matching_service import MatchingService
 
 logger = logging.getLogger(__name__)
@@ -41,3 +42,18 @@ def match_best_view(request):
 
 def job_matching_page(request):
     return render(request, "job_matching.html")
+
+
+@api_view(['GET'])
+def ahs_breakdown_view(request, code: str):
+    logger.debug("ahs_breakdown_view called for code=%s", code)
+    breakdown = get_ahs_breakdown(code)
+
+    if not breakdown:
+        logger.info("Breakdown not found for code=%s", code)
+        return JsonResponse({"error": "AHS code not found"}, status=404)
+
+    return JsonResponse({
+        "code": code,
+        "breakdown": breakdown,
+    }, status=200)
