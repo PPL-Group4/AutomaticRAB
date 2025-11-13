@@ -49,7 +49,7 @@ jobs:
         run: |
           # Use --noinput to prevent Django from prompting to delete existing DB in non-interactive CI
           # Don't use --keepdb in CI as it can cause issues with stale test databases
-          coverage run manage.py test --verbosity 2 --noinput
+          coverage run --source=. manage.py test --verbosity 2 --noinput
           coverage xml
           coverage report -m
 

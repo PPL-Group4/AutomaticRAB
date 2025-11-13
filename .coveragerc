@@ -1,0 +1,6 @@
+[run]
+source = .
+
+[report]
+omit =
+    */_remote_module_non_scriptable.py
