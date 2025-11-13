@@ -12,6 +12,7 @@
       <tr style="background-color:#00365a; color:white;">
         <th>No.</th>
         <th>Uraian Pekerjaan</th>
+        <th>Satuan</th>
         <th>Kode</th>
         <th>Status</th>
       </tr>
@@ -20,6 +21,7 @@
       <tr>
         <td>1</td>
         <td><input type="text" class="form-control uraian-input" placeholder="Masukkan uraian pekerjaan"></td>
+        <td><input type="text" class="form-control satuan-input" placeholder="m2, m3, ls, dll"></td>
         <td class="match-code">-</td>
         <td class="status-cell">-</td>
       </tr>
@@ -72,6 +74,7 @@
     row.innerHTML = `
       <td>${rowCount}</td>
       <td><input type="text" class="form-control uraian-input" placeholder="Masukkan uraian pekerjaan"></td>
+      <td><input type="text" class="form-control satuan-input" placeholder="m2, m3, ls, dll"></td>
       <td class="match-code">-</td>
       <td class="status-cell">-</td>
     `;
@@ -82,6 +85,8 @@
     const rows = document.querySelectorAll("#jobRows tr");
     for (const row of rows) {
       const uraian = row.querySelector(".uraian-input").value.trim();
+      const satuanInput = row.querySelector(".satuan-input");
+      const satuan = satuanInput ? satuanInput.value.trim() : "";
       const codeCell = row.querySelector(".match-code");
       const statusCell = row.querySelector(".status-cell");
 
@@ -102,7 +107,7 @@
         const response = await fetch("{% url 'match-best' %}", {
           method: "POST",
           headers: {"Content-Type": "application/json"},
-          body: JSON.stringify({description: uraian})
+          body: JSON.stringify({description: uraian, unit: satuan})
         });
         const data = await response.json();
 

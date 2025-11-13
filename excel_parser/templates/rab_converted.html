@@ -3,6 +3,26 @@
 
 {% block content %}
 <style>
+    .warning-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: .4rem;
+    font-size: .8rem;
+    padding: .25rem .5rem;
+    border-radius: 999px;
+    border: 1px solid transparent;
+    background: #fff7ed;          
+    color: #b45309;               
+  }
+
+  .warning-chip.critical {
+    background: #fef2f2;          
+    color: #b91c1c;               
+  }
+  .warning-chip .dot {
+    width: .5rem; height: .5rem; border-radius: 999px; background:#f59e0b;
+  }
+  .warning-chip.critical .dot { background:#ef4444; }
   .price-origin-wrapper {
     width: 100%;
   }
@@ -77,6 +97,40 @@
     <div class="d-flex justify-content-between"><span class="fw-bold">Terbilang</span> <span id="terbilang">NOL RUPIAH</span></div>
   </div>
 
+  <div class="card mt-4 p-3 shadow-sm" id="targetBidBox" style="display:none;">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h5 class="mb-0">🎯 Target Bid</h5>
+      <span class="badge text-bg-secondary">Beta</span>
+    </div>
+    <div class="row g-3 align-items-end">
+      <div class="col-md-4">
+        <label for="targetBudgetMode" class="form-label">Mode</label>
+        <select id="targetBudgetMode" class="form-select form-select-sm">
+          <option value="percentage" selected>Persentase dari harga saat ini</option>
+          <option value="absolute">Nominal (Rp)</option>
+        </select>
+      </div>
+      <div class="col-md-5">
+        <label for="targetBudgetInput" class="form-label">Target</label>
+        <div class="input-group input-group-sm">
+          <span class="input-group-text" id="targetBudgetPrefix">Rp</span>
+          <input type="text" id="targetBudgetInput" class="form-control" placeholder="cth: 150000000" inputmode="decimal">
+          <span class="input-group-text d-none" id="targetBudgetSuffix">%</span>
+        </div>
+      </div>
+      <div class="col-md-3 d-grid">
+        <button type="button" class="btn btn-primary btn-sm" id="applyTargetBidButton">
+          <span id="targetBidSpinner" class="spinner-border spinner-border-sm me-2 d-none" role="status" aria-hidden="true"></span>
+          Terapkan Target Bid
+        </button>
+      </div>
+    </div>
+    <small class="text-muted d-block mt-2" id="targetBidHint">
+      Sistem mencoba mengganti material mahal pada setiap AHSP agar total mendekati target.
+    </small>
+    <div id="targetBidSummary" class="mt-3"></div>
+  </div>
+
   <!-- Cost Weight Analysis Chart -->
   <div class="card mt-4 p-4 shadow-sm" id="costWeightChartBox" style="display:none;">
     <h5 class="mb-3">📊 Cost Weight Analysis</h5>
@@ -89,6 +143,8 @@
       </div>
     </div>
   </div>
+
+  {% include "efficiency_recommendations/recommendations_panel.html" %}
 
   <a href="#" class="btn btn-outline-primary mt-3">+ Tambah Kategori Pekerjaan / Pilih Referensi RAB</a>
 </div>
@@ -108,10 +164,151 @@
   const RECOMPUTE_ENDPOINT = "/api/recompute_total_cost/";
   const EXCEL_UPLOAD_ENDPOINT = "{% url 'preview_rows' %}";
   const PDF_UPLOAD_ENDPOINT = "{% url 'pdf_parser:rab_converted_pdf' %}";
+  const OPTIMIZE_AHS_ENDPOINT_TEMPLATE = "{% url 'optimize_ahs_materials_view' '__AHS_CODE__' %}";
+  const OPTIMIZE_AHS_PLACEHOLDER = "__AHS_CODE__";
   const suggestionCache = new Map();
   const dropdownRequestState = new WeakMap();
   const MANUAL_SUGGESTION_LIMIT = 12;
   const PRICE_OVERRIDE_CONFIRM_MESSAGE = "Harga ini diisi otomatis oleh sistem. Apakah Anda yakin ingin menimpa nilai tersebut secara manual?";
+  const SAFE_ROW_KEY_PATTERN = /^[A-Za-z0-9._:-]{1,128}$/;
+  const SAFE_NUMERIC_PATTERN = /^-?\d{0,12}(?:[.,]\d{0,4})?$/;
+  const UNSAFE_CODE_PATTERN = /[<>]/;
+
+  function escapeHtml(input) {
+    if (input === null || input === undefined) {
+      return "";
+    }
+    return String(input)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+
+  function sanitizeRowKey(value, fallback = null) {
+    if (typeof value !== "string") {
+      return fallback;
+    }
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return fallback;
+    }
+    return SAFE_ROW_KEY_PATTERN.test(trimmed) ? trimmed : fallback;
+  }
+
+  function canonicalizeFrontendCode(value) {
+    if (typeof value !== "string") {
+      return "";
+    }
+    let text = value.trim().toUpperCase();
+    if (!text) {
+      return "";
+    }
+    text = text.replace(/[-_/ ]+/g, ".");
+    text = text.replace(/[^A-Z0-9.]/g, "");
+    text = text.replace(/\.{2,}/g, ".");
+    while (text.includes("..")) {
+      text = text.replace("..", ".");
+    }
+    return text.replace(/^\.+|\.+$/g, "");
+  }
+  function toDecimalString(value) {
+    if (!Number.isFinite(value)) {
+      return "";
+    }
+    const fixed = Number(value).toFixed(6);
+    return fixed.replace(/\.0+$/, "").replace(/(\.\d*?[1-9])0+$/, "$1").replace(/\.$/, "");
+  }
+
+
+  function normaliseNumericInput(value, { allowBlank = false } = {}) {
+    if (value === undefined || value === null) {
+      return allowBlank ? undefined : 0;
+    }
+    if (typeof value === "string") {
+      const trimmed = value.trim();
+      if (!trimmed) {
+        return allowBlank ? undefined : 0;
+      }
+      if (!SAFE_NUMERIC_PATTERN.test(trimmed)) {
+        return null;
+      }
+      value = parseFloat(trimmed.replace(",", "."));
+    }
+    if (!Number.isFinite(value)) {
+      return null;
+    }
+    if (value < 0) {
+      return null;
+    }
+    if (Math.abs(value) > 1_000_000_000_000) {
+      return null;
+    }
+    return Number(value);
+  }
+
+  function enforceValidNumericInput(inputEl, fieldLabel, { allowBlank = false } = {}) {
+    if (!inputEl) {
+      return { value: 0, isValid: true, provided: false };
+    }
+    const raw = String(inputEl.value ?? "").trim();
+    if (!raw) {
+      inputEl.classList.remove("is-invalid");
+      return { value: 0, isValid: true, provided: false };
+    }
+    if (!SAFE_NUMERIC_PATTERN.test(raw)) {
+      inputEl.classList.add("is-invalid");
+      showError(`${fieldLabel} mengandung karakter tidak valid.`);
+      return { value: 0, isValid: false, provided: false };
+    }
+    const numeric = parseFloat(raw.replace(",", "."));
+    if (!Number.isFinite(numeric) || numeric < 0 || Math.abs(numeric) > 1_000_000_000_000) {
+      inputEl.classList.add("is-invalid");
+      showError(`${fieldLabel} harus berupa angka non-negatif yang wajar.`);
+      return { value: 0, isValid: false, provided: false };
+    }
+    inputEl.classList.remove("is-invalid");
+    return { value: numeric, isValid: true, provided: true };
+  }
+
+  function buildRecomputePayload({ rowKey, code, volume, unitPrice }) {
+    const errors = [];
+    const payload = {};
+
+    const safeRowKey = sanitizeRowKey(rowKey);
+    if (rowKey && !safeRowKey) {
+      errors.push("Row key tidak valid.");
+    } else if (safeRowKey) {
+      payload.row_key = safeRowKey;
+    }
+
+    const safeCode = canonicalizeFrontendCode(code || "");
+    if (code && !safeCode) {
+      errors.push("Kode pekerjaan mengandung karakter tidak sah.");
+    } else if (safeCode) {
+      payload.code = safeCode;
+      payload.analysis_code = safeCode;
+    }
+
+    const safeVolume = normaliseNumericInput(volume);
+    if (safeVolume === null) {
+      errors.push("Volume harus berupa angka non-negatif.");
+    } else {
+      payload.volume = toDecimalString(safeVolume);
+    }
+
+    if (unitPrice !== undefined) {
+      const safeUnit = normaliseNumericInput(unitPrice, { allowBlank: true });
+      if (safeUnit === null) {
+        errors.push("Harga satuan harus berupa angka non-negatif.");
+      } else if (safeUnit !== undefined) {
+        payload.unit_price = toDecimalString(safeUnit);
+      }
+    }
+
+    return errors.length ? { errors } : { payload };
+  }
 
   function showError(message) {
     const errorContainer = document.getElementById("errorContainer");
@@ -125,6 +322,562 @@
   function hideLoading() {
     document.getElementById("loadingSpinner").style.display = "none";
   }
+
+  // ---------- TARGET BID INTEGRATION ----------
+  function setTargetBidVisibility(isVisible) {
+    const box = document.getElementById("targetBidBox");
+    if (!box) {
+      return;
+    }
+    box.style.display = isVisible ? "block" : "none";
+    if (isVisible) {
+      setTargetBidBusy(false);
+      handleTargetBudgetModeChange();
+    }
+  }
+
+  function setTargetBidBusy(isBusy) {
+    const button = document.getElementById("applyTargetBidButton");
+    const spinner = document.getElementById("targetBidSpinner");
+    const modeSelect = document.getElementById("targetBudgetMode");
+    const input = document.getElementById("targetBudgetInput");
+    if (button) {
+      button.disabled = isBusy;
+    }
+    if (modeSelect) {
+      modeSelect.disabled = isBusy;
+    }
+    if (input) {
+      input.disabled = isBusy;
+    }
+    if (spinner) {
+      spinner.classList.toggle("d-none", !isBusy);
+    }
+  }
+
+  function resetTargetBidSummary() {
+    const summary = document.getElementById("targetBidSummary");
+    if (summary) {
+      summary.innerHTML = "";
+    }
+  }
+
+  function handleTargetBudgetModeChange() {
+    const modeSelect = document.getElementById("targetBudgetMode");
+    const prefix = document.getElementById("targetBudgetPrefix");
+    const suffix = document.getElementById("targetBudgetSuffix");
+    const input = document.getElementById("targetBudgetInput");
+    const hint = document.getElementById("targetBidHint");
+    if (!modeSelect || !prefix || !suffix || !input) {
+      return;
+    }
+
+    const mode = modeSelect.value === "absolute" ? "absolute" : "percentage";
+    if (mode === "percentage") {
+      prefix.classList.add("d-none");
+      suffix.classList.remove("d-none");
+      input.placeholder = "cth: 80";
+      if (hint) {
+        hint.textContent = "Misal 80 berarti target biaya setiap AHSP menjadi 80% dari harga awal.";
+      }
+    } else {
+      prefix.classList.remove("d-none");
+      suffix.classList.add("d-none");
+      prefix.textContent = "Rp";
+      input.placeholder = "cth: 150000000";
+      if (hint) {
+        hint.textContent = "Masukkan nominal target untuk harga per unit AHSP (rupiah).";
+      }
+    }
+  }
+
+  function readGrandTotalValue() {
+    return calculateGrandTotalFromRows();
+  }
+
+  function formatCurrencyId(value) {
+    const numeric = Number.isFinite(value) ? value : 0;
+    return "Rp. " + Number(numeric).toLocaleString("id-ID", {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    });
+  }
+
+  function formatCurrencyRp(value, { decimals = 2, fallback = null } = {}) {
+    if (value === null || value === undefined || value === "") {
+      return fallback;
+    }
+    const numeric = parseCurrencyNumber(value);
+    if (!Number.isFinite(numeric)) {
+      return fallback;
+    }
+    return "Rp. " + numeric.toLocaleString("id-ID", {
+      minimumFractionDigits: decimals,
+      maximumFractionDigits: decimals,
+    });
+  }
+
+  function renderTargetBidSummary(details) {
+    const summary = document.getElementById("targetBidSummary");
+    if (!summary) {
+      return;
+    }
+
+    const {
+      appliedCodes = [],
+      failedCodes = [],
+      beforeTotal = 0,
+      afterTotal = 0,
+      targetMode = "percentage",
+      targetNumeric = 0,
+    } = details || {};
+
+    if (!appliedCodes.length && !failedCodes.length) {
+      summary.innerHTML = "<div class=\"alert alert-warning mb-0\">Tidak ada kode AHSP yang dapat disesuaikan untuk target ini.</div>";
+      return;
+    }
+
+    const targetNominal = targetMode === "percentage"
+      ? beforeTotal * (targetNumeric / 100)
+      : targetNumeric;
+    const gap = Math.abs(afterTotal - targetNominal);
+    const direction = afterTotal >= targetNominal ? "lebih tinggi" : "lebih rendah";
+    const metCount = appliedCodes.filter(item => item.metTarget).length;
+
+    let failureNote = "";
+    if (failedCodes.length) {
+      const reported = failedCodes.slice(0, 3).map(entry => entry.code).join(", ");
+      const suffix = failedCodes.length > 3 ? ", ..." : "";
+      failureNote = `<div class="small text-muted">Gagal memproses: ${reported}${suffix}.</div>`;
+    }
+
+    const adjustmentSummaries = appliedCodes
+      .map(item => ({
+        code: item.code,
+        adjustments: Array.isArray(item.adjustedMaterials) ? item.adjustedMaterials : [],
+      }))
+      .filter(entry => entry.adjustments.length);
+
+    const adjustmentHtml = adjustmentSummaries.length
+      ? `
+        <div class="mt-3">
+          <div class="fw-semibold mb-2">Rincian penyesuaian material:</div>
+          ${adjustmentSummaries
+            .map(entry => {
+              const listItems = entry.adjustments
+                .map(material => {
+                  const nameText = escapeHtml(material.name || "-");
+                  const unitText = material.unit ? ` (${escapeHtml(material.unit)})` : "";
+                  const brandLabel = material.brand
+                    ? escapeHtml(material.brand)
+                    : "Brand tidak tersedia";
+                  const newPriceLabel = formatCurrencyRp(material.newUnitPrice, { fallback: null });
+                  const originalPriceLabel = formatCurrencyRp(material.originalUnitPrice, { fallback: null });
+                  let priceSnippet = "";
+                  if (newPriceLabel) {
+                    priceSnippet = `${newPriceLabel}`;
+                    if (originalPriceLabel && originalPriceLabel !== newPriceLabel) {
+                      priceSnippet += ` (dari ${originalPriceLabel})`;
+                    }
+                  }
+                  const extraInfo = priceSnippet ? `, ${priceSnippet}` : "";
+                  return `<li class="mb-1">` +
+                    `<strong>${nameText}</strong>${unitText} — brand <span class="text-primary">${brandLabel}</span>${extraInfo}</li>`;
+                })
+                .join("");
+              return `
+                <div class="mb-2">
+                  <div class="text-muted small">AHS ${escapeHtml(entry.code || "(tanpa kode)")}</div>
+                  <ul class="mb-0 ps-3">${listItems}</ul>
+                </div>
+              `;
+            })
+            .join("")
+          }
+        </div>
+      `
+      : "";
+
+    summary.innerHTML = `
+      <div class="alert alert-info mb-0">
+        <div><strong>${appliedCodes.length}</strong> kode AHSP diproses.${failedCodes.length ? ` <span class="text-danger">${failedCodes.length} kode gagal.</span>` : ""}</div>
+        <div>Total awal: ${formatCurrencyId(beforeTotal)} → Total sekarang: ${formatCurrencyId(afterTotal)}.</div>
+        <div>Target: ${targetMode === "percentage" ? `${targetNumeric}% (${formatCurrencyId(targetNominal)})` : formatCurrencyId(targetNominal)}.</div>
+        <div>Selisih terhadap target: ${formatCurrencyId(gap)} (${direction}).</div>
+        ${metCount ? `<div>${metCount} kode sudah memenuhi target unitnya.</div>` : ""}
+        ${failureNote}
+      </div>
+      ${adjustmentHtml}
+    `;
+  }
+
+  function getBaselineAutoPrice(rows) {
+    if (!Array.isArray(rows)) {
+      return null;
+    }
+    for (const row of rows) {
+      const priceInput = row && row.querySelector ? row.querySelector(".price-input") : null;
+      if (!priceInput) {
+        continue;
+      }
+      const baseRaw = priceInput.dataset ? priceInput.dataset.baseAutoPrice : null;
+      if (baseRaw !== undefined && baseRaw !== null && baseRaw !== "") {
+        const baseNumeric = parseCurrencyNumber(baseRaw);
+        if (Number.isFinite(baseNumeric) && baseNumeric > 0) {
+          return baseNumeric;
+        }
+      }
+      const refRaw = priceInput.dataset ? priceInput.dataset.referencePrice : null;
+      if (refRaw !== undefined && refRaw !== null && refRaw !== "") {
+        const refNumeric = parseCurrencyNumber(refRaw);
+        if (Number.isFinite(refNumeric) && refNumeric > 0) {
+          return refNumeric;
+        }
+      }
+      const inputNumeric = parseCurrencyNumber(priceInput.value);
+      if (Number.isFinite(inputNumeric) && inputNumeric > 0) {
+        return inputNumeric;
+      }
+    }
+    return null;
+  }
+
+  function getRepresentativeVolume(rows) {
+    if (!Array.isArray(rows)) {
+      return null;
+    }
+    for (const row of rows) {
+      const volumeInput = row && row.querySelector ? row.querySelector(".volume-input") : null;
+      if (!volumeInput) {
+        continue;
+      }
+      const numeric = parseCurrencyNumber(volumeInput.value);
+      if (Number.isFinite(numeric) && numeric > 0) {
+        return numeric;
+      }
+    }
+    return null;
+  }
+
+  function deriveOptimizedUnitPrice(rows, optimisationResult) {
+    if (!optimisationResult || typeof optimisationResult !== "object") {
+      return null;
+    }
+
+    const adjustedOverallRaw = optimisationResult.adjusted_totals && optimisationResult.adjusted_totals.overall;
+    const originalOverallRaw = optimisationResult.original_totals && optimisationResult.original_totals.overall;
+    const adjustedOverall = adjustedOverallRaw !== undefined && adjustedOverallRaw !== null && adjustedOverallRaw !== ""
+      ? parseCurrencyNumber(adjustedOverallRaw)
+      : null;
+    const originalOverall = originalOverallRaw !== undefined && originalOverallRaw !== null && originalOverallRaw !== ""
+      ? parseCurrencyNumber(originalOverallRaw)
+      : null;
+
+    const baseline = getBaselineAutoPrice(rows);
+    if (
+      Number.isFinite(baseline) && baseline > 0 &&
+      Number.isFinite(adjustedOverall) && adjustedOverall >= 0 &&
+      Number.isFinite(originalOverall) && originalOverall > 0
+    ) {
+      const factor = adjustedOverall / originalOverall;
+      if (Number.isFinite(factor) && factor >= 0) {
+        return baseline * factor;
+      }
+    }
+
+    const unitCandidates = optimisationResult.adjusted_totals ? [
+      optimisationResult.adjusted_totals.unit_price,
+      optimisationResult.adjusted_totals.unitPrice,
+      optimisationResult.adjusted_totals.per_unit,
+      optimisationResult.adjusted_totals.perUnit,
+    ] : [];
+    for (const candidate of unitCandidates) {
+      if (candidate === undefined || candidate === null || candidate === "") {
+        continue;
+      }
+      const numeric = parseCurrencyNumber(candidate);
+      if (Number.isFinite(numeric) && numeric >= 0) {
+        return numeric;
+      }
+    }
+
+    if (Number.isFinite(adjustedOverall)) {
+      const volume = getRepresentativeVolume(rows);
+      if (Number.isFinite(volume) && volume > 0) {
+        return adjustedOverall / volume;
+      }
+    }
+
+    return null;
+  }
+
+  function extractReplacementSummary(response) {
+    if (!response || !Array.isArray(response.replacements)) {
+      return [];
+    }
+
+    const toNumeric = (raw) => {
+      if (raw === undefined || raw === null) {
+        return null;
+      }
+      const text = String(raw).trim();
+      if (!text) {
+        return null;
+      }
+      const numeric = parseCurrencyNumber(text);
+      return Number.isFinite(numeric) ? numeric : null;
+    };
+
+    return response.replacements
+      .map(entry => {
+        if (!entry) {
+          return null;
+        }
+        const alternative = entry.alternative || {};
+        const brand = alternative.brand || alternative.brand_name || "";
+        const source = alternative.source || "";
+        const originalRaw = entry.original_unit_price ?? entry.originalUnitPrice ?? entry.originalUnitPriceRp;
+        const newRaw = entry.new_unit_price ?? entry.newUnitPrice ?? entry.adjusted_unit_price ?? entry.adjustedUnitPrice;
+
+        const originalUnitPrice = toNumeric(originalRaw);
+        const newUnitPrice = toNumeric(newRaw);
+
+        if (newUnitPrice === null) {
+          return null;
+        }
+
+        return {
+          name: entry.name || entry.material_name || "",
+          unit: entry.unit || "",
+          brand: brand,
+          source,
+          originalUnitPrice,
+          newUnitPrice,
+        };
+      })
+      .filter(item => item && item.name);
+  }
+
+  function applyOptimizedUnitPrice(rows, newUnitPrice) {
+    if (!Array.isArray(rows) || !rows.length) {
+      return;
+    }
+    const normalized = Number(newUnitPrice);
+    if (!Number.isFinite(normalized) || normalized < 0) {
+      return;
+    }
+    rows.forEach(row => {
+      const priceInput = row.querySelector(".price-input");
+      const volumeInput = row.querySelector(".volume-input");
+      const totalCell = row.querySelector(".total-cell");
+
+      if (priceInput) {
+        priceInput.value = normalized;
+        priceInput.dataset.referencePrice = String(normalized);
+        priceInput.dataset.previousValue = priceInput.value;
+        priceInput.dataset.manualConfirmed = "false";
+        updatePriceOriginUI(priceInput, "auto");
+      }
+
+      if (volumeInput && totalCell) {
+        const volume = parseCurrencyNumber(volumeInput.value);
+        const newTotal = volume * normalized;
+        totalCell.textContent = "Rp. " + newTotal.toLocaleString("id-ID", {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        });
+      }
+
+      updatePriceWarningForRow(row);
+    });
+  }
+
+  async function requestOptimizedAhs(code, payload) {
+    const endpoint = OPTIMIZE_AHS_ENDPOINT_TEMPLATE.replace(OPTIMIZE_AHS_PLACEHOLDER, encodeURIComponent(code));
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    let data = null;
+    try {
+      data = await response.json();
+    } catch (err) {
+      data = null;
+    }
+
+    if (!response.ok) {
+      const detail = data && (data.detail || data.error);
+      throw new Error(detail || "Optimasi target bid gagal diproses.");
+    }
+
+    return data;
+  }
+
+  function collectRowsByAnalysisCode() {
+    const rows = Array.from(document.querySelectorAll("#rabTables tr[data-row-key]"));
+    const map = new Map();
+
+    rows.forEach(row => {
+      const analysisCell = row.querySelector(".analysis-code-cell");
+      if (!analysisCell) {
+        return;
+      }
+      const rawCode = analysisCell.textContent || "";
+      const canonical = canonicalizeFrontendCode(rawCode);
+      if (!canonical) {
+        return;
+      }
+      if (!map.has(canonical)) {
+        map.set(canonical, { rows: [], displayCode: rawCode.trim() || canonical });
+      }
+      map.get(canonical).rows.push(row);
+    });
+
+    return map;
+  }
+
+  async function applyTargetBid() {
+    const modeSelect = document.getElementById("targetBudgetMode");
+    const inputEl = document.getElementById("targetBudgetInput");
+
+    if (!modeSelect || !inputEl) {
+      return;
+    }
+
+    const mode = modeSelect.value === "absolute" ? "absolute" : "percentage";
+    const numericCheck = enforceValidNumericInput(inputEl, "Target budget");
+    if (!numericCheck.isValid || !numericCheck.provided) {
+      return;
+    }
+
+    const numericValue = numericCheck.value;
+    if (mode === "percentage" && (numericValue <= 0 || numericValue > 100)) {
+      inputEl.classList.add("is-invalid");
+      showError("Persentase target harus antara 0 hingga 100.");
+      return;
+    }
+    if (mode === "absolute" && numericValue <= 0) {
+      inputEl.classList.add("is-invalid");
+      showError("Target nominal harus lebih besar dari nol.");
+      return;
+    }
+    inputEl.classList.remove("is-invalid");
+
+    const groups = collectRowsByAnalysisCode();
+    if (!groups.size) {
+      showError("Tidak ditemukan kode AHSP yang valid untuk dioptimasi.");
+      return;
+    }
+
+    const payload = {
+      material_limit: 2,
+      target_budget: numericValue.toString(),
+      mode,
+    };
+
+    const beforeTotal = calculateGrandTotalFromRows();
+  const targetNominal = mode === "percentage" ? beforeTotal * (numericValue / 100) : numericValue;
+  const gapBaseline = Number.isFinite(targetNominal) && targetNominal > 0 ? targetNominal : beforeTotal;
+  const TARGET_GAP_RATIO = 0.01;
+  const TARGET_GAP_MIN = 10000;
+  const targetGapThreshold = Math.max(gapBaseline * TARGET_GAP_RATIO, TARGET_GAP_MIN); // treat ≤1% gap (or Rp1.000) as "close enough"
+    const appliedCodes = [];
+    const failedCodes = [];
+
+    setTargetBidBusy(true);
+    resetTargetBidSummary();
+
+    let afterTotal = beforeTotal;
+    let stopAdjusting = false;
+
+    try {
+      for (const [code, info] of groups.entries()) {
+        if (stopAdjusting) {
+          break;
+        }
+        try {
+          const data = await requestOptimizedAhs(code, payload);
+          const adjustments = extractReplacementSummary(data);
+          const derivedUnit = deriveOptimizedUnitPrice(info.rows, data);
+          if (derivedUnit !== null && derivedUnit !== undefined && Number.isFinite(derivedUnit)) {
+            applyOptimizedUnitPrice(info.rows, derivedUnit);
+          } else {
+            console.warn("Unable to derive optimized unit price for", code, data);
+          }
+          updateGrandTotalFromRows(false);
+          afterTotal = calculateGrandTotalFromRows();
+
+          const metTarget = data && data.target_budget && data.target_budget.met_after_adjustment === true;
+          appliedCodes.push({
+            code: info.displayCode || code,
+            metTarget,
+            remainingGap: parseCurrencyNumber(data && data.target_budget && data.target_budget.remaining_gap),
+            adjustedMaterials: adjustments,
+          });
+
+          if (Number.isFinite(targetNominal) && targetNominal >= 0) {
+            const gapToTarget = Math.abs(afterTotal - targetNominal);
+            if (targetNominal > 0) {
+              if (gapToTarget <= targetGapThreshold || afterTotal <= targetNominal) {
+                stopAdjusting = true;
+              }
+            } else if (targetNominal === 0 && afterTotal <= targetGapThreshold) {
+              stopAdjusting = true;
+            }
+          }
+        } catch (err) {
+          console.warn("Target bid optimisation failed for", code, err);
+          failedCodes.push({ code: info.displayCode || code, error: err.message || String(err) });
+        }
+      }
+
+      updateGrandTotalFromRows();
+      afterTotal = calculateGrandTotalFromRows();
+
+      if (window.EfficiencyRecommendations && typeof currentTestJobId !== "undefined" && currentTestJobId) {
+        try {
+          window.EfficiencyRecommendations.refresh();
+        } catch (refreshErr) {
+          console.warn("Failed to refresh efficiency recommendations after target bid.", refreshErr);
+        }
+      }
+
+      renderTargetBidSummary({
+        appliedCodes,
+        failedCodes,
+        beforeTotal,
+        afterTotal,
+        targetMode: mode,
+        targetNumeric: numericValue,
+      });
+    } catch (err) {
+      console.error("Target bid application error", err);
+      showError("Terjadi kesalahan saat menerapkan target bid: " + (err.message || err));
+    } finally {
+      setTargetBidBusy(false);
+    }
+  }
+
+  function setupTargetBidControls() {
+    const modeSelect = document.getElementById("targetBudgetMode");
+    const button = document.getElementById("applyTargetBidButton");
+
+    if (modeSelect) {
+      modeSelect.addEventListener("change", handleTargetBudgetModeChange);
+      handleTargetBudgetModeChange();
+    }
+
+    if (button) {
+      button.addEventListener("click", (event) => {
+        event.preventDefault();
+        applyTargetBid();
+      });
+    }
+  }
+
+  setupTargetBidControls();
 
   const excelUploadForm = document.getElementById("excelUploadForm");
   const pdfUploadForm = document.getElementById("pdfUploadForm");
@@ -149,7 +902,7 @@
 
         const rows = data.rows || data.excel_standard || data.excel_apendo;
         if (rows) {
-          renderTables(rows, { sourceType: "excel" });
+          renderTables(rows, { sourceType: "excel", jobId: data.job_id });
           fileInput.value = "";
         } else {
           showError("Gagal memproses file: " + (data.error || "Terjadi kesalahan yang tidak diketahui"));
@@ -180,7 +933,7 @@
         hideLoading();
 
         if (Array.isArray(data.rows) && data.rows.length) {
-          renderTables(data.rows, { sourceType: "pdf" });
+          renderTables(data.rows, { sourceType: "pdf", jobId: data.job_id });
           fileInput.value = "";
         } else {
           showError("Gagal memproses file: " + (data.error || "Tidak ada baris yang ditemukan"));
@@ -197,6 +950,9 @@
     const container = document.getElementById("rabTables");
     container.innerHTML = "";
 
+    resetTargetBidSummary();
+    setTargetBidVisibility(false);
+
     if (!Array.isArray(rows) || !rows.length) {
       document.getElementById("grandTotalBox").style.display = "none";
       showError("Tidak ada baris yang dapat ditampilkan");
@@ -211,6 +967,7 @@
     }
 
     document.getElementById("grandTotalBox").style.display = "block";
+    setTargetBidVisibility(true);
     updateGrandTotalFromRows();
   }
 
@@ -219,6 +976,7 @@
     let currentTable = null;
     let tbody = null;
     let bujakCounter = 0;
+    const matchPromises = []; 
 
     rows.forEach((row, rowIndex) => {
       const skipKeywords = ["PAJAK", "JUMLAH SETELAH PAJAK", "DIBULATKAN", "TERBILANG"];
@@ -246,13 +1004,14 @@
               <th>Volume</th>
               <th>SAT</th>
               <th>Harga Satuan (Rp.)</th>
-              <th>Jumlah </th>
+              <th>Jumlah</th>
             </tr>
           </thead>
         `;
         const newBody = document.createElement("tbody");
         table.appendChild(newBody);
         container.appendChild(table);
+
         currentTable = table;
         tbody = newBody;
       }
@@ -273,6 +1032,7 @@
         strong.textContent = row.description || "";
         titleCell.appendChild(strong);
         tr.appendChild(titleCell);
+
         tbody.appendChild(tr);
         return;
       }
@@ -289,6 +1049,7 @@
         emphasis.textContent = row.description || "";
         titleCell.appendChild(emphasis);
         tr.appendChild(titleCell);
+
         tbody.appendChild(tr);
         return;
       }
@@ -300,13 +1061,31 @@
       const tr = buildDataRow(row, rowIndex);
       tbody.appendChild(tr);
       total += parseCurrencyNumber(row.total_price);
+
+      matchPromises.push((async () => {
+        const matchCell = tr.querySelector("td:nth-child(5)");
+        const analysisCell = tr.querySelector(".analysis-code-cell");
+        const statusCell = tr.querySelector("td:nth-child(4)");
+
+        try {
+          const results = await fetchAndStoreSuggestions(row, row.description || "");
+          populateMatchCell(matchCell, row, analysisCell, statusCell);
+        } catch (err) {
+          console.warn("Match fetch failed for row:", row.description, err);
+        }
+      })());
+    });
+
+    Promise.all(matchPromises).then(() => {
+      console.log("✅ All sectioned table matches complete");
     });
 
     updateGrandTotal(total);
   }
-
+  
   function renderFlatTable(rows, container) {
     let total = 0;
+
     const table = document.createElement("table");
     table.classList.add("table", "table-bordered", "table-sm", "align-middle", "mb-4");
     table.innerHTML = `
@@ -324,14 +1103,58 @@
         </tr>
       </thead>
     `;
+
     const tbody = document.createElement("tbody");
     table.appendChild(tbody);
     container.appendChild(table);
 
     rows.forEach((row, rowIndex) => {
+      if (row.job_match_status === "skipped" && (!row.is_section || row.is_section === undefined)) {
+        const tr = document.createElement("tr");
+
+        const numberCell = document.createElement("td");
+        numberCell.textContent = row.number || "";
+        tr.appendChild(numberCell);
+
+        const titleCell = document.createElement("td");
+        titleCell.colSpan = 8;
+        const strong = document.createElement("strong");
+        strong.textContent = row.description || "";
+        titleCell.appendChild(strong);
+        tr.appendChild(titleCell);
+
+        tr.classList.add("table-secondary", "fw-semibold");
+        tbody.appendChild(tr);
+        return;
+      }
+
       const tr = buildDataRow(row, rowIndex, { flatNumbering: true });
       tbody.appendChild(tr);
       total += parseCurrencyNumber(row.total_price);
+    });
+
+    const matchPromises = rows.map(async (row, rowIndex) => {
+      if (row.is_section || row.job_match_status === "skipped") return;
+
+      const tr = table.querySelector(
+        `tr[data-row-key="${sanitizeRowKey(row.row_key || row.rowKey, `row-${rowIndex}`)}"]`
+      );
+      if (!tr) return;
+
+      const matchCell = tr.querySelector("td:nth-child(5)");
+      const analysisCell = tr.querySelector(".analysis-code-cell");
+      const statusCell = tr.querySelector("td:nth-child(4)");
+
+      try {
+        const results = await fetchAndStoreSuggestions(row, row.description || "");
+        populateMatchCell(matchCell, row, analysisCell, statusCell);
+      } catch (err) {
+        console.warn("Match fetch failed for row:", row.description, err);
+      }
+    });
+
+    Promise.all(matchPromises).then(() => {
+      console.log("✅ All matching complete");
     });
 
     updateGrandTotal(total);
@@ -339,8 +1162,9 @@
 
   function buildDataRow(row, rowIndex, options = {}) {
     const tr = document.createElement("tr");
-    const rowKey = row.row_key || row.rowKey || `row-${rowIndex}`;
-    tr.dataset.rowKey = rowKey;
+    const sanitizedRowKey = sanitizeRowKey(row.row_key || row.rowKey, `row-${rowIndex}`);
+    tr.dataset.rowKey = sanitizedRowKey || `row-${rowIndex}`;
+    const rowKey = tr.dataset.rowKey;
 
     const numberCell = document.createElement("td");
     numberCell.textContent = options.flatNumbering ? (row.number || rowIndex + 1) : (row.number || "");
@@ -348,6 +1172,16 @@
 
     const descriptionCell = document.createElement("td");
     descriptionCell.textContent = row.description || "";
+    const descInner = document.createElement("div");
+    descInner.className = "d-flex flex-column";
+    const title = document.createElement("div");
+    title.textContent = row.description || "";
+    const warnHost = document.createElement("div");
+    warnHost.className = "price-warning-host mt-1"; 
+    descInner.appendChild(title);
+    descInner.appendChild(warnHost);
+    descriptionCell.textContent = "";
+    descriptionCell.appendChild(descInner);
     tr.appendChild(descriptionCell);
 
     const analysisCell = document.createElement("td");
@@ -387,11 +1221,16 @@
     const priceInput = document.createElement("input");
     priceInput.type = "number";
     priceInput.className = "form-control form-control-sm price-input";
-    priceInput.value = parseCurrencyNumber(row.price);
+    const initialUnitPrice = parseCurrencyNumber(row.price);
+    priceInput.value = initialUnitPrice;
     priceInput.min = "0";
     priceInput.step = "0.01";
     priceInput.dataset.rowIndex = rowIndex;
     priceInput.dataset.rowKey = rowKey;
+    if (Number.isFinite(initialUnitPrice)) {
+      priceInput.dataset.referencePrice = String(initialUnitPrice);
+      priceInput.dataset.baseAutoPrice = String(initialUnitPrice);
+    }
     priceWrapper.appendChild(priceInput);
 
     const badge = document.createElement("span");
@@ -548,8 +1387,14 @@
     const priceInput = row.querySelector(".price-input");
     const totalCell = row.querySelector(".total-cell");
 
-    const volume = parseFloat(volumeInput.value) || 0;
-    const price = parseFloat(priceInput.value) || 0;
+    const volumeCheck = enforceValidNumericInput(volumeInput, "Volume");
+    const priceCheck = enforceValidNumericInput(priceInput, "Harga satuan", { allowBlank: true });
+    if (!volumeCheck.isValid || !priceCheck.isValid) {
+      return;
+    }
+
+    const volume = volumeCheck.value;
+    const price = priceCheck.provided ? priceCheck.value : 0;
 
     // Instant UI update (no delay)
     const total = volume * price;
@@ -567,13 +1412,21 @@
       // Backend recomputation (precise rounding & persistence)
       try {
         const analysisCell = row.querySelector(".analysis-code-cell");
-        const code = analysisCell ? analysisCell.textContent.trim() : "";
+        const rawCode = analysisCell ? analysisCell.textContent.trim() : "";
         const rowKey = row.dataset.rowKey || null;
-        const payload = { row_key: rowKey, volume, unit_price: price };
-        if (code) {
-          payload.code = code;
-          payload.analysis_code = code;
+        const payloadResult = buildRecomputePayload({
+          rowKey,
+          code: rawCode,
+          volume,
+          unitPrice: priceCheck.provided ? price : undefined,
+        });
+
+        if (payloadResult.errors) {
+          showError(payloadResult.errors.join(" "));
+          return;
         }
+
+        const payload = payloadResult.payload;
 
         const response = await fetch(RECOMPUTE_ENDPOINT, {
           method: "POST",
@@ -606,17 +1459,23 @@
   let costWeightChart = null;
   let chartUpdateTimeout = null;
 
-  function updateGrandTotalFromRows(shouldUpdateChart = true) {
-    let grand = 0;
+  function calculateGrandTotalFromRows() {
+    let total = 0;
     document.querySelectorAll(".total-cell").forEach(cell => {
-      let text = cell.textContent.replace(/[^\d,.-]/g, "").replace(/\./g, "").replace(",", ".");
-      const val = parseFloat(text) || 0;
-      grand += val;
+      const numeric = parseCurrencyNumber(cell.textContent);
+      if (Number.isFinite(numeric)) {
+        total += numeric;
+      }
     });
-    
+    return total;
+  }
+
+  function updateGrandTotalFromRows(shouldUpdateChart = true) {
+    const grand = calculateGrandTotalFromRows();
+
     // Update Grand Total immediately (no delay)
     updateGrandTotal(grand);
-    
+
     // Only reset pie chart timer if triggered by user input (not backend callback)
     if (shouldUpdateChart) {
       if (chartUpdateTimeout) {
@@ -805,6 +1664,14 @@
     return status.replace(/(^|\s)\w/g, letter => letter.toUpperCase());
   }
 
+  function getBestConfidenceMatch(matches) {
+    if (!Array.isArray(matches) || !matches.length) return null;
+    return matches.reduce((best, m) => {
+      if (!m || typeof m.confidence !== "number") return best;
+      return !best || m.confidence > best.confidence ? m : best;
+    }, null);
+  }
+
   function populateMatchCell(cell, row, analysisCell, statusCell) {
     cell.innerHTML = "";
 
@@ -813,23 +1680,76 @@
       errorNotice.className = "text-danger small mb-2";
       errorNotice.textContent = row.job_match_error ? `Error: ${row.job_match_error}` : "Error";
       cell.appendChild(errorNotice);
-      renderManualInput(cell, row, analysisCell, statusCell, "Masukkan kode AHSP secara manual", {
-        noticeClass: "text-warning small mb-2"
+      renderManualInput(cell, row, analysisCell, statusCell, "", {
+        noticeClass: selectableMatches.length ? "text-muted small mb-2" : "text-warning small mb-2"
       });
       return;
     }
 
     const matches = normalizeMatches(row.job_match);
     const lookup = updateRowLookup(row, matches);
-    const selectableMatches = matches.filter(match => match && match.code);
-    const fallbackMessages = matches.filter(match => !match || !match.code);
+    const selectableMatches = matches.filter(m => m && m.code);
+    const fallbackMessages = matches.filter(m => !m || !m.code);
 
-    if (row.job_match_status === "found" && selectableMatches.length === 1) {
+    // === ALTERNATIVES / UNIT MISMATCH CASE ===
+    if (row.unit_mismatch === true) {
+      statusCell.textContent = "Not found (no same-unit match)";
+      statusCell.classList.remove("text-success");
+      statusCell.classList.add("text-danger");
+
+      analysisCell.textContent = "";
+
+      const tr = analysisCell.closest("tr");
+      if (tr) {
+        const priceInput = tr.querySelector(".price-input");
+        if (priceInput) {
+          priceInput.value = "0";
+          priceInput.dataset.referencePrice = "";
+          priceInput.dataset.manualConfirmed = "true";
+          updatePriceOriginUI(priceInput, "manual");
+        }
+      }
+
+      const alternatives = row.job_match;
+      if (Array.isArray(alternatives) && alternatives.length) {
+        const helper = document.createElement("div");
+        helper.className = "fw-semibold small mb-2 text-warning";
+        helper.textContent =
+          "Sugesti dengan unit berbeda";
+        cell.appendChild(helper);
+
+        alternatives.forEach(match => {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className =
+            "btn btn-sm btn-outline-warning w-100 text-start match-option mb-1";
+          const label = buildMatchLabel(match);
+          button.dataset.label = label;
+          if (match.code) button.dataset.code = match.code;
+          button.textContent = label;
+          button.addEventListener("click", () =>
+            handleMatchSelection(match, row, analysisCell, statusCell, cell, button)
+          );
+          cell.appendChild(button);
+        });
+      }
+
+      renderManualInput(cell, row, analysisCell, statusCell, "", {
+        noticeClass: selectableMatches.length ? "text-muted small mb-2" : "text-warning small mb-2"
+      });
+
+      return;
+    }
+
+    // === FOUND CASES ===
+    if (selectableMatches.length === 1) {
+      // ✅ Automatically match the single result
       const match = selectableMatches[0];
       row.job_match_selected = match;
       row.analysis_code = match.code;
       analysisCell.textContent = match.code;
-      statusCell.textContent = "Dipilih";
+      statusCell.textContent = "Dipilih (Auto)";
+      statusCell.classList.remove("text-danger");
       statusCell.classList.add("text-success");
 
       const span = document.createElement("span");
@@ -838,51 +1758,72 @@
       cell.appendChild(span);
 
       const tr = analysisCell.closest("tr");
-      if (tr) {
-        setTimeout(() => setPriceForRow(match, tr), 0);
+      if (tr) setTimeout(() => setPriceForRow(match, tr), 0);
+    }
+
+    else if (selectableMatches.length > 1) {
+      // ✅ Automatically pick the one with highest confidence
+      const bestMatch = getBestConfidenceMatch(selectableMatches);
+      if (bestMatch) {
+        row.job_match_selected = bestMatch;
+        row.analysis_code = bestMatch.code;
+        analysisCell.textContent = bestMatch.code;
+        statusCell.textContent = "Dipilih (Auto)";
+        statusCell.classList.remove("text-danger");
+        statusCell.classList.add("text-success");
+
+        const span = document.createElement("span");
+        span.className = "text-success fw-semibold";
+        span.textContent = buildMatchLabel(bestMatch);
+        cell.appendChild(span);
+
+        const tr = analysisCell.closest("tr");
+        if (tr) setTimeout(() => setPriceForRow(bestMatch, tr), 0);
       }
 
-      return;
-    }
-
-    if (!selectableMatches.length && !fallbackMessages.length) {
-      renderManualInput(cell, row, analysisCell, statusCell, "Masukkan kode AHSP secara manual", {
-        noticeClass: "text-warning small mb-2"
-      });
-      return;
-    }
-
-    if (selectableMatches.length) {
+      // Still render all available buttons for manual re-selection
       const helper = document.createElement("div");
       helper.className = "fw-semibold small mb-2 text-dark";
-      helper.textContent = "Pilih kode yang sesuai atau gunakan input manual:";
+      helper.textContent = "Sugesti lain:";
       cell.appendChild(helper);
 
       selectableMatches.forEach(match => {
         const button = document.createElement("button");
         button.type = "button";
-        button.className = "btn btn-sm btn-outline-primary w-100 text-start match-option mb-1";
+        button.className =
+          "btn btn-sm btn-outline-primary w-100 text-start match-option mb-1";
         const label = buildMatchLabel(match);
         button.dataset.label = label;
-        if (match.code) {
-          button.dataset.code = match.code;
-        }
+        if (match.code) button.dataset.code = match.code;
         button.textContent = label;
-        button.addEventListener("click", () => {
-          handleMatchSelection(match, row, analysisCell, statusCell, cell, button);
-        });
+
+        // Mark the automatically selected one visually
+        if (bestMatch && match.code === bestMatch.code) {
+          button.classList.remove("btn-outline-primary");
+          button.classList.add("btn-success");
+          button.textContent = `Dipilih: ${button.dataset.label}`;
+        }
+
+        button.addEventListener("click", () =>
+          handleMatchSelection(match, row, analysisCell, statusCell, cell, button)
+        );
         cell.appendChild(button);
       });
     }
 
-    const manualLabel = fallbackMessages.length
-      ? (fallbackMessages[0] && fallbackMessages[0].match_status ? fallbackMessages[0].match_status : "Masukkan kode AHSP secara manual")
-      : "Masukkan kode AHSP secara manual";
+    else {
+      // No matches, fallback to manual
+      statusCell.textContent = "Not found";
+      statusCell.classList.add("text-danger");
+    }
 
-    renderManualInput(cell, row, analysisCell, statusCell, manualLabel, {
+    // Always show manual input for all cases
+    renderManualInput(cell, row, analysisCell, statusCell, "", {
       noticeClass: selectableMatches.length ? "text-muted small mb-2" : "text-warning small mb-2"
     });
+
   }
+
 
   function normalizeMatches(matchData) {
     if (!matchData) {
@@ -943,8 +1884,8 @@
     const input = document.createElement("input");
     input.type = "text";
     input.className = "form-control";
-    input.placeholder = options.placeholder || "Masukkan kode AHSP";
-    input.value = row.analysis_code || "";
+    input.placeholder = "Masukkan kode AHSP secara manual";
+    input.value = "";
     input.autocomplete = "off";
 
     const dropdown = document.createElement("div");
@@ -956,18 +1897,33 @@
     dropdown.style.top = "100%";
     dropdown.style.zIndex = "1000";
 
-    const updateNotice = (message) => {
-      notice.textContent = message || label || "Needs Manual Input";
-    };
-
     const button = document.createElement("button");
     button.type = "button";
     button.className = "btn btn-primary";
     button.textContent = "Gunakan";
 
+    const warnIfUnsafeCode = (value) => {
+      if (!value || !UNSAFE_CODE_PATTERN.test(value)) {
+        input.classList.remove("is-invalid");
+        delete input.dataset.warnedUnsafeCode;
+        return false;
+      }
+      input.classList.add("is-invalid");
+      if (input.dataset.warnedUnsafeCode !== "true") {
+        showError("Kode AHSP tidak boleh mengandung karakter < atau >.");
+        input.dataset.warnedUnsafeCode = "true";
+      }
+      return true;
+    };
+
     const applyManual = async () => {
       const value = input.value.trim();
       if (!value) {
+        input.focus();
+        return;
+      }
+
+      if (warnIfUnsafeCode(value)) {
         input.focus();
         return;
       }
@@ -981,11 +1937,7 @@
       row.job_match_status = "manual";
       updateRowLookup(row, matched ? [matched] : []);
 
-      if (matched && matched.name) {
-        updateNotice(`Manual: ${matched.name}`);
-      } else {
-        updateNotice(label);
-      }
+      // updateNotice("Masukkan kode AHSP secara manual");
 
       analysisCell.textContent = value;
       statusCell.textContent = "Manual";
@@ -1023,6 +1975,7 @@
     const triggerDropdown = () => showDropdown(input, dropdown, row, label);
     input.addEventListener("focus", triggerDropdown);
     input.addEventListener("input", () => {
+      warnIfUnsafeCode(input.value);
       clearTimeout(dropdownDebounce);
       dropdownDebounce = setTimeout(triggerDropdown, 200);
     });
@@ -1036,7 +1989,9 @@
       event.preventDefault();
     });
 
-    group.appendChild(input);
+  warnIfUnsafeCode(input.value);
+
+  group.appendChild(input);
     group.appendChild(button);
     cell.appendChild(group);
     cell.appendChild(dropdown);
@@ -1130,6 +2085,10 @@
       if (!match || !match.code) {
         return;
       }
+      if (match.unit_mismatch) {
+        item.style.color = "#dc3545"; // red text
+        item.style.fontStyle = "italic";
+      }
       const item = document.createElement("button");
       item.type = "button";
       item.className = "dropdown-item text-wrap";
@@ -1164,15 +2123,25 @@
   function fetchRemoteSuggestions(row, query, limit = MANUAL_SUGGESTION_LIMIT) {
     const trimmedQuery = (query || "").trim();
     const description = trimmedQuery || (row.description || "").trim();
-
     if (!description) {
       return Promise.resolve([]);
     }
 
-    const cacheKey = `${description}|${limit}`;
+    const unit = (row.unit || row.sat || "").trim();
+
+    // === Prevent outdated async responses ===
+    const requestToken = Symbol("match-request");
+    row._lastRequestToken = requestToken;
+
+    // === Build cache key (include unit) ===
+    const cacheKey = unit ? `${description}|${unit}|${limit}` : `${description}|${limit}`;
     if (suggestionCache.has(cacheKey)) {
       return suggestionCache.get(cacheKey);
     }
+
+    // === Build payload ===
+    const payload = { description };
+    if (unit) payload.unit = unit;
 
     const request = fetch(MATCH_ENDPOINT, {
       method: "POST",
@@ -1180,31 +2149,61 @@
         "Content-Type": "application/json",
         Accept: "application/json",
       },
-      body: JSON.stringify({ description }),
+      body: JSON.stringify(payload),
     })
       .then(res => (res.ok ? res.json() : { match: [] }))
       .then(data => {
-        const { match } = data || {};
-        if (!match) {
+        // 🧠 Ignore stale responses
+        if (row._lastRequestToken !== requestToken) {
+          console.debug("⚠️ Ignored stale match response for:", description);
           return [];
         }
-        if (Array.isArray(match)) {
-          return match;
+
+        // === Unit mismatch alternatives ===
+        if (data.alternatives && Array.isArray(data.alternatives)) {
+          row.unit_mismatch = true;
+          return data.alternatives.map(a => ({ ...a, unit_mismatch: true }));
         }
-        return match.code ? [match] : [];
+
+        // === Normal matches (same-unit) ===
+        if (data.match) {
+          const matchList = Array.isArray(data.match) ? data.match : [data.match];
+          const validMatches = matchList.filter(m => m && !m.unit_mismatch);
+          if (validMatches.length) {
+            row.unit_mismatch = false;
+            return validMatches;
+          }
+        }
+
+        // === No results ===
+        row.unit_mismatch = false;
+        return [];
       })
-      .catch(() => []);
+      .catch(err => {
+        console.warn("Fetch error in fetchRemoteSuggestions:", err);
+        return [];
+      });
 
     suggestionCache.set(cacheKey, request);
     return request;
   }
 
+
+
   function fetchAndStoreSuggestions(row, query) {
     return fetchRemoteSuggestions(row, query).then(results => {
       updateRowLookup(row, results);
+
+      if (!results || !results.length) {
+        row.job_match = []; 
+      } else {
+        row.job_match = results;
+      }
+
       return Array.from(getMatchLookup(row).values());
     });
   }
+
 
   function findMatchByCode(row, code) {
     const lookup = getMatchLookup(row);
@@ -1222,7 +2221,35 @@
     if (value === null || value === undefined) {
       return 0;
     }
-    const numeric = parseFloat(String(value).replace(/[^0-9.-]/g, ""));
+    let text = String(value).trim();
+    if (!text) {
+      return 0;
+    }
+
+    text = text.replace(/\s+/g, "");
+    text = text.replace(/[A-Za-z]/g, "");
+
+    let cleaned = text.replace(/[^0-9,.-]/g, "");
+    if (!cleaned || cleaned === "-" || cleaned === "." || cleaned === ",") {
+      return 0;
+    }
+
+    const lastComma = cleaned.lastIndexOf(",");
+    const lastDot = cleaned.lastIndexOf(".");
+
+    if (lastComma > -1 && lastDot > -1) {
+      if (lastComma > lastDot) {
+        cleaned = cleaned.replace(/\./g, "").replace(/,/g, ".");
+      } else {
+        cleaned = cleaned.replace(/,/g, "");
+      }
+    } else if (lastComma > -1) {
+      cleaned = cleaned.replace(/,/g, ".");
+    } else if (lastDot > -1) {
+      cleaned = cleaned.replace(/\.(?=.*\.)/g, "");
+    }
+
+    const numeric = Number.parseFloat(cleaned);
     return Number.isFinite(numeric) ? numeric : 0;
   }
 
@@ -1249,12 +2276,26 @@
     const totalCell = tr.querySelector(".total-cell");
     if (!priceInput) return;
 
+    if (match && match.unit_mismatch === true) {
+      const priceWrapper = priceInput.closest(".price-origin-wrapper");
+      if (priceWrapper) {
+        priceInput.value = "";
+        priceInput.dataset.referencePrice = "";
+        priceInput.dataset.baseAutoPrice = "";
+        updatePriceOriginUI(priceInput, "manual");
+      }
+      return;
+    }
+
     // prefer any price present on match object (various keys)
     const possiblePrice = match && (match.unit_price ?? match.price ?? match.unitPrice ?? match.unitPriceRp ?? null);
     if (possiblePrice !== null && possiblePrice !== undefined && String(possiblePrice).trim() !== "") {
       const num = parseFloat(String(possiblePrice).replace(/[^0-9.-]/g, ""));
       if (!Number.isNaN(num)) {
         priceInput.value = num;
+  priceInput.dataset.baseAutoPrice = String(num);
+  priceInput.dataset.referencePrice = String(num);
+  updatePriceWarningForRow(tr);
         priceInput.dataset.previousValue = priceInput.value;
         priceInput.dataset.manualConfirmed = "false";
         updatePriceOriginUI(priceInput, "auto");
@@ -1268,16 +2309,40 @@
     if (!code) return;
 
     const priceCell = priceInput.closest("td");
+    const priceWrapper = priceInput.closest(".price-origin-wrapper");
     if (priceCell) {
+      if (priceWrapper && priceWrapper.parentElement === priceCell) {
+        priceCell.removeChild(priceWrapper);
+      }
       showMatchingSpinner(priceCell);
     }
 
-    const volume = volumeInput ? (parseFloat(volumeInput.value) || 0) : 0;
-    const rowKey = tr.dataset.rowKey || null;
-    const payload = { code, volume, row_key: rowKey };
-    if (code) {
-      payload.analysis_code = code;
+    const rawVolumeValue = volumeInput ? volumeInput.value : 0;
+    const safeVolume = normaliseNumericInput(rawVolumeValue);
+    if (safeVolume === null) {
+      showError("Volume harus berupa angka non-negatif.");
+      if (priceCell) {
+        priceCell.innerHTML = "";
+        if (priceWrapper) {
+          priceCell.appendChild(priceWrapper);
+        }
+      }
+      return;
     }
+    const volume = safeVolume === undefined ? 0 : safeVolume;
+    const rowKey = tr.dataset.rowKey || null;
+    const payloadResult = buildRecomputePayload({ rowKey, code, volume });
+    if (payloadResult.errors) {
+      showError(payloadResult.errors.join(" "));
+      if (priceCell) {
+        priceCell.innerHTML = "";
+        if (priceWrapper) {
+          priceCell.appendChild(priceWrapper);
+        }
+      }
+      return;
+    }
+    const payload = payloadResult.payload;
 
     try {
       const resp = await fetch(RECOMPUTE_ENDPOINT, {
@@ -1288,7 +2353,9 @@
 
       if (priceCell) {
         priceCell.innerHTML = "";
-        priceCell.appendChild(priceInput.closest(".price-origin-wrapper"));
+        if (priceWrapper) {
+          priceCell.appendChild(priceWrapper);
+        }
       }
 
       if (!resp.ok) {
@@ -1300,6 +2367,8 @@
         const num = parseFloat(String(serverUnit).replace(/[^0-9.-]/g, ""));
         if (!Number.isNaN(num)) {
           priceInput.value = num;
+          priceInput.dataset.baseAutoPrice = String(num);
+          priceInput.dataset.referencePrice = String(num);
           priceInput.dataset.previousValue = priceInput.value;
           priceInput.dataset.manualConfirmed = "false";
           updatePriceOriginUI(priceInput, "auto");
@@ -1311,6 +2380,7 @@
             const precise = parseFloat(data.total_cost) || 0;
             totalCell.textContent = "Rp. " + precise.toLocaleString("id-ID", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
             updateGrandTotalFromRows(false); // Don't reset chart timer from backend callback
+            updatePriceWarningForRow(row);
           }
         }
       }
@@ -1318,9 +2388,95 @@
       console.warn("Failed to fetch unit price for code:", code, err);
       if (priceCell) {
         priceCell.innerHTML = "";
-        priceCell.appendChild(priceInput.closest(".price-origin-wrapper"));
+        if (priceWrapper) {
+          priceCell.appendChild(priceWrapper);
+        }
       }
     }
   }
+  function computeDeviationInfo(actual, reference) {
+  const ref = parseFloat(reference);
+  const act = parseFloat(actual);
+  if (!isFinite(ref) || ref <= 0 || !isFinite(act)) return null;
+
+  const pct = ((act - ref) / ref) * 100; 
+  const absPct = Math.abs(pct);
+
+  let level = null;
+  if (absPct > 50) level = "CRITICAL";
+  else if (absPct > 20) level = "WARN";
+  else if (absPct > 10) level = "MODERATE";
+  else level = "NONE";
+
+  return { pct, absPct, level, direction: pct >= 0 ? "higher" : "lower" };
+}
+
+function renderWarningChip(host, info) {
+  host.innerHTML = "";
+  if (!info || info.level === "NONE") return;
+
+  const chip = document.createElement("span");
+  chip.className = "warning-chip" + (info.level === "CRITICAL" ? " critical" : "");
+  const dot = document.createElement("span");
+  dot.className = "dot";
+  const text = document.createElement("span");
+
+  const dirText = info.pct >= 0 ? "lebih tinggi" : "lebih rendah";
+  text.textContent = `Harga ${info.absPct.toFixed(1)}% ${dirText} dari database`;
+
+  chip.appendChild(dot);
+  chip.appendChild(text);
+  host.appendChild(chip);
+}
+
+function updatePriceWarningForRow(tr) {
+  if (!tr) return;
+  const priceInput = tr.querySelector(".price-input");
+  const host = tr.querySelector(".price-warning-host");
+  if (!priceInput || !host) return;
+
+  const reference = priceInput.dataset.referencePrice;
+  if (!reference) { host.innerHTML = ""; return; }
+
+  const info = computeDeviationInfo(priceInput.value, reference);
+  renderWarningChip(host, info);
+}
+</script>
+
+<!-- Include Efficiency Recommendations JavaScript -->
+<script src="{% static 'efficiency_recommendations/recommendations.js' %}"></script>
+<script>
+  // Initialize efficiency recommendations after table is rendered
+  // This will be called when data is loaded
+  let currentTestJobId = null;
+
+  // Hook into the existing renderTables function to trigger recommendations
+  const originalRenderTables = renderTables;
+  renderTables = function(rows, options = {}) {
+    // Call original function
+    originalRenderTables(rows, options);
+    
+    // Extract job_id from response if available
+    if (options.jobId) {
+      currentTestJobId = options.jobId;
+      // Initialize recommendations panel
+      if (window.EfficiencyRecommendations) {
+        window.EfficiencyRecommendations.init(currentTestJobId);
+      }
+    }
+  };
+
+  // Also trigger refresh when price inputs change
+  document.addEventListener('input', function(event) {
+    if (event.target.classList.contains('price-input')) {
+      // Debounce the refresh to avoid too many API calls
+      if (window.EfficiencyRecommendations && currentTestJobId) {
+        clearTimeout(window.refreshRecommendationsTimeout);
+        window.refreshRecommendationsTimeout = setTimeout(() => {
+          window.EfficiencyRecommendations.refresh();
+        }, 2000); // Wait 2 seconds after last price change
+      }
+    }
+  });
 </script>
 {% endblock %}
