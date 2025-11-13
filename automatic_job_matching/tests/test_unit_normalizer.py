@@ -1,4 +1,4 @@
-from django.test import TestCase
+from django.test import SimpleTestCase
 from automatic_job_matching.utils.unit_normalizer import (
     normalize_unit,
     infer_unit_from_description,
@@ -7,7 +7,7 @@ from automatic_job_matching.utils.unit_normalizer import (
 )
 
 
-class NormalizeUnitTests(TestCase):
+class NormalizeUnitTests(SimpleTestCase):
     """Test normalize_unit function."""
     
     def test_normalize_unit_none_input(self):
@@ -67,7 +67,7 @@ class NormalizeUnitTests(TestCase):
         self.assertEqual(normalize_unit("BUAH"), "bh")
 
 
-class InferUnitFromDescriptionTests(TestCase):
+class InferUnitFromDescriptionTests(SimpleTestCase):
     """Test infer_unit_from_description function."""
     
     def test_infer_unit_explicit_m2(self):
@@ -188,7 +188,7 @@ class InferUnitFromDescriptionTests(TestCase):
         self.assertEqual(infer_unit_from_description("MOBILISASI ALAT"), "ls")
 
 
-class UnitsAreCompatibleTests(TestCase):
+class UnitsAreCompatibleTests(SimpleTestCase):
     """Test units_are_compatible function."""
     
     def test_units_compatible_no_user_unit(self):
@@ -311,7 +311,7 @@ class UnitsAreCompatibleTests(TestCase):
         self.assertFalse(result)
 
 
-class CalculateUnitCompatibilityScoreTests(TestCase):
+class CalculateUnitCompatibilityScoreTests(SimpleTestCase):
     """Test calculate_unit_compatibility_score function."""
     
     def test_compatibility_score_no_user_unit(self):

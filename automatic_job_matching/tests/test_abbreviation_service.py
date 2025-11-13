@@ -25,3 +25,13 @@ class AbbreviationServiceTests(SimpleTestCase):
             AbbreviationService.expand("plst dinding + bt belah"),
             "plester dinding + batu belah",
         )
+
+    def test_none_or_empty_input(self):
+        self.assertIsNone(AbbreviationService.expand(None))
+        self.assertEqual(AbbreviationService.expand(""), "")
+
+    def test_multi_word_abbreviation(self):
+        from unittest.mock import patch
+
+        with patch.dict(AbbreviationService.MAP, {"b t": "batu tembok"}, clear=False):
+            self.assertEqual(AbbreviationService.expand("b t area"), "batu tembok area")

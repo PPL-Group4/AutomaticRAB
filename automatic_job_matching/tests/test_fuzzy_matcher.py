@@ -1,4 +1,4 @@
-from django.test import TestCase
+from django.test import SimpleTestCase
 from unittest.mock import Mock, MagicMock, patch
 from automatic_job_matching.service.fuzzy_matcher import (
     FuzzyMatcher,
@@ -27,7 +27,7 @@ class FakeAhsRepo:
         return list(self._rows)
 
 
-class FilterByUnitTests(TestCase):
+class FilterByUnitTests(SimpleTestCase):
     """Test _filter_by_unit function."""
 
     def test_filter_by_unit_no_unit(self):
@@ -90,7 +90,7 @@ class FilterByUnitTests(TestCase):
             self.assertEqual(len(result), 1)
 
 
-class WordWeightConfigTests(TestCase):
+class WordWeightConfigTests(SimpleTestCase):
     """Test WordWeightConfig class."""
 
     def test_is_action_word(self):
@@ -109,7 +109,7 @@ class WordWeightConfigTests(TestCase):
 
 
 
-class SimilarityCalculatorTests(TestCase):
+class SimilarityCalculatorTests(SimpleTestCase):
     """Test SimilarityCalculator class."""
 
     def setUp(self):
@@ -165,7 +165,7 @@ class SimilarityCalculatorTests(TestCase):
         self.assertLess(score, 1.0)
 
 
-class CandidateProviderTests(TestCase):
+class CandidateProviderTests(SimpleTestCase):
     """Test CandidateProvider class."""
 
     def test_get_candidates_by_head_token_no_unit(self):
@@ -585,7 +585,7 @@ class CandidateProviderTests(TestCase):
             self.assertGreater(len(candidates), 0)
 
 
-class MatchingProcessorTests(TestCase):
+class MatchingProcessorTests(SimpleTestCase):
     """Test MatchingProcessor class."""
 
     def test_find_best_match_returns_highest_score(self):
@@ -756,7 +756,7 @@ class MatchingProcessorTests(TestCase):
         self.assertEqual(processor._min_similarity, 1.0)
 
 
-class FuzzyMatcherTests(TestCase):
+class FuzzyMatcherTests(SimpleTestCase):
     """Test FuzzyMatcher class."""
 
     def test_match_returns_result(self):
@@ -987,7 +987,7 @@ class FuzzyMatcherTests(TestCase):
         self.assertEqual(matcher.min_similarity, 1.0)
 
 
-class HelperFunctionTests(TestCase):
+class HelperFunctionTests(SimpleTestCase):
     """Test helper functions."""
 
     def test_norm_name_with_valid_string(self):

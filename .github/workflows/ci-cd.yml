@@ -43,12 +43,15 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          pip install coverage
 
-      - name: Run tests
+      - name: Run tests with coverage
         run: |
           # Use --noinput to prevent Django from prompting to delete existing DB in non-interactive CI
           # Don't use --keepdb in CI as it can cause issues with stale test databases
-          python manage.py test --verbosity 2 --noinput
+          coverage run manage.py test --verbosity 2 --noinput
+          coverage xml
+          coverage report -m
 
   build:
     runs-on: ubuntu-latest
