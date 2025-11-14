@@ -1,9 +1,29 @@
-from django.test import TestCase
+from django.test import SimpleTestCase
 from unittest.mock import patch
 from automatic_job_matching.service.matching_service import MatchingService
 
 
-class MatchingServiceFallbackTests(TestCase):
+def _identity_translation(self, text, *args, **kwargs):
+    return text
+
+
+class MatchingServiceTestCase(SimpleTestCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls._translator_patch = patch(
+            "automatic_job_matching.service.matching_service.TranslationService.translate_to_indonesian",
+            new=_identity_translation,
+        )
+        cls._translator_patch.start()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls._translator_patch.stop()
+        super().tearDownClass()
+
+
+class MatchingServiceFallbackTests(MatchingServiceTestCase):
     @patch("automatic_job_matching.service.matching_service.FuzzyMatcher")
     def test_fuzzy_match_fallback_to_match(self, mock_matcher_cls):
         fake_matcher = mock_matcher_cls.return_value
@@ -51,7 +71,7 @@ class MatchingServiceFallbackTests(TestCase):
         self.assertEqual(result[0]["code"], "M.01")
 
 
-class MatchingSingleVsMultiWordTests(TestCase):
+class MatchingSingleVsMultiWordTests(MatchingServiceTestCase):
     @patch("automatic_job_matching.service.matching_service.MatchingService.perform_exact_match")
     @patch("automatic_job_matching.service.matching_service.MatchingService.perform_multiple_match")
     def test_single_word_returns_multiple_matches(self, mock_multi, mock_exact):
@@ -78,7 +98,7 @@ class MatchingSingleVsMultiWordTests(TestCase):
         mock_fuzzy.assert_called_once()
 
 
-class MatchingServiceEdgeCaseTests(TestCase):
+class MatchingServiceEdgeCaseTests(MatchingServiceTestCase):
     @patch("automatic_job_matching.service.matching_service.FuzzyMatcher")
     def test_fuzzy_match_with_exception(self, mock_fuzzy_cls):
         mock_matcher = mock_fuzzy_cls.return_value

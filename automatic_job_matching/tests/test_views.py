@@ -1,9 +1,9 @@
 import json
-from django.test import TestCase, Client
+from django.test import SimpleTestCase, Client
 from unittest.mock import patch
 from django.urls import reverse
 
-class MatchBestViewTests(TestCase):
+class MatchBestViewTests(SimpleTestCase):
     def setUp(self):
         self.client = Client()
         self._best_patcher = patch("automatic_job_matching.views.MatchingService.perform_best_match")
@@ -191,7 +191,7 @@ class MatchBestViewTests(TestCase):
         self.mock_best.assert_called_once_with("test", unit="M3")
 
 
-class AhsBreakdownViewTests(TestCase):
+class AhsBreakdownViewTests(SimpleTestCase):
     def setUp(self):
         self.client = Client()
 
