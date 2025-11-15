@@ -2,10 +2,6 @@ name: CI - CD
 
 on:
   push:
-    branches:
-      - development
-      - staging
-      - main
   pull_request:
 
 jobs:
@@ -52,6 +48,26 @@ jobs:
           coverage run --source=. manage.py test --verbosity 2 --noinput
           coverage xml
           coverage report -m
+
+      - name: Generate coverage badge
+        run: |
+          npm install -g coverage-badges-cli
+          coverage-badges
+
+      - name: Update README with branch-specific badge
+        if: github.event_name == 'push'
+        run: |
+          sed -i "s|\$BRANCH|${{ github.ref_name }}|g" README.md
+
+      - name: Upload coverage badge and README
+        if: github.event_name == 'push'
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "Update coverage badge and README for ${{ github.ref_name }}"
+          file_pattern: "coverage-badges-*.svg README.md"
+          branch: ${{ github.ref_name }}
+          skip_fetch: true
+          skip_checkout: true
 
   build:
     runs-on: ubuntu-latest
