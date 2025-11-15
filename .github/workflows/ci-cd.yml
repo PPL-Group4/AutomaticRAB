@@ -57,8 +57,9 @@ jobs:
 
       - name: Generate coverage badge
         run: |
-          npm install -g coverage-badges-cli
-          npx coverage-badges --output coverage.svg --source coverage.json
+          # Install genbadge which works better with coverage.py
+          pip install genbadge[coverage]
+          genbadge coverage -i coverage.xml -o coverage.svg
           ls -la coverage.svg  # Verify file was created
 
       - name: Update README with branch-specific badge
