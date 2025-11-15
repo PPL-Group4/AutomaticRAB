@@ -47,12 +47,13 @@ jobs:
           # Don't use --keepdb in CI as it can cause issues with stale test databases
           coverage run --source=. manage.py test --verbosity 2 --noinput
           coverage xml
+          coverage json
           coverage report -m
 
       - name: Generate coverage badge
         run: |
           npm install -g coverage-badges-cli
-          npx coverage-badges --output coverage.svg
+          npx coverage-badges --output coverage.svg --source coverage.json
           ls -la coverage.svg  # Verify file was created
 
       - name: Update README with branch-specific badge
