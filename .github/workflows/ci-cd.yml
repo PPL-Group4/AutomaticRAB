@@ -52,19 +52,19 @@ jobs:
       - name: Generate coverage badge
         run: |
           npm install -g coverage-badges-cli
-          coverage-badges
+          npx coverage-badges --output coverage.svg
 
       - name: Update README with branch-specific badge
         if: github.event_name == 'push'
         run: |
-          sed -i "s|\$BRANCH|${{ github.ref_name }}|g" README.md
+          sed -i "s|https://raw.githubusercontent.com/PPL-Group4/AutomaticRAB/refs/heads/\$BRANCH/coverage-badges-coverage.svg|https://raw.githubusercontent.com/PPL-Group4/AutomaticRAB/refs/heads/${{ github.ref_name }}/coverage.svg|g" README.md
 
       - name: Upload coverage badge and README
         if: github.event_name == 'push'
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
           commit_message: "Update coverage badge and README for ${{ github.ref_name }}"
-          file_pattern: "coverage-badges-*.svg README.md"
+          file_pattern: "coverage.svg README.md"
           branch: ${{ github.ref_name }}
           skip_fetch: true
           skip_checkout: true
