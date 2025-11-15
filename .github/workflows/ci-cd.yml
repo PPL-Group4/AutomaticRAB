@@ -7,6 +7,8 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     strategy:
       fail-fast: false
       matrix:
@@ -47,17 +49,24 @@ jobs:
           # Don't use --keepdb in CI as it can cause issues with stale test databases
           coverage run --source=. manage.py test --verbosity 2 --noinput
           coverage xml
+          coverage json
           coverage report -m
+          # Debug: Show what coverage actually found
+          echo "=== Coverage Summary ==="
+          python -c "import json; data=json.load(open('coverage.json')); print(f\"Total coverage: {data['totals']['percent_covered']:.1f}%\")"
 
       - name: Generate coverage badge
         run: |
-          npm install -g coverage-badges-cli
-          npx coverage-badges --output coverage.svg
+          # Install genbadge which works better with coverage.py
+          pip install genbadge[coverage]
+          genbadge coverage -i coverage.xml -o coverage.svg
+          ls -la coverage.svg  # Verify file was created
 
       - name: Update README with branch-specific badge
         if: github.event_name == 'push'
         run: |
-          sed -i "s|https://raw.githubusercontent.com/PPL-Group4/AutomaticRAB/refs/heads/\$BRANCH/coverage-badges-coverage.svg|https://raw.githubusercontent.com/PPL-Group4/AutomaticRAB/refs/heads/${{ github.ref_name }}/coverage.svg|g" README.md
+          sed -i "s|\$BRANCH|${{ github.ref_name }}|g" README.md
+          cat README.md | grep coverage.svg  # Verify replacement worked
 
       - name: Upload coverage badge and README
         if: github.event_name == 'push'
@@ -143,7 +152,6 @@ jobs:
         id: version
         run: |
           if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
-            # Production: semantic version (you'll need to update this manually or use a versioning tool)
             VERSION="v1.0.0"
             PRERELEASE=false
           elif [[ "${{ github.ref }}" == "refs/heads/staging" ]]; then
