@@ -92,6 +92,8 @@ venv.bak/
 /site
 # mypy
 .mypy_cache/
+staticfiles/
+
 # Sublime Text
 *.tmlanguage.cache
 *.tmPreferences.cache
@@ -107,9 +109,11 @@ Control.ca-bundle
 Control.system-ca-bundle
 GitHub.sublime-settings
 # Visual Studio Code
+.vscode
 .vscode/*
 !.vscode/settings.json
 !.vscode/tasks.json
 !.vscode/launch.json
 !.vscode/extensions.json
 .history
+.vscode

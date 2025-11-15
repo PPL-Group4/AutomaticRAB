@@ -15,8 +15,31 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
-from django.urls import path
+from django.urls import include, path
+from django.shortcuts import redirect
+from django.conf import settings
+from django.conf.urls.static import static
+import os
+
+
+from automatic_price_matching.views import recompute_total_cost
+
+def trigger_error(request):
+    division_by_zero = 1 / 0
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path("api/", include("automatic_job_matching.urls")),
+    path("excel_parser/", include("excel_parser.urls")),
+    path("pdf_parser/", include("pdf_parser.urls")),
+    path("", lambda request: redirect("job-matching")),
+    path('automatic_price_matching/', include('automatic_price_matching.urls')),
+    path("cost_weight/", include("cost_weight.urls")),
+    path("efficiency_recommendations/", include("efficiency_recommendations.urls")),
+    path("target_bid/", include("target_bid.urls")),
+    path("api/recompute_total_cost/", recompute_total_cost),
+    path('sentry-debug/', trigger_error),
 ]
+
+if settings.DEBUG or os.getenv("DOCKER_ENV") == "True":
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

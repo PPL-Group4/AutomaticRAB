@@ -1,0 +1,2277 @@
+id,code,name,unit,brand,unit_price
+1,M.01,"Bata Ringan Tebal 7,5 cm",buah/bh,Blescon,5600.0
+2,M.02,Mortar Perekat Bata Ringan,kg,,3332.0
+3,M.03,"Bata Ringan Tebal 7,5 cm",buah/bh,Citicon,6300.0
+4,M.04,"Bata Ringan Tebal 7,5 cm",buah/bh,Grand Elephant,6050.0
+5,M.05,"Bata Ringan Tebal 7,5 cm",buah/bh,Focon,5650.0
+6,M.06,"Bata ringan tebal 7,5 cm",buah/bh,,8500.0
+7,M.07,Bata Ringan Tebal 10 cm,buah/bh,Blescon,7467.0
+8,M.08,Bata Ringan Tebal 10 cm,buah/bh,Citicon,8400.0
+9,M.09,Bata Ringan Tebal 10 cm,buah/bh,Grand Elephant,8067.0
+10,M.10,Bata Ringan Tebal 10 cm,buah/bh,Focon,7867.0
+11,M.11,Bata ringan tebal 10 cm,buah/bh,,11000.0
+12,M.12,Kaso 5/7 kayu kelas II,m3,,10214200.0
+13,M.13,Papan Kayu ukuran 2/20 cm,m3,,2500000.0
+14,M.14,Paku biasa 5 inchi,kg,,20000.0
+15,M.15,Semen Portland (PC),kg,,1300.0
+16,M.16,Pasir Beton,kg,,300.0
+17,M.17,Kerikil,kg,,210.0
+18,M.18,Air,liter,,200.0
+19,M.19,Residu,liter,,21000.0
+20,M.20,Seng gelombang,lembar,,85000.0
+21,M.21,Kawat duri,m',,1750.0
+22,M.22,Seng gelombang bjls  30 panjang 180 cm,lembar,,73300.0
+23,M.23,Baja L 40.40.4,kg,,14840.0
+24,M.24,Kawat seng 3mm,kg,,18800.0
+25,M.25,Pasangan batu ukuran 20/50 t=40cm,m3,,286500.0
+26,M.26,Kawat jaring panjang 240 cm,lembar,,300000.0
+27,M.27,Panel beton pracetak,lembar,,125000.0
+28,M.28,Kolom beton pracetak,batang,,282000.0
+29,M.29,Multiplek tebal 18 mm,lembar,,226600.0
+30,M.30,Tiang kayu 8/12 kelas II tinggi 4m,m3,,11950000.0
+31,M.31,Frame besi L.30.30.3,kg,,14840.0
+32,M.32,Paku campuran 5 cm + 7 cm,kg,,20000.0
+33,M.33,Cat kayu,kg,,50000.0
+34,M.34,Multiplek tebal 9 mm,lembar,,116700.0
+35,M.35,Tiang kayu 5/7 kelas II tinggi 3m,m3,,11950000.0
+36,M.36,Frame Allum L.10.1,kg,,25000.0
+37,M.37,Banner plastik 0.6x0.8 m2,m2,,100000.0
+38,M.38,Dolken kayu φ 8-10 panjang 400 cm,m',,5000.0
+39,M.39,Kayu,m3,,11950000.0
+40,M.40,Besi strip,kg,,7500.0
+41,M.41,Pasir pasang,m3,,200000.0
+42,M.42,Koral Beton,m3,,352300.0
+43,M.43,Bata merah,buah,,700.0
+44,M.44,Seng pelat,lembar,,72200.0
+45,M.45,Jendela nako,buah,,400000.0
+46,M.46,Kaca polos,m2,,120000.0
+47,M.47,Kunci tanam,buah,,65800.0
+48,M.48,Plywood 4 mm,lembar,,75000.0
+49,M.49,Kaso 5/7,m3,,10214200.0
+50,M.50,Multiplek tebal 4 mm,lembar,,116700.0
+51,M.51,Fondasi pasangan batu,m3,,286500.0
+52,M.52,GRC Pelat t=4 mm uk 122x244 cm,lembar,,200000.0
+53,M.53,Paku,kg,,20000.0
+54,M.54,Asbes gelombang,lembar,,62400.0
+55,M.55,Paku asbes,kg,,21000.0
+56,M.56,Floor lantai (Beton lantai kerja),m3,,805600.0
+57,M.57,Pintu Double teakwood rangka kayu,m2,,150000.0
+58,M.58,Frame besi kaca nako,daun,,400000.0
+59,M.59,cat dinding,m2,,25000.0
+60,M.60,Agg Pokok,m3,,350000.0
+61,M.61,Agg Pengunci,m3,,360000.0
+62,M.62,Agg Penutup,kg,,370000.0
+63,M.63,Aspal,kg,,1200.0
+64,M.64,Paku payung,kg,,35590.0
+65,M.65,Kayu papan 3/20 cm,m3,,2825000.0
+66,M.66,Paku 2 inch,kg,,18000.0
+67,M.67,Pen Kuningan titik acuan,buah,,27000.0
+68,M.68,Marmer Graphir 10x10 cm,bauh,,20000.0
+69,M.69,Marmer Graphir 12x12 cm,bh,,25000.0
+70,M.70,Pasir urug (quarry - lokasi pekerjaan),m3,,254700.0
+71,M.71,Tanah biasa (quarry - lokasi pekerjaan),m3,,146900.0
+72,M.72,Tanah liat (quarry-lokasi pekerjaan),m3,,160000.0
+73,M.73,Tanah Subur,m3,,165000.0
+74,M.74,Sirtu (quarry - lokasi pekerjaan),m3,,261800.0
+75,M.75,batu pecah 5/7,m3,,351800.0
+76,M.76,Geotextile >100 gr/m2,m2,,17500.0
+77,M.77,Geotextile >400 gr/m2,m2,,21000.0
+78,M.78,Geotextile >800 gr/m2,m2,,32000.0
+79,M.79,Geomembran,m2,,18950.0
+80,M.80,Geosynthetic Clay Liner,m2,,25000.0
+81,M.81,Bentonite,kg,,25000.0
+82,M.82,Angkur M16,buah,,18500.0
+83,M.83,Cuka bibit,liter,,50000.0
+84,M.84,"Baja ringan C75 x 0,75 mm",batang,,77200.0
+85,M.85,"Baja ringan C75 x 0,75 mm (permeter)",m,,12866.666666666666
+86,M.86,Paku Rivet,buah,,200.0
+87,M.87,Reng Baja Ringan,m,,33900.0
+88,M.88,Kayu balok 6/12 kelas II,m3,,11950000.0
+89,M.89,Besi strip tebal 5 mm,kg,,7500.0
+90,M.90,Paku 12 cm,kg,,1500.0
+91,M.91,Kayu balok 6/12 kelas I,m3,,25000000.0
+92,M.92,Reng 2x3 cm,m3,,8750000.0
+93,M.93,Paku 5 dan 10 cm,kg,,20000.0
+94,M.94,Reng 3x4 cm,m3,,9302000.0
+95,M.95,Kayu balok 6/15 kelas II (batang),batang,,414000.0
+96,M.96,Paku 4 inch,kg,,19000.0
+97,M.97,Baja Tulangan Polos (BjTP) diameter < 12 mm,kg,,14250.0
+98,M.98,Kawat beton,kg,,18800.0
+99,M.99,Baja Tulangan Sirip (BjTS) diameter < 12 mm,kg,,14500.0
+100,M.100,Baja Tulangan Polos (BjTP) diameter >12 mm,kg,,16000.0
+101,M.101,Baja Tulangan Sirip (BjTS) diameter >12 mm,kg,,16500.0
+102,M.102,Wiremesh M6,kg,,11522.0
+103,M.103,Waterstop lebar 150 mm,m',,75000.0
+104,M.104,Waterstop lebar 200 mm,m',,94000.0
+105,M.105,Waterstop lebar 250 mm,m',,136000.0
+106,M.106,Kayu papan kelas III,m3,,8000000.0
+107,M.107,Minyak bekisting,liter,,16800.0
+108,M.108,Plywood 12 mm,lembar,,167300.0
+109,M.109,Formtie/penjaga jarak bekesting/spacer,buah,,7000.0
+110,M.110,Batu split 2/3,kg,,260.962962962963
+111,M.111,Fly ash,kg,,600.0
+112,M.112,Strorox-100,kg,,40000.0
+113,M.113,Adukan beton K-275 ready mix,m3,,937100.0
+114,M.114,Terpal,m2,,12000.0
+115,M.115,Karung goni,m2,,14500.0
+116,M.116,BjTP,kg,,14250.0
+117,M.117,Pasir beton (quarry - lokasi pekerjaan),m3,,370200.0
+118,M.118,Batu split 1/2,m3,,370200.0
+119,M.119,Semen grout,kg,,6000.0
+120,M.120,Epoxy resin grout,kg,,216700.0
+121,M.121,Batu belah (quarry - lokasi pekerjaan),m3,,286500.0
+122,M.122,Pasir pasang (quarry - lokasi pekerjaan),m3,,275000.0
+123,M.123,Agregat kasar,kg,,285.18518518518516
+124,M.124,Kawat Las,kg,,45550.0
+125,M.125,Baja Profil,kg,,16480.0
+126,M.126,Besi angkur/mur/baut,kg,,16660.0
+127,M.127,Baut,Kg,,17000.0
+128,M.128,Besi plat baja tebal 2 mm,kg,,25000.0
+129,M.129,Baja Profil Siku,kg,,15500.0
+130,M.130,Lantai kerja,m3,,805000.0
+131,M.131,Besi hollow  50.50.3,kg,,13800.0
+132,M.132,Phenol film 12mm,lembar,,230000.0
+133,M.133,Dinabolt dia. 12mm (10-15 cm),buah,,4550.0
+134,M.134,Papan Cor,m3,,2500000.0
+135,M.135,BjTS,kg,,14500.0
+136,M.136,"Bambu panjang 4,5 m",batang,,14500.0
+137,M.137,Anyaman Bambu,lembar,,50000.0
+138,M.138,Kawat bendrat,kg,,18800.0
+139,M.139,"Pipa PVC dia. 1""",m',,11250.0
+140,M.140,Ijuk,kg,,7000.0
+141,M.141,Geotekstil woven 400 gr/m2,m2,,25000.0
+142,M.142,"Pipa PVC dia. 2""",m',,26000.0
+143,M.143,Batu,m3,,97500.0
+144,M.144,Kawat  bronjong,kg,,15680.0
+145,M.145,"Bronjong kawat  pabrikan Uk.2x1x0,5 ø  3mm mesh 8x10",buah,,460000.0
+146,M.146,Genteng palentong,buah,,2800.0
+147,M.147,Genteng kodok glazuur,buah,,5800.0
+148,M.148,Genteng palentong super,buah,,5300.0
+149,M.149,Genteng beton,buah,,6800.0
+150,M.150,Bubung genteng palentong,buah,,10700.0
+151,M.151,Bubung genteng kodok,buah,,8600.0
+152,M.152,Nok genteng beton,buah,,9600.0
+153,M.153,Paku 1 inch,kg,,15000.0
+154,M.154,Semen warna,kg,,7800.0
+155,M.155,"Asbes gelombang besar 5 mm, 250x92 cm",lembar,,113400.0
+156,M.156,Paku pancing 6x23,kg,,19460.0
+157,M.157,"Asbes gelombang besar 5 mm, 225x92 cm",lembar,,104900.0
+158,M.158,"Asbes gelombang besar 5 mm, 200x92 cm",lembar,,94000.0
+159,M.159,"Asbes gelombang besar 5 mm, 180x92 cm",lembar,,85500.0
+160,M.160,"Asbes gelombang kecil 4 mm, 270x105 cm",lembar,,88400.0
+161,M.161,"Asbes gelombang besar 5 mm, 300x105 cm",lembar,,135000.0
+162,M.162,"Asbes gelombang besar 5 mm, 240x105 cm",lembar,,130000.0
+163,M.163,"Asbes gelombang besar 5 mm, 210x105 cm",lembar,,125000.0
+164,M.164,"Asbes gelombang besar 5 mm, 150x105 cm",lembar,,120000.0
+165,M.165,"Asbes gelombang besar 6 mm, 300x108 cm",lembar,,131000.0
+166,M.166,"Asbes gelombang besar 6 mm, 270x108 cm",lembar,,113400.0
+167,M.167,"Asbes gelombang besar 6 mm, 240x108 cm",lembar,,99600.0
+168,M.168,"Asbes gelombang besar 6 mm, 210x108 cm",lembar,,92900.0
+169,M.169,"Asbes gelombang besar 6 mm, 180x108 cm",lembar,,93000.0
+170,M.170,Nok stel gelombang 92 cm,lembar,,60000.0
+171,M.171,Paku sekrup,kg,,30090.0
+172,M.172,Nok stel gelombang 105 cm,lembar,,70000.0
+173,M.173,Nok stel gelombang 108 cm,lembar,,80000.0
+174,M.174,Nok paten 92 cm,lembar,,65000.0
+175,M.175,Nok paten 105 cm,lembar,,70000.0
+176,M.176,Nok paten 108 cm,lembar,,75000.0
+177,M.177,Nok setel rata 92 cm,lembar,,70000.0
+178,M.178,Nok setel rata 105 cm,lembar,,75000.0
+179,M.179,Nok setel rata 108 cm,lembar,,80000.0
+180,M.180,Seng Gelombang 105 cm x 180 cm,lembar,,85000.0
+181,M.181,Aluminium gelombang 95x180 cm,lembar,,180400.0
+182,M.182,Sirap kayu,buah,,5000.0
+183,M.183,Roof light fiberglass,lembar,,116300.0
+184,M.184,Atap UPVC uk. 86x119 cm,m2,,200000.0
+185,M.185,Paku sekrup (buah),buah,,1600.0
+186,M.186,Genteng aspal 80x100 cm,buah,,149700.0
+187,M.187,Plywood 6 mm,lembar,,84200.0
+188,M.188,Plastik aerator,buah,,15900.0
+189,M.189,Atap metal lembaran,m2,,112500.0
+190,M.190,Atap metal menerus,m2,,80000.0
+191,M.191,Kaca tempered 12 mm,m2,,600000.0
+192,M.192,Sealant,tube,,33100.0
+193,M.193,Seng Pelat  90x180 cm bjls 28,lembar,,72200.0
+194,M.194,Nok standar,lembar,,67000.0
+195,M.195,Nok genteng aspal,buah,,95000.0
+196,M.196,Kayu Balok Borneo,m3,,2700000.0
+197,M.197,Nok genteng metal,buah,,25600.0
+198,M.198,Aluminium foil double side,m2,,11000.0
+199,M.199,Glasswool tebal 8 cm,m2,,29167.0
+200,M.200,Kawat harmonika,m2,,34620.0
+201,M.201,Insulasi foam,m2,,70000.0
+202,M.202,Talang datar/jurai seng lebar 90cm,m3,,75000.0
+203,M.203,Talang Seng 1/2 lingkaran diameter 15cm,m,,133000.0
+204,M.204,Besi strip (20x3) mm,kg,,17250.0
+205,M.205,Kayu papan kelas II,m3,,14000000.0
+206,M.206,Listplank GRC lebar 30 cm,m',,23000.0
+207,M.207,Listplank GRC lebar 20 cm,m',,21000.0
+208,M.208,Membran Bakar,m',,150000.0
+209,M.209,Cairan Primer,kg,,57500.0
+210,M.210,Waterproofing Cristalin,kg,,62000.0
+211,M.211,Waterproofing Semen Base,kg,,74500.0
+212,M.212,Waterproofing Acrylic Base,kg,,64000.0
+213,M.213,Plafon akustik 30x30 cm,lembar,,6200.0
+214,M.214,Plafon akustik 30x60 cm,lembar,,13900.0
+215,M.215,Plafon akustik 60x120 cm,lembar,,24000.0
+216,M.216,Profil Aluminium ”T”,m',,15000.0
+217,M.217,Kawat Ø 4 mm,kg,,35000.0
+218,M.218,Ramset,buah,,3200.0
+219,M.219,Gypsum board (120 cm x 240 cm x 9 mm),lembar,,70000.0
+220,M.220,Papan semen,m2,,45000.0
+221,M.221,Plywood 3 mm,lembar,,62500.0
+222,M.222,Paku Tripleks,kg,,17500.0
+223,M.223,Kayu papan tebal 9 mm,m3,,4750000.0
+224,M.224,List kayu profil,m',,5000.0
+225,M.225,List gypsum profil,m',,15800.0
+226,M.226,Aluminium spandrel 10x600 cm,lembar,,200000.0
+227,M.227,Besi hollow galvanis 40.40,m',,6250.0
+228,M.228,Paku 7 - 10 cm,kg,,20000.0
+229,M.229,HB-20,buah,,13000.0
+230,M.230,Besi angkur diameter 8,kg,,35000.0
+231,M.231,HB-15,buah,,12000.0
+232,M.232,HB-10,buah,,12000.0
+233,M.233,Bata rooster,buah,,15000.0
+234,M.234,Bata Berongga Uk. 12x11x24,buah,,15000.0
+235,M.235,Glass block 20x20 cm,buah,,2500.0
+236,M.236,Mortar siap pakai,kg,,1850.0
+237,M.237,Bata ringan tebal 20 cm,buah,,14933.0
+238,M.238,Batako 20x40x10 cm,buah,,3000.0
+239,M.239,Gypsum Board (122 cm x  244 cm x  12 mm),buah,,96000.0
+240,M.240,Rockwool tebal 50 mm,kg,,290000.0
+241,M.241,Compound gypsum,kg,,3500.0
+242,M.242,Serbuk batu granit,kg,,12000.0
+243,M.243,Serbuk batu traso,kg,,13000.0
+244,M.244,Mortar Skimcoat,kg,,5070.0
+245,M.245,Soda api,kg,,17900.0
+246,M.246,Sabun,kg,,19400.0
+247,M.247,Cairan perontok karat,kg,,20000.0
+248,M.248,Meni kayu,kg,,34500.0
+249,M.249,Plamir kayu,kg,,30100.0
+250,M.250,Cat dasar (cat kayu),kg,,38200.0
+251,M.251,Cat penutup (cat kayu),kg,,58500.0
+252,M.252,Kuas 3 inch,buah,,10400.0
+253,M.253,Pengencer cat kayu/besi,kg,,20000.0
+254,M.254,Amplas,lembar,,3900.0
+255,M.255,Teak oil,liter,,29200.0
+256,M.256,Pelitur,liter,,73700.0
+257,M.257,Pelitur jadi,liter,,66200.0
+258,M.258,Vernis,liter,,44500.0
+259,M.259,Dempul,kg,,33500.0
+260,M.260,Cat dasar (cat tembok interior),kg,,119100.0
+261,M.261,Cat penutup (cat tembok interior),kg,,130500.0
+262,M.262,Cat dasar (cat tembok eksterior),kg,,128500.0
+263,M.263,Cat penutup (cat tembok eksterior),kg,,136600.0
+264,M.264,Kapur padam,kg,,7000.0
+265,M.265,Alang-alang,ikat,,30000.0
+266,M.266,Cat dasar (cat besi),kg,,52300.0
+267,M.267,Cat antara (cat besi),kg,,49700.0
+268,M.268,Cat penutup (cat besi),kg,,54700.0
+269,M.269,Meni besi,kg,,39700.0
+270,M.270,Perancah kayu,m3,,2500000.0
+271,M.271,Cat Dasar Plafond,kg,,128500.0
+272,M.272,Cat Plafond Eksterior,kg,,119100.0
+273,M.273,Cat epoxy,kg,,30000.0
+274,M.274,Wood filler,kg,,53000.0
+275,M.275,Woodstain,kg,,87000.0
+276,M.276,Sanding,kg,,90000.0
+277,M.277,Melamic,kg,,60000.0
+278,M.278,Thinner,liter,,21800.0
+279,M.279,Ubin PC abu-abu 20x20 cm,buah,,2000.0
+280,M.280,Ubin PC abu-abu 30x30 cm,buah,,3400.0
+281,M.281,Ubin PC abu-abu 40x40 cm,buah,,4600.0
+282,M.282,Ubin PC abu-abu 60x60 cm,buah,,6000.0
+283,M.283,Plint ubin PC abu-abu uk. 10-15x20 cm,buah,,1000.0
+284,M.284,Plint ubin PC abu-abu uk. 10-15x30 cm,buah,,1500.0
+285,M.285,Plint ubin PC abu-abu uk. 10-15x40 cm,buah,,2000.0
+286,M.286,Plint ubin PC abu-abu uk. 10-15x60 cm,buah,,2500.0
+287,M.287,Ubin warna 20x20 cm,buah,,2000.0
+288,M.288,Ubin warna 30x30 cm,buah,,4500.0
+289,M.289,Ubin warna 40x40 cm,buah,,6000.0
+290,M.290,Ubin warna 60x60 cm,buah,,8000.0
+291,M.291,Plint ubin warna uk. 10-15x20 cm,buah,,1500.0
+292,M.292,Plint ubin warna uk. 10-15x30 cm,buah,,2000.0
+293,M.293,Plint ubin warna uk. 10-15x40 cm,buah,,3000.0
+294,M.294,Plint ubin warna uk. 10-15x60 cm,buah,,4500.0
+295,M.295,Ubin teraso 30x30 cm,buah,,24000.0
+296,M.296,Ubin teraso 40x40 cm,buah,,30000.0
+297,M.297,Teraso cor,m3,,3500000.0
+298,M.298,Plint ubin teraso uk. 10-15x30 cm,buah,,4000.0
+299,M.299,Plint ubin teraso uk. 10-15x40 cm,buah,,6000.0
+300,M.300,Homogenous tile 30x30 cm,buah,,20000.0
+301,M.301,Homogenous tile 40x40 cm,buah,,30000.0
+302,M.302,Homogenous tile 60x60 cm,buah,,50000.0
+303,M.303,Plint homogenous tile uk. 10-15x30 cm,buah,,5000.0
+304,M.304,Plint homogenous tile uk. 10-15x40 cm,buah,,7000.0
+305,M.305,Plint homogenous tile uk. 10-15x60 cm,buah,,10000.0
+306,M.306,Homogenous tile unpolish 30x30 cm,buah,,27000.0
+307,M.307,Homogenous tile unpolish 40x40 cm,buah,,39000.0
+308,M.308,Homogenous tile unpolish 60x60 cm,buah,,56000.0
+309,M.309,Plint homogenous tile unpolish uk. 10-15x30 cm,buah,,7000.0
+310,M.310,Plint homogenous tile unpolish uk. 10-15x40 cm,buah,,9000.0
+311,M.311,Plint homogenous tile unpolish uk. 10-15x60 cm,buah,,13000.0
+312,M.312,Ubin granit 30x30 cm,buah,,14200.0
+313,M.313,Ubin granit 40x40 cm,buah,,20000.0
+314,M.314,Ubin granit 60x60 cm,buah,,30000.0
+315,M.315,Plint ubin granit uk. 10-15x30 cm,buah,,6000.0
+316,M.316,Plint ubin granit uk. 10-15x40 cm,buah,,8000.0
+317,M.317,Plint ubin granit uk. 10-15x60 cm,buah,,10000.0
+318,M.318,Ubin teralux marmer 30x30 cm,buah,,45000.0
+319,M.319,Ubin teralux marmer 40x40 cm,buah,,60000.0
+320,M.320,Ubin teralux marmer 60x60 cm,buah,,70000.0
+321,M.321,Plint teralux kerang uk. 10-15x30 cm,buah,,2000.0
+322,M.322,Plint teralux kerang uk. 10-15x40 cm,buah,,3000.0
+323,M.323,Plint teralux kerang uk. 10-15x60 cm,buah,,4000.0
+324,M.324,Plint teralux marmer uk. 10-15x30 cm,buah,,2500.0
+325,M.325,Plint teralux marmer uk. 10-15x40 cm,buah,,3000.0
+326,M.326,Plint teralux marmer uk. 10-15x60 cm,buah,,4000.0
+327,M.327,Keramik artistik 8x8 cm,buah,,1000.0
+328,M.328,Keramik artistik 10x10 cm,buah,,1500.0
+329,M.329,Keramik artistik 20x20 cm,buah,,2000.0
+330,M.330,Keramik artistik 30x30 cm,buah,,3000.0
+331,M.331,Keramik artistik 40x40 cm,buah,,4000.0
+332,M.332,Plint internal cove uk. 5x5x20 cm,buah,,5000.0
+333,M.333,Keramik 20x20 cm,buah,,2200.0
+334,M.334,Keramik 30x30 cm,buah,,4000.0
+335,M.335,Keramik 40x40 cm,buah,,8100.0
+336,M.336,Keramik variasi 30x30 cm,buah,,4000.0
+337,M.337,Keramik variasi 40x40 cm,buah,,8100.0
+338,M.338,Plint keramik uk. 10-15x20 cm,buah,,2000.0
+339,M.339,Plint keramik uk. 10-15x30 cm,buah,,3000.0
+340,M.340,Plint keramik uk. 10-15x40 cm,buah,,4000.0
+341,M.341,Plint keramik uk. 10-15x60 cm,buah,,5000.0
+342,M.342,Step Nosing Keramik 10x60 cm,buah,,28000.0
+343,M.343,Marmer,buah,,800000.0
+344,M.344,Karpet,m2,,45000.0
+345,M.345,Lem Karpet,kg,,75000.0
+346,M.346,Underlayer karpet,m2,,10000.0
+347,M.347,Parquet kayu solid,m2,,306600.0
+348,M.348,Lem kayu,kg,,16400.0
+349,M.349,Lantai engineering wood,m2,,200000.0
+350,M.350,Kayu papan kelas I,m3,,26000000.0
+351,M.351,Vinyl,buah,,7000.0
+352,M.352,Lem,kg,,60000.0
+353,M.353,Floor hardener,kg,,5000.0
+354,M.354,UPVC decking,m2,,500000.0
+355,M.355,Bubuk poles,kg,,180000.0
+356,M.356,Wax,kg,,130000.0
+357,M.357,Keramik Tactile 30x30 cm,buah,,37000.0
+358,M.358,Keramik Tactile 40x40 cm,buah,,39500.0
+359,M.359,Keramik dinding artistik 10x20 cm,buah,,2500.0
+360,M.360,Keramik dinding artistik 5x20 cm,buah,,2000.0
+361,M.361,Keramik dinding 10x20 cm,buah,,2000.0
+362,M.362,Keramik dinding 20x20 cm,buah,,3000.0
+363,M.363,Homogenous tile dinding 30x30 cm,buah,,22000.0
+364,M.364,Homogenous tile dinding 40x40 cm,buah,,30000.0
+365,M.365,Homogenous tile dinding 60x60 cm,buah,,35000.0
+366,M.366,Porselen 11x11 cm (dus),dus,,83000.0
+367,M.367,Porselen 10x20 cm,buah,,2000.0
+368,M.368,Porselen 20x20 cm,buah,,4000.0
+369,M.369,Bata tempel,buah,,2500.0
+370,M.370,Batu paras,m2,,125000.0
+371,M.371,Batu tempel hitam,m2,,121600.0
+372,M.372,Wallpaper,m',,13500.0
+373,M.373,Plywood 4 mm m3,m3,,6298700.0
+374,M.374,Bilik Bambu,m2,,21000.0
+375,M.375,Kayu kaso 5/7 kelas III,m3,,3500000.0
+376,M.376,List kayu 2x4 cm,m3,,6000000.0
+377,M.377,Besi siku 40x40x4 mm,kg,,15667.0
+378,M.378,Lem epoxy,kg,,145000.0
+379,M.379,Kayu Balok Kelas II,m3,,20000000.0
+380,M.380,Paku 5 dan 7 cm,kg,,20000.0
+381,M.381,Metal Hollow 20x40 mm,m',,7500.0
+382,M.382,Rolling door besi,m2,,509100.0
+383,M.383,Rolling door aluminium,m2,,600600.0
+384,M.384,Pintu lipat PVC,m2,,750000.0
+385,M.385,Profil Aluminium,m',,130000.0
+386,M.386,Aluminium Strip,m',,50000.0
+387,M.387,Rangka Aluminium,m',,39000.0
+388,M.388,Profil Kaca tebal 6 mm,m2,,15000.0
+389,M.389,Pintu panel kayu lapis timbal uk. 1x2 m,unit,,10000000.0
+390,M.390,Besi siku 30x30x3 mm,kg,,13000.0
+391,M.391,Pintu tahan api,unit,,8000000.0
+392,M.392,Blockboard tebal 18 mm,m2,,410600.0
+393,M.393,Veeneer tebal 2 mm,m2,,150000.0
+394,M.394,Pintu uPVC lebar 80 cm,buah,,1043100.0
+395,M.395,Pintu uPVC lebar 70 cm,buah,,730000.0
+396,M.396,Jendela Nako Rangka Aluminium (rangka+kaca 5 mm),m2,,242000.0
+397,M.397,Paku Sekrup 1-2 cm,buah,,1600.0
+398,M.398,"Besi strip (0,2x2) cm",m',,5000.0
+399,M.399,Jendela Kaca Upvc 2 daun,buah,,2000000.0
+400,M.400,Skrup fixer,buah,,1600.0
+401,M.401,Kayu balok 6/15 kelas I,m3,,25000000.0
+402,M.402,Kayu balok 6/15 kelas II,m3,,11950000.0
+403,M.403,Jalusi uPVC,m3,,49500.0
+404,M.404,Kusen Bovenlight Upvc,buah,,270000.0
+405,M.405,Kunci tanam antik,buah,,144300.0
+406,M.406,Kunci tanam biasa,buah,,65800.0
+407,M.407,Kunci tanam kamar mandi,buah,,46900.0
+408,M.408,Kunci silinder,buah,,70000.0
+409,M.409,Engsel pintu (kw 1),buah,,31500.0
+410,M.410,Floor hinge,buah,,500000.0
+411,M.411,Door closer,buah,,167500.0
+412,M.412,Door holder,buah,,81000.0
+413,M.413,Door stop,buah,,58500.0
+414,M.414,Rel pintu dorong,buah,,243100.0
+415,M.415,Venetions Blinds dan Vertical Blinds,buah,,140000.0
+416,M.416,Teralis Besi Strip lengkap dengan accessories,m2,,150000.0
+417,M.417,Kawat Nyamuk,m2,,20190.0
+418,M.418,Besi siku 20x20 tebal 2 mm,kg,,19500.0
+419,M.419,Paku 3 cm,cm,,15000.0
+420,M.420,List kayu profil kelas II,kg,,5500.0
+421,M.421,Grendel,bh,,15000.0
+422,M.422,Engsel kupu-kupu,buah,,41700.0
+423,M.423,Engsel angin,buah,,27400.0
+424,M.424,Spring knip,buah,,21600.0
+425,M.425,Kait angin,buah,,12000.0
+426,M.426,Kunci lemari,set,,14100.0
+427,M.427,Grendel tanam,buah,,150000.0
+428,M.428,Hendle Jendela,buah,,58500.0
+429,M.429,Sunscreen aluminium,m2,,381900.0
+430,M.430,Kaca polos 3 mm,m2,,120000.0
+431,M.431,Kaca polos 5 mm,m2,,198000.0
+432,M.432,Kaca polos 6 mm,m2,,237000.0
+433,M.433,Kaca polos 8 mm,m2,,226400.0
+434,M.434,Kaca buram 12mm,m2,,317000.0
+435,M.435,Kaca cermin 5 mm,m2,,221400.0
+436,M.436,Kaca cermin 8 mm,m2,,796100.0
+437,M.437,Kaca wireglass 5 mm,m2,,144800.0
+438,M.438,Kaca patri 5 mm,m2,,1516300.0
+439,M.439,Kaca laminated 8 mm,m2,,700000.0
+440,M.440,Frame aluminium,m',,38333.0
+441,M.441,Kaca laminated 12 mm,m2,,900000.0
+442,M.442,Profil slimar aluminium,m',,60000.0
+443,M.443,Jalusi aluminium,m2,,600000.0
+444,M.444,Pipa besi hitam 3 inch,m',,42000.0
+445,M.445,Pipa besi hitam 1 inch,m',,15500.0
+446,M.446,Cat zyncromate,kg,,26000.0
+447,M.447,Pipa besi hitam 2 inch,m',,31000.0
+448,M.448,"Pipa besi hitam 1,5 inch",m',,22000.0
+449,M.449,Tangga service,buah,,1144000.0
+450,M.450,Dynabolt M12,buah,,30500.0
+451,M.451,Formika,lembar,,170000.0
+452,M.452,Jendela Ornamen GRC,m3,,596000.0
+453,M.453,Paku Fishes,buah,,580.0
+454,M.454,Logo PU Plat Baja 80x80 cm,Buah,,450000.0
+455,M.455,Signage Plat Baja lengkap dengan accessories,buah,,1500000.0
+456,M.456,Akrilik 4 mm,m2,,179000.0
+457,M.457,Pen akrilik,buah,,7000.0
+458,M.458,Cutting sticker,m2,,100000.0
+459,M.459,Cat Thermoplast,kg,,29120.0
+460,M.460,Glass Beads,kg,,18000.0
+461,M.461,Logo PU Akrilik 40x40 cm,kg,,400000.0
+462,M.462,Paku Beton 5 cm,kg,,200.0
+463,M.463,Nomor Rumah Akrilik 15x30 cm,kg,,55000.0
+464,M.464,Wastafel,buah,,325100.0
+465,M.465,Bak cuci stainlesteel,unit,,230600.0
+466,M.466,Water drain,buah,,321900.0
+467,M.467,Bak cuci teraso,unit,,600000.0
+468,M.468,Kloset duduk/monoblok,buah,,1490000.0
+469,M.469,Flexible hose,buah,,55000.0
+470,M.470,Kloset jongkok,buah,,250000.0
+471,M.471,Pasangan bata 1:3,m2,,128620.0
+472,M.472,Sekat kubikel,m2,,1200000.0
+473,M.473,Pintu kubikel,set,,1000000.0
+474,M.474,Urinoir,buah,,456800.0
+475,M.475,Partisi urinoir,buah,,700000.0
+476,M.476,Sealtape,buah,,5700.0
+477,M.477,Bak teraso,unit,,450000.0
+478,M.478,Porselen 11x11 cm,buah,,1000.0
+479,M.479,Bak fiberglass 70x70x66 cm,unit,,328400.0
+480,M.480,"Pipa PVC AW Ø 3/4"" (m)",m',,8750.0
+481,M.481,"Stop kran PVC 3/4""",buah,,6000.0
+482,M.482,Bak fiberglass 1 m3,unit,,400000.0
+483,M.483,Beton 1:2:3,m3,,1325155.0
+484,M.484,Kayu papan kelas III (m2),m2,,160000.0
+485,M.485,Bathup,unit,,2500000.0
+486,M.486,"Stop kran PVC 1/2""",buah,,4000.0
+487,M.487,Floor drain stainles steel,buah,,44700.0
+488,M.488,Kran air,buah,,41700.0
+489,M.489,Jet washer,buah,,100000.0
+490,M.490,Robe hook,unit,,70000.0
+491,M.491,Towel bar,unit,,150000.0
+492,M.492,Grab bar,buah,,120000.0
+493,M.493,Soap holder,buah,,150000.0
+494,M.494,Tissue holder,buah,,150000.0
+495,M.495,Shower Set,unit,,666000.0
+496,M.496,Pohon Pucuk Merah di Polybag 20 Liter,pohon,,350000.0
+497,M.497,Pohon Pucuk Merah di Polybag 25 Liter,pohon,,400000.0
+498,M.498,Pohon Bunga Kupu-kupu di Polybag 50 Liter,pohon,,500000.0
+499,M.499,Pohon Bunga Kupu-kupu di Polybag 75 Liter,pohon,,530000.0
+500,M.500,Pohon Mahoni di Polybag 100 Liter,pohon,,400000.0
+501,M.501,Pohon Mahoni di Polybag 150 Liter,pohon,,425000.0
+502,M.502,Pohon Beringin di Polybag 200 Liter,pohon,,550000.0
+503,M.503,Pohon Beringin di Polybag 250 Liter,pohon,,590000.0
+504,M.504,Semak Alamanda di Polybag 5 Liter,pohon,,10000.0
+505,M.505,Semak Alamanda di Polybag 11 Liter,pohon,,15000.0
+506,M.506,Semak Alamanda di Polybag 20 Liter,pohon,,20000.0
+507,M.507,Penutup Tanah Kacang Hias,m2,,2500.0
+508,M.508,Rumput gajah mini,m2,,15000.0
+509,M.509,Pohon Bunga Mentega di Polybag 20 liter,buah,,135000.0
+510,M.510,Anti Rayap tanah,kg,,28500.0
+511,M.511,Pohon Bunga Terompet kuning di Polybag 20 liter,buah,,135000.0
+512,M.512,Pohon Bungur Sakura di Polybag 20 Liter,buah,,150000.0
+513,M.513,Pohon Cassia Glauca di Polybag 20 Liter,buah,,155000.0
+514,M.514,Pohon Dracaena'song of india' di polybag 20 liter,buah,,165000.0
+515,M.515,"Pohon Dracaena 'Song of
+Jamaica' di Polybag 20
+Liter",buah,,170000.0
+516,M.516,"Pohon Jarak Batavia di
+Polybag 20 Liter",buah,,175000.0
+517,M.517,"Pohon Kayu Putih
+Kuning di Polybag 20
+Liter",buah,,180000.0
+518,M.518,"Pohon Bugenvil/bunga
+kertas di Polybag 20 Liter",buah,,185000.0
+519,M.519,"Pohon Penda Merah di
+Polybag 20 Liter",buah,,190000.0
+520,M.520,"Pohon Sikat Botol di
+Polybag 20 Liter",buah,,150000.0
+521,M.521,"Pohon Thevetia di
+Polybag 20 Liter",buah,,170000.0
+522,M.522,"Pohon Turi di Polybag 20
+Liter",buah,,180000.0
+523,M.523,"Pohon Kembang Merak di
+Polybag 20 Liter",buah,,210000.0
+524,M.524,"Pohon Pandan Bali di
+Polybag 20 Liter",buah,,200000.0
+525,M.525,"Pohon Yucca di Polybag
+20 Liter",buah,,190000.0
+526,M.526,"Pohon Bunga Mentega di
+Polybag 25 Liter",buah,,150000.0
+527,M.527,"Pohon Bunga Terompet
+Kuning di Polybag 25 Liter",buah,,150000.0
+528,M.528,"Pohon Bungur
+Sakura/Bungur Jepang di
+Polybag 25 Liter",buah,,175000.0
+529,M.529,"Pohon Cassia glauca di
+Polybag 25 Liter",buah,,170000.0
+530,M.530,"Pohon Dracaena ‘Song of
+India’ di Polybag 25 Liter",buah,,180000.0
+531,M.531,"Pohon Dracaena 'Song of
+Jamaica' di Polybag 25
+Liter",buah,,190000.0
+532,M.532,Pohon Jarak Batavia di Polybag 25 Liter,buah,,190000.0
+533,M.533,Pohon Kayu Putih Kuning di Polybag 25 Liter,buah,,190000.0
+534,M.534,"Pohon Sikat Botol di
+Polybag 25 Liter",buah,,165000.0
+535,M.535,Pohon Thevetia di Polybag 25 Liter,buah,,190000.0
+536,M.536,Pohon Turi di Polybag 25 Liter,buah,,190000.0
+537,M.537,"Pohon Bintaro di Polybag
+50 Liter",buah,,220000.0
+538,M.538,Pohon Bunga Terompet Kuning di Polybag 50 Liter,buah,,200000.0
+539,M.539,Pohon Flamboyan di Polybag 50 Liter,buah,,210000.0
+540,M.540,Pohon Flamboyan Kuning di Polybag 50 Liter,buah,,210000.0
+541,M.541,Pohon Janda Merana di Polybag 50 Liter,buah,,220000.0
+542,M.542,Pohon Ketapang kencana di Polybag 50 Liter,buah,,225000.0
+543,M.543,Pohon Sosis di Polybag 50 Liter,buah,,225000.0
+544,M.544,Pohon Tabebuya di Polybag 50 Liter,buah,,225000.0
+545,M.545,Pohon Waru di Polybag 50 Liter,buah,,225000.0
+546,M.546,Pohon Bintaro di Polybag 75 Liter,buah,,350000.0
+547,M.547,Pohon Biola Cantik di Polybag 75 Liter,buah,,350000.0
+548,M.548,Pohon Bungur di Polybag 75 Liter,buah,,350000.0
+549,M.549,Pohon Flamboyan di Polybag 75 Liter,buah,,350000.0
+550,M.550,Pohon Flamboyan Kuning di Polybag 75 Liter,buah,,350000.0
+551,M.551,Pohon Janda Merana di Polybag 75 Liter,buah,,350000.0
+552,M.552,Pohon Kamboja di Polybag 75 Liter,buah,,350000.0
+553,M.553,Pohon Keben di Polybag 75 Liter,buah,,350000.0
+554,M.554,"Pohon Kecrutan di Polybag
+75 Liter",buah,,350000.0
+555,M.555,Pohon Ketapang kencana di Polybag 75 Liter,buah,,350000.0
+556,M.556,"Pohon Mahoni di Polybag
+75 Liter",buah,,150000.0
+557,M.557,"Pohon Pulai di Polybag 75
+Liter",buah,,150000.0
+558,M.558,"Pohon Putat di Polybag 75
+Liter",buah,,150000.0
+559,M.559,Pohon Sosis di Polybag 75 Liter,buah,,150000.0
+560,M.560,Pohon Tabebuya di Polybag 75 Liter,buah,,150000.0
+561,M.561,Pohon Trembesi di Polybag 75 Liter,buah,,150000.0
+562,M.562,Pohon Waru di Polybag 75 Liter,buah,,250000.0
+563,M.563,Pohon Beringin di Polybag 100 Liter,buah,,250000.0
+564,M.564,Pohon Biola Cantik di Polybag 100 Liter,buah,,375000.0
+565,M.565,Pohon Bodhi di Polybag 100 Liter,buah,,275000.0
+566,M.566,Pohon Bungur di Polybag 100 Liter,buah,,375000.0
+567,M.567,Pohon Flamboyan di Polybag 100 Liter,buah,,375000.0
+568,M.568,Pohon Kamboja di Polybag 100 Liter,buah,,375000.0
+569,M.569,Pohon Keben di Polybag 100 Liter,buah,,350000.0
+570,M.570,Pohon Kecrutan di Polybag 100 Liter,buah,,375000.0
+571,M.571,Pohon Ketapang kencana di Polybag 100 Liter,buah,,375000.0
+572,M.572,Pohon Pulai di Polybag 100 Liter,buah,,275000.0
+573,M.573,Pohon Putat di Polybag 100 Liter,buah,,275000.0
+574,M.574,Pohon Sosis di Polybag 100 Liter,buah,,275000.0
+575,M.575,Pohon Trembesi di Polybag 100 Liter,buah,,275000.0
+576,M.576,Pohon Bodhi di Polybag 150 Liter,buah,,300000.0
+577,M.577,Pohon Beringin di Polybag 150 Liter,buah,,275000.0
+578,M.578,Pohon Flamboyan di Polybag 150 Liter,buah,,400000.0
+579,M.579,Pohon Kamboja di Polybag 150 Liter,buah,,400000.0
+580,M.580,Pohon Pulai di Polybag 150 Liter,buah,,300000.0
+581,M.581,Pohon Sosis di Polybag 150 Liter,buah,,300000.0
+582,M.582,Pohon Bodhi di Polybag 200 Liter,buah,,325000.0
+583,M.583,Pohon Flamboyan di Polybag 200 Liter,buah,,425000.0
+584,M.584,Pohon Kamboja Fosil di Polybag 200 Liter,buah,,425000.0
+585,M.585,Pohon Pulai di Polybag 200 Liter,buah,,325000.0
+586,M.586,Pohon Sosis di Polybag 200 Liter,buah,,325000.0
+587,M.587,"Pohon Trembesi di Polybag 200
+Liter",buah,,325000.0
+588,M.588,"Pohon Baobab di Polybag 250
+Liter",buah,,350000.0
+589,M.589,"Pohon Bodhi di Polybag 250
+Liter",buah,,350000.0
+590,M.590,"Pohon Pulai di Polybag 250
+Liter",buah,,350000.0
+591,M.591,"Pohon Sosis di Polybag 250
+Liter",buah,,350000.0
+592,M.592,"Pohon Trembesi di Polybag
+250 Liter",buah,,350000.0
+593,M.593,Palem jepang di Polybag 50 Liter,buah,,150000.0
+594,M.594,"Palem komodoria/
+komodor/chamadorea di
+Polybag 50 Liter",buah,,150000.0
+595,M.595,"Palem kuning di Polybag 50
+Liter",buah,,150000.0
+596,M.596,"Palem Merah/ Pinang Merah di
+Polybag 50 Liter",buah,,150000.0
+597,M.597,"Palem waregu di Polybag 50
+Liter",buah,,150000.0
+598,M.598,"Sikas Halus/Mawar Jambe di
+Polybag 50 Liter",buah,,150000.0
+599,M.599,"Palem Phoenix di Polybag 50
+Liter",buah,,150000.0
+600,M.600,"Palem jepang di Polybag 75
+Liter",buah,,200000.0
+601,M.601,"Palem komodoria/
+komodor/chamadorea di
+Polybag 75 Liter",buah,,200000.0
+602,M.602,"Palem kuning di Polybag 75
+Liter",buah,,200000.0
+603,M.603,"Palem Merah/ Pinang Merah di
+Polybag 75 Liter",buah,,200000.0
+604,M.604,"Palem waregu di Polybag 75
+Liter",buah,,200000.0
+605,M.605,"Sikas Halus/Mawar Jambe di
+Polybag 75 Liter",buah,,200000.0
+606,M.606,"Palem Phoenix di Polybag 75
+Liter",buah,,200000.0
+607,M.607,"Palem ekor tupai di Polybag 100
+Liter",buah,,250000.0
+608,M.608,Sylvertris di Polybag 100 Liter,buah,,250000.0
+609,M.609,Palem Putri di Polybag 100 Liter,buah,,200000.0
+610,M.610,Palem raja di Polybag 100 Liter,buah,,250000.0
+611,M.611,"Palem sadeng di Polybag 100
+Liter",buah,,250000.0
+612,M.612,"Palem ekor tupai di Polybag 150
+Liter",buah,,300000.0
+613,M.613,Sylvertris di Polybag 150 Liter,buah,,300000.0
+614,M.614,Palem Putri di Polybag 150 Liter,buah,,300000.0
+615,M.615,Palem raja di Polybag 150 Liter,buah,,300000.0
+616,M.616,Palem sadeng di Polybag 150 Liter,buah,,300000.0
+617,M.617,"Palem ekor tupai di Polybag 200
+Liter",buah,,400000.0
+618,M.618,Sylvertris di Polybag 200 Liter,buah,,400000.0
+619,M.619,Palem Putri di Polybag 200 Liter,buah,,400000.0
+620,M.620,Palem raja di Polybag 200 Liter,buah,,400000.0
+621,M.621,"Palem sadeng di Polybag 200
+Liter",buah,,400000.0
+622,M.622,"Palem Sadeng di Polybag 250
+Liter",buah,,450000.0
+623,M.623,"Palem ekor tupai di Polybag 250
+Liter",buah,,450000.0
+624,M.624,Sylvertris di Polybag 250 Liter,buah,,450000.0
+625,M.625,Palem Putri di Polybag 250 Liter,buah,,450000.0
+626,M.626,Palem raja di Polybag 250 Liter,buah,,450000.0
+627,M.627,"Semak Alamanda/Bunga
+terompet emas di Polybag 5
+Liter",buah,,3000.0
+628,M.628,"Semak Bakung Lele di Polybag
+5 Liter",buah,,3500.0
+629,M.629,"Semak Bunga Iris di Polybag 5
+Liter",buah,,3000.0
+630,M.630,"Semak Cendrawasih di Polybag
+5 Liter",buah,,3000.0
+631,M.631,"Semak Hujan Mas di Polybag 5
+Liter",buah,,3000.0
+632,M.632,"Semak Kacapiring
+wangi/Gardenia di Polybag 5
+Liter",buah,,3000.0
+633,M.633,"Semak Kemuning di Polybag 5
+Liter",buah,,3000.0
+634,M.634,"Semak Melati Putih di Polybag
+5 Liter",buah,,3000.0
+635,M.635,"Semak Pandan Kuning di
+Polybag 5 Liter",buah,,3000.0
+636,M.636,"Semak Pretty Pink di Polybag 5
+Liter",buah,,3000.0
+637,M.637,"Semak Sansevieria/Lidah
+Mertua di Polybag 5 Liter",buah,,3000.0
+638,M.638,"Semak Tabernae/Mondokaki di
+Polybag 5 Liter",buah,,3000.0
+639,M.639,"Semak Walisongo/Umbrella
+tree di Polybag 5 Liter",buah,,3000.0
+640,M.640,"Semak Agave/lidah naga di
+Polybag 11 Liter",buah,,5000.0
+641,M.641,"Semak Alamanda/Bunga
+terompet emas di Polybag 11
+Liter",buah,,5000.0
+642,M.642,"Semak Bakung Jawa di
+Polybag 11 Liter",buah,,5000.0
+643,M.643,"Semak Bakung Lele di
+Polybag 11 Liter",buah,,5000.0
+644,M.644,"Semak Bromelia di Polybag
+11 Liter",buah,,5000.0
+645,M.645,"Semak Bunga Terompet
+Kuning di Polybag 11 Liter",buah,,5000.0
+646,M.646,"Semak Costus di Polybag 11
+Liter",buah,,5000.0
+647,M.647,"Semak Dracaena ‘Song of
+India’ di Polybag 11 Liter",buah,,5000.0
+648,M.648,"Semak Dracaena 'Song of
+Jamaica' di Polybag 11 Liter",buah,,5000.0
+649,M.649,"Semak Helliconia di Polybag
+11 Liter",buah,,5000.0
+650,M.650,"Semak Honje/Kecombrang di
+Polybag 11 Liter",buah,,5000.0
+651,M.651,"Semak Hujan Mas di Polybag
+11 Liter",buah,,5000.0
+652,M.652,"Semak Kaca piring di Polybag
+11 Liter",buah,,5000.0
+653,M.653,"Semak Kacapiring
+wangi/Gardenia di Polybag
+11 Liter",buah,,5000.0
+654,M.654,"Semak Kana di Polybag 11
+Liter",buah,,5000.0
+655,M.655,"Semak Lili Brazil di Polybag
+11 Liter",buah,,5000.0
+656,M.656,"Semak Melati Putih di
+Polybag 11 Liter",buah,,5000.0
+657,M.657,"Semak Nusa Indah di
+Polybag 11 Liter",buah,,5000.0
+658,M.658,"Semak Oleander/Bunga
+Mentega di Polybag 11 Liter",buah,,5000.0
+659,M.659,"Semak Pretty Pink di Polybag
+11 Liter",buah,,5000.0
+660,M.660,"Semak Puring di Polybag 11
+Liter",buah,,5000.0
+661,M.661,"Semak Ruelia / Kencana
+Ungu di Polybag 11 Liter",buah,,5000.0
+662,M.662,"Semak Sansevieria/Lidah
+Mertua di Polybag 11 Liter",buah,,5000.0
+663,M.663,"Semak Soka di Polybag 11
+Liter",buah,,5000.0
+664,M.664,"Semak Tabernae di Polybag
+11 Liter",buah,,5000.0
+665,M.665,"Semak Walisongo/Umbrella
+Tree di Polybag 11 Liter",buah,,5000.0
+666,M.666,"Semak Agave/lidah naga di
+Polybag 20 Liter",buah,,9000.0
+667,M.667,"Semak Alamanda/Bunga
+terompet emas di Polybag 20 Liter",buah,,9000.0
+668,M.668,"Semak Bakung Jawa di Polybag
+20 Liter",buah,,9000.0
+669,M.669,"Semak Bromelia di Polybag 20
+Liter",buah,,9000.0
+670,M.670,"Semak Bugenvil/bunga kertas di
+Polybag 20 Liter",buah,,9000.0
+671,M.671,"Semak Bunga Terompet Kuning di
+Polybag 20 Liter",buah,,9000.0
+672,M.672,Semak Canna di Polybag 20 Liter,buah,,9000.0
+673,M.673,"Semak Dracaena ‘Song of India’ di
+Polybag 20 Liter",buah,,9000.0
+674,M.674,"Semak Dracaena 'Song of
+Jamaica' di Polybag 20 Liter",buah,,9000.0
+675,M.675,"Semak Helliconia di Polybag 20
+Liter",buah,,9000.0
+676,M.676,"Semak Honje/Kecombrang di
+Polybag 20 Liter",buah,,9000.0
+677,M.677,"Semak Hujan Mas di Polybag 20
+Liter",buah,,9000.0
+678,M.678,"Semak Kacapiring
+wangi/Gardenia di Polybag 20
+Liter",buah,,9000.0
+679,M.679,"Semak Kembang sepatu di
+Polybag 20 Liter",buah,,9000.0
+680,M.680,"Semak Oleander/Bunga Mentega
+di Polybag 20 Liter",buah,,9000.0
+681,M.681,"Semak Penda Emas di Polybag 20
+Liter",buah,,9000.0
+682,M.682,Semak Puring di Polybag 20 Liter,buah,,9000.0
+683,M.683,"Semak Tabernac di Polybag 20
+Liter",buah,,9000.0
+684,M.684,"Semak Walisongo/Umbrella Tree
+di Polybag 20 Liter",buah,,9000.0
+685,M.685,"Penutup Tanah Kacang hias di
+Polybag 0.5 Liter",buah,,15000.0
+686,M.686,"Penutup Tanah Widelia di
+Polybag 0.5 Liter",buah,,15000.0
+687,M.687,"Penutup Tanah Sutra bombay
+di Polybag 0.5 Liter",buah,,15000.0
+688,M.688,"Penutup Tanah Lantana di
+Polybag 0.5 Liter",buah,,15000.0
+689,M.689,"Penutup Tanah Kucai Mini di
+Polybag 0.5 Liter",buah,,15000.0
+690,M.690,Rumput gajah,buah,,10000.0
+691,M.691,Rumput peking,buah,,19000.0
+692,M.692,Rumput embun,buah,,17000.0
+693,M.693,"Matras Tipe I, Termasuk angkur / penguat matras",m2,,5600.0
+694,M.694,Perekat Campuran Hydroseeding,kg,,16000.0
+695,M.695,Bibit Vegetasi (Biji Rumput),kg,,80000.0
+696,M.696,Mulsa,kg,,35000.0
+697,M.697,Pupuk Organik,kg,,178000.0
+698,M.698,Pupuk anorganik *),kg,,18000.0
+699,M.699,"Perekat Matras
+Perkuatan (Lem)",kg,,18000.0
+700,M.700,"Matras Tipe II, Termasuk angkur / penguat matras",m2,,7500.0
+701,M.701,"Matras Tipe III, Termasuk angkur / penguat matras",m2,,9500.0
+702,M.702,Bibit Vegetasi (Biji Legume Crop Cover/LCC),kg,,166000.0
+703,M.703,Material Organik,m3,,10500.0
+704,M.704,Kapur,kg,,3100.0
+705,M.705,Pasir,m3,,250000.0
+706,M.706,Sulfur,kg,,12000.0
+707,M.707,Air Bersih,liter,,550.0
+708,M.708,Pupuk anorganik padat,m3,,150000.0
+709,M.709,Pupuk anorganik cair (ex: NPK),m3,,150000.0
+710,M.710,Fungisida/Insektisida,OH,,430000.0
+711,M.711,Tong Sampah 2 tabung,buah,,340000.0
+712,M.712,Besi Hollow 30x60,m,,13700.0
+713,M.713,cat minyak,liter,,48500.0
+714,M.714,Kabel NYY 1 x 4 mm²,m',,7500.0
+715,M.715,Kabel NYY 1 x 6 mm²,m',,12000.0
+716,M.716,Kabel NYY 1 x 10 mm²,m',,18000.0
+717,M.717,Kabel NYY 1 x 16 mm²,m',,36000.0
+718,M.718,Kabel NYY 1 x 25 mm²,m',,56000.0
+719,M.719,Kabel NYY 1 x 35 mm²,m',,75000.0
+720,M.720,Kabel NYY 1 x 50 mm²,m',,99600.0
+721,M.721,Kabel NYY 1 x 70 mm²,m',,142000.0
+722,M.722,Kabel NYY 1 x 95 mm²,m',,196500.0
+723,M.723,Kabel NYY 1 x 120 mm²,m',,246500.0
+724,M.724,Kabel NYY 1 x 150 mm²,m',,303000.0
+725,M.725,Kabel NYY 1 x 185 mm²,m',,377000.0
+726,M.726,Kabel NYY 1 x 250 mm²,m',,496000.0
+727,M.727,Kabel NYY 1 x 300 mm²,m',,619000.0
+728,M.728,Kabel NYY 1 x 400 mm²,m',,786000.0
+729,M.729,Kabel NYY 1 x 500 mm²,m',,1004400.0
+730,M.730,Kabel NYY 1 x 630 mm²,m',,1245000.0
+731,M.731,"Kabel NYY 2 x 1,5 mm²",m',,12000.0
+732,M.732,"Kabel NYY 2 x 2,5 mm²",m',,16560.0
+733,M.733,Kabel NYY 2 x 4 mm²,m',,23000.0
+734,M.734,Kabel NYY 2 x 6 mm²,m',,35000.0
+735,M.735,Kabel NYY 2 x 10 mm²,m',,57500.0
+736,M.736,Kabel NYY 2 x 16 mm²,m',,92000.0
+737,M.737,"Kabel NYY 3 x 1,5 mm²",m',,15000.0
+738,M.738,"Kabel NYY 3 x 2,5 mm²",m',,21500.0
+739,M.739,Kabel NYY 3 x 4 mm²,m',,33000.0
+740,M.740,Kabel NYY 3 x 6 mm²,m',,46000.0
+741,M.741,Kabel NYY 3 x 10 mm²,m',,74600.0
+742,M.742,Kabel NYY 3 x 16 mm²,m',,114000.0
+743,M.743,Kabel NYY 3 x 25 mm²,m',,174900.0
+744,M.744,Kabel NYY 3 x 35 mm²,m',,235500.0
+745,M.745,Kabel NYY 3 x 50 mm²,m',,305700.0
+746,M.746,"Kabel NYY 4 x 1,5 mm²",m',,18600.0
+747,M.747,"Kabel NYY 4 x 2,5 mm²",m',,28620.0
+748,M.748,Kabel NYY 4 x 4 mm²,m',,43000.0
+749,M.749,Kabel NYY 4 x 6 mm²,m',,61000.0
+750,M.750,Kabel NYY 4 x 10 mm²,m',,96000.0
+751,M.751,Kabel NYY 4 x 16 mm²,m',,148500.0
+752,M.752,Kabel NYY 4 x 25 mm²,m',,228000.0
+753,M.753,Kabel NYY 4 x 35 mm²,m',,310500.0
+754,M.754,Kabel NYY 4 x 50 mm²,m',,412200.0
+755,M.755,Kabel NYY 4 x 70 mm²,m',,584700.0
+756,M.756,Kabel NYY 4 x 95 mm²,m',,805200.0
+757,M.757,Kabel NYY 4 x 120 mm²,m',,1011900.0
+758,M.758,Kabel NYY 4 x 150 mm²,m',,1245000.0
+759,M.759,Kabel NYY 4 x 185 mm²,m',,1552800.0
+760,M.760,Kabel NYY 4 x 240 mm²,m',,2044800.0
+761,M.761,Kabel NYY 4 x 300 mm²,m',,2550900.0
+762,M.762,"Kabel NYA 1 x 1,5 mm²",m',,3200.0
+763,M.763,"Kabel NYA 1 x 2,5 mm²",m',,5300.0
+764,M.764,Kabel NYA 1 x 4 mm²,m',,8300.0
+765,M.765,Kabel NYA 1 x 6 mm²,m',,12200.0
+766,M.766,Kabel NYA 1 x 10 mm²,m',,20000.0
+767,M.767,Kabel NYA 1 x 16 mm²,m',,33000.0
+768,M.768,"Kabel NYA 2 x 1,5 mm²",m',,9200.0
+769,M.769,PVC conduit HI 20 mm²,m',,4100.0
+770,M.770,"Kabel NYA 3 x 1,5 mm²",m',,14000.0
+771,M.771,"Kabel NYA 3 x 2,5 mm²",m',,19448.0
+772,M.772,PVC conduit HI 32 mm²,m',,20000.0
+773,M.773,"Kabel NYA 5 x 2,5 mm²",m',,51500.0
+774,M.774,Kabel NYA 1 x 35 mm²,m',,71250.0
+775,M.775,Kabel NYA 1 x 95 mm²,m',,181000.0
+776,M.776,"Kabel NYM 2 x 1,5 mm²",m',,8880.0
+777,M.777,"Kabel NYM 2 x 2,5 mm²",m',,13250.0
+778,M.778,Kabel NYM 2 x 4 mm²,m',,19950.0
+779,M.779,Kabel NYM 2 x 6 mm²,m',,29000.0
+780,M.780,Kabel NYM 2 x 10 mm²,m',,49000.0
+781,M.781,"Kabel NYM 3 x 1,5 mm²",m',,11400.0
+782,M.782,"Kabel NYM 3 x 2,5 mm²",m',,21300.0
+783,M.783,Kabel NYM 3 x 4 mm²,m',,27000.0
+784,M.784,Kabel NYM 3 x 6 mm²,m',,43100.0
+785,M.785,Kabel NYM 3 x 10 mm²,m',,69200.0
+786,M.786,"Kabel NYM 4 x 1,5 mm²",m',,14400.0
+787,M.787,"Kabel NYM 4 x 2,5 mm²",m',,22700.0
+788,M.788,Kabel NYM 4 x 4 mm²,m',,37000.0
+789,M.789,Kabel NYM 4 x 6 mm²,m',,54400.0
+790,M.790,Kabel NYM 4 x 10 mm²,m',,92900.0
+791,M.791,Kabel NYM 4 x 16 mm²,m',,150000.0
+792,M.792,"Kabel NYMHY 2 x 1,5 mm²",m',,9300.0
+793,M.793,"Kabel NYMHY 2 x 2,5 mm²",m',,13900.0
+794,M.794,"Kabel NYMHY 3 x 1,5 mm²",m',,13400.0
+795,M.795,"Kabel NYMHY 3 x 2,5 mm²",m',,21300.0
+796,M.796,"Kabel NYMHY 4 x 2,5 mm²",m',,28700.0
+797,M.797,"Kabel NYMHY 3 x 1,5
+mm2 + Conduit PVC
+HI 20 mm dan
+aksesoris",m',,17500.0
+798,M.798,"Kabel NYMHY 2(3 x
+1,5 mm2) + Conduit
+PVC HI 20 mm dan
+aksesoris",m',,35000.0
+799,M.799,"Kabel NYFGBY 2 x 1,5 mm²",m',,22750.0
+800,M.800,"Kabel NYFGBY 2 x 2,5 mm²",m',,30500.0
+801,M.801,Kabel NYFGBY 2 x 4 mm²,m',,35200.0
+802,M.802,Kabel NYFGBY 2 x 6 mm²,m',,43350.0
+803,M.803,Kabel NYFGBY 2 x 10 mm²,m',,60750.0
+804,M.804,Kabel NYFGBY 2 x 16 mm²,m',,82000.0
+805,M.805,"Kabel NYFGBY 3 x 1,5 mm²",m',,28500.0
+806,M.806,"Kabel NYFGBY 3 x 2,5 mm²",m',,32900.0
+807,M.807,Kabel NYFGBY 3 x 4 mm²,m',,49000.0
+808,M.808,Kabel NYFGBY 3 x 6 mm²,m',,63500.0
+809,M.809,Kabel NYFGBY 3 x 10 mm²,m',,79600.0
+810,M.810,Kabel NYFGBY 3 x 16 mm²,m',,128900.0
+811,M.811,"Kabel NYFGBY 4 x 1,5 mm²",m',,29400.0
+812,M.812,"Kabel NYFGBY 4 x 2,5 mm²",m',,38600.0
+813,M.813,Kabel NYFGBY 4 x 4 mm²,m',,66000.0
+814,M.814,Kabel NYFGBY 4 x 6 mm²,m',,70200.0
+815,M.815,Kabel NYFGBY 4 x 10 mm²,m',,100600.0
+816,M.816,Kabel NYFGBY 4 x 16 mm²,m',,159300.0
+817,M.817,Kabel NYFGBY 4 x 25 mm²,m',,247200.0
+818,M.818,Kabel NYFGBY 4 x 35 mm²,m',,314750.0
+819,M.819,Kabel NYFGBY 4 x 50 mm²,m',,411600.0
+820,M.820,Kabel NYFGBY 4 x 70 mm²,m',,575250.0
+821,M.821,Kabel NYFGBY 4 x 95 mm²,m',,743750.0
+822,M.822,Kabel NYFGBY 4 x 120 mm²,m',,969500.0
+823,M.823,Kabel NYFGBY 4 x 150 mm²,m',,1187650.0
+824,M.824,Kabel NYFGBY 4 x 185 mm²,m',,1470650.0
+825,M.825,Kabel NYFGBY 4 x 240 mm²,m',,1921500.0
+826,M.826,Kabel NYFGBY 4 x 300 mm²,m',,2392250.0
+827,M.827,"Kabel FRC 3 x 2,5 mm²",m',,40000.0
+828,M.828,Kabel FRC 4 x 4 mm²,m',,90000.0
+829,M.829,Kabel FRC 4 x 6 mm²,m',,110000.0
+830,M.830,Kabel FRC 4 x 150 mm²,m',,1607400.0
+831,M.831,Kabel FRC 1 x 150 mm²,m',,275000.0
+832,M.832,"Kabel FRC 2 x 1,5 mm2 + PVC Conduit HI 20 mm dan aksesoris",m',,27100.0
+833,M.833,"Kabel FRC 2 x 2,5 mm2 + PVC Conduit HI 20 mm dan aksesoris",m',,37600.0
+834,M.834,"Kabel BCC 4 mm² (0,04 kg/m)",m',,12000.0
+835,M.835,"BCC 6 mm2 (0,06 kg/m) dan aksesoris",m',,38300.0
+836,M.836,"Kabel BCC 10 mm² (0,10 kg/m)",m',,29000.0
+837,M.837,"Kabel BCC 16 mm² (0,16 kg/m)",m',,33000.0
+838,M.838,"Kabel BCC 25 mm² (0,25 kg/m)",m',,53000.0
+839,M.839,"Kabel BCC 35 mm² (0,35 kg/m)",m',,72000.0
+840,M.840,"Kabel BCC 50 mm² (0,50 kg/m)",m',,95500.0
+841,M.841,"Kabel BCC 70 mm² (0,70 kg/m)",m',,136000.0
+842,M.842,"Kabel BCC 95 mm² (0,95 kg/m)",m',,185000.0
+843,M.843,Kabel STP AWG 18 + PVC Conduit HI 20 mm (dari MCFA ke TB) dan aksesoris,m',,10700.0
+844,M.844,"Kabel ITC 2 x 2 x 0,6 mm2 + PVC Conduit HI 20 mm dan aksesoris",m',,13100.0
+845,M.845,Kabel UTP CAT 6,m',,1500.0
+846,M.846,Kabel Coaxial 7C-2V,m',,22800.0
+847,M.847,Kabel tray 600 x 100 mm,m',,352000.0
+848,M.848,Kabel tray 500 x 100 mm,m',,309000.0
+849,M.849,Kabel tray 400 x 100 mm,m',,265000.0
+850,M.850,Kabel tray 300 x 100 mm,m',,219000.0
+851,M.851,Kabel tray 200 x 100 mm,m',,175000.0
+852,M.852,Kabel Ladder 500 x100 mm,m',,494000.0
+853,M.853,Kabel Ladder 600 x100 mm,m',,535000.0
+854,M.854,Kabel Ladder 800 x100 mm,m',,569000.0
+855,M.855,"Baja ringan C75 x 1,00 mm (m)",m',,17667.0
+856,M.856,"Hanger tray panjang 2,5 m",buah,,300000.0
+857,M.857,Mur baut kabel tray,buah,,1000.0
+858,M.858,Klem kabel tray,buah,,6000.0
+859,M.859,Kabel Tray (Horizontal) 1000 x 100 mm TRU Powder Coating dan aksesoris,m',,650000.0
+860,M.860,Kabel Tray (Horizontal) 1000 x 100 mm TRU Hot Dip Galvanized dan aksesoris,m',,670000.0
+861,M.861,Kabel Tray (Horizontal) 1000 x 100 mm TRU OCP dan aksesoris,m',,710000.0
+862,M.862,Kabel Tray (Horizontal) 1000 x 100 mm TRC Powder Coating dan aksesoris,m',,750000.0
+863,M.863,Kabel Tray (Horizontal) 1000 x 100 mm TRC Hot Dip Galvanized dan aksesoris,m',,670000.0
+864,M.864,Kabel Tray (Horizontal) 1000 x 100 mm TRC OCP dan aksesoris,m',,710000.0
+865,M.865,Kabel Tray (Horizontal) 900 x 100 mm TRU Powder Coating dan aksesoris,m',,550000.0
+866,M.866,"Kabel Tray
+(Horizontal) 900 x
+100 mm TRU Hot Dip
+Galvanized dan
+aksesoris",m',,570000.0
+867,M.867,"Kabel Tray
+(Horizontal) 900 x
+100 mm TRU OCP
+dan aksesoris",m',,590000.0
+868,M.868,Kabel Tray (Horizontal) 900 x 100 mm TRC Powder Coating dan aksesoris,m',,600000.0
+869,M.869,Kabel Tray (Horizontal) 900 x 100 mm TRC Hot Dip Galvanized dan aksesoris,m',,630000.0
+870,M.870,"Kabel Tray
+(Horizontal) 900 x
+100 mm TRC OCP
+dan aksesoris",m',,650000.0
+871,M.871,"Kabel Tray
+(Horizontal) 800 x
+100 mm TRU Powder
+Coating dan aksesoris",m',,400000.0
+872,M.872,"Kabel Tray
+(Horizontal) 800 x
+100 mm TRU Hot Dip
+Galvanized dan
+aksesoris",m',,430000.0
+873,M.873,"Kabel Tray
+(Horizontal) 800 x
+100 mm TRU OCP
+dan aksesoris",m',,450000.0
+874,M.874,"Kabel Tray
+(Horizontal) 800 x
+100 mm TRC Powder
+Coating dan aksesoris",m',,470000.0
+875,M.875,"Kabel Tray
+(Horizontal) 800 x
+100 mm TRC Hot Dip
+Galvanized dan
+aksesoris",m',,490000.0
+876,M.876,Kabel Tray (Horizontal) 800 x 100 mm TRC OCP dan aksesoris,m',,510000.0
+877,M.877,Kabel Tray (Horizontal) 700 x 100 mm TRU Powder Coating dan aksesoris,m',,350000.0
+878,M.878,Kabel Tray (Horizontal) 700 x 100 mm TRU Hot Dip Galvanized dan aksesoris,m',,370000.0
+879,M.879,Kabel Tray (Horizontal) 700 x 100 mm TRU OCP dan aksesoris,m',,390000.0
+880,M.880,Kabel Tray (Horizontal) 700 x 100 mm TRC Powder Coating dan aksesoris,m',,410000.0
+881,M.881,Kabel Tray (Horizontal) 700 x 100 mm TRC Hot Dip Galvanized dan aksesoris,m',,430000.0
+882,M.882,Kabel Tray (Horizontal) 700 x 100 mm TRC,m',,450000.0
+883,M.883,Kabel Tray 600 x 100 mm Hotdip Galvanized,m',,1639000.0
+884,M.884,Kabel Tray 600 x100 mm Elektro Galvanized,m',,1255500.0
+885,M.885,Kabel Tray 600 x 100 mm Powder Coating,m',,890000.0
+886,M.886,(Horizontal) 600 x 100 mm TRC Hot Dip Galvanized dan aksesoris,m',,350000.0
+887,M.887,Pemasangan 1 Unit Kabel Tray (Horizontal) 600 x 100 mm TRC OCP,m',,370000.0
+888,M.888,Kabel Tray (Horizontal) 500 x 100 mm TRU Hot Dip Galvanized dan aksesoris,m',,385000.0
+889,M.889,Kabel Tray (Horizontal) 500 x 100 mm TRU OCP dan aksesoris,m',,395000.0
+890,M.890,Kabel Tray (Horizontal) 500 x 100 mm TRC Powder Coating dan aksesoris,m',,415000.0
+891,M.891,Kabel Tray (Horizontal) 500 x 100 mm TRC Hot Dip Galvanized dan aksesoris,m',,430000.0
+892,M.892,Kabel Tray (Horizontal) 500 x 100 mm TRC OCP dan aksesoris,m',,445000.0
+893,M.893,Kabel Tray (Horizontal) 400 x 100 mm TRU Hot Dip Galvanized dan aksesoris,unit,,350000.0
+894,M.894,Kabel Tray (Horizontal) 400 x 100 mm TRC Powder Coating dan aksesoris,unit,,380000.0
+895,M.895,Kabel Tray (Horizontal) 400 x 100 mm TRC Hot Dip Galvanized dan aksesoris,unit,,395000.0
+896,M.896,Kabel Tray (Horizontal) 400 x 100 mm TRC OCP dan aksesoris,unit,,410000.0
+897,M.897,Kabel Tray (Horizontal) 300 x 100 mm TRU Hot Dip Galvanized dan aksesoris,unit,,300000.0
+898,M.898,Kabel Tray (Horizontal) 300 x 100 mm TRU OCP dan aksesoris,unit,,320000.0
+899,M.899,Kabel Tray (Horizontal) 300 x 100 mm TRC Powder Coating dan aksesoris,unit,,340000.0
+900,M.900,Kabel Tray (Horizontal) 300 x 100 mm TRC Hot Dip Galvanized dan aksesoris,unit,,360000.0
+901,M.901,Kabel Tray (Horizontal) 300 x 100 mm TRC OCP dan aksesoris,unit,,380000.0
+902,M.902,Kabel Tray (Horizontal) 200 x 100 mm TRU Hot Dip Galvanized dan aksesoris,unit,,400000.0
+903,M.903,Kabel Tray (Horizontal) 200 x 100 mm TRU OCP dan aksesoris,unit,,250000.0
+904,M.904,Kabel Tray (Horizontal) 200 x 100 mm TRC Powder Coating dan aksesoris,unit,,270000.0
+905,M.905,Kabel Tray (Horizontal) 200 x 100 mm TRC Hot Dip Galvanized dan aksesoris,unit,,280000.0
+906,M.906,Kabel Tray (Horizontal) 200 x 100 mm TRC OCP dan aksesoris,unit,,300000.0
+907,M.907,Kabel Tray (Horizontal) 150 x 100 mm TRU Powder Coating dan aksesoris,unit,,250000.0
+908,M.908,Kabel Tray (Horizontal) 150 x 100 mm TRU Hot Dip Galvanized dan aksesoris,unit,,260000.0
+909,M.909,Kabel Tray (Horizontal) 150 x 100 mm TRU OCP dan aksesoris,unit,,280000.0
+910,M.910,Kabel Tray (Horizontal) 150 x 100 mm TRC Powder Coating dan aksesoris,unit,,300000.0
+911,M.911,Kabel Tray (Horizontal) 150 x 100 mm TRC Hot Dip Galvanized dan aksesoris,unit,,320000.0
+912,M.912,Kabel Tray (Vertikal) 1000 x 100 mm TRU Powder Coating dan aksesoris,unit,,350000.0
+913,M.913,Kabel Tray (Vertikal) 1000 x 100 mm TRU Hot Dip Galvanized dan aksesoris,unit,,370000.0
+914,M.914,Kabel Tray (Vertikal) 1000 x 100 mm TRU OCP dan aksesoris,unit,,390000.0
+915,M.915,Kabel Tray (Vertikal) 1000 x 100 mm TRC Powder Coating dan aksesoris,unit,,400000.0
+916,M.916,Kabel Tray (Vertikal) 1000 x 100 mm TRC Hot Dip Galvanized dan aksesoris,unit,,410000.0
+917,M.917,Kabel Tray (Vertikal) 1000 x 100 mm TRC OCP dan aksesoris,unit,,420000.0
+918,M.918,Kabel Tray (Vertikal) 900 x 100 mm TRU Powder Coating dan aksesoris,unit,,340000.0
+919,M.919,Kabel Tray (Vertikal) 900 x 100 mm TRU Hot Dip Galvanized dan aksesoris,unit,,350000.0
+920,M.920,Kabel Tray (Vertikal) 900 x 100 mm TRU OCP dan aksesoris,unit,,360000.0
+921,M.921,Kabel Tray (Vertikal) 900 x 100 mm TRC Powder Coating dan aksesoris,unit,,370000.0
+922,M.922,Kabel Tray (Vertikal) 900 x 100 mm TRC Hot Dip Galvanized dan aksesoris,unit,,380000.0
+923,M.923,Kabel Tray (Vertikal) 900 x 100 mm TRC OCP dan aksesoris,unit,,390000.0
+924,M.924,Kabel Tray (Vertikal) 800 x 100 mm TRU Powder Coating dan aksesoris,unit,,350000.0
+925,M.925,Kabel Tray (Vertikal) 800 x 100 mm TRU Hot Dip Galvanized dan aksesoris,unit,,360000.0
+926,M.926,Kabel Tray (Vertikal) 800 x 100 mm TRU OCP dan aksesoris,unit,,370000.0
+927,M.927,Kabel Tray (Vertikal) 800 x 100 mm TRC Powder Coating dan aksesoris,unit,,380000.0
+928,M.928,Kabel Tray (Vertikal) 800 x 100 mm TRC Hot Dip Galvanized dan aksesoris,unit,,390000.0
+929,M.929,Kabel Tray (Vertikal) 800 x 100 mm TRC OCP dan aksesoris,unit,,400000.0
+930,M.930,Kabel Tray (Vertikal) 700 x 100 mm TRU Powder Coating dan aksesoris,unit,,340000.0
+931,M.931,Kabel Tray (Vertikal) 700 x 100 mm TRU Hot Dip Galvanized dan aksesoris,unit,,350000.0
+932,M.932,Kabel Tray (Vertikal) 700 x 100 mm TRU OCP dan aksesoris,unit,,360000.0
+933,M.933,Kabel Tray (Vertikal) 700 x 100 mm TRC Powder Coating dan aksesoris,unit,,370000.0
+934,M.934,Kabel Tray (Vertikal) 700 x 100 mm TRC Hot Dip Galvanized dan aksesoris,unit,,380000.0
+935,M.935,Kabel Tray (Vertikal) 700 x 100 mm TRC OCP dan aksesoris,unit,,390000.0
+936,M.936,Kabel Tray (Vertikal) 600 x 100 mm TRU Hot Dip Galvanized dan aksesoris,unit,,340000.0
+937,M.937,Kabel Tray (Vertikal) 600 x 100 mm TRU OCP dan aksesoris,unit,,350000.0
+938,M.938,"Kabel Tray (Vertikal)
+600 x 100 mm TRC
+Powder Coating dan
+aksesoris",unit,,360000.0
+939,M.939,"Kabel Tray (Vertikal)
+600 x 100 mm TRC
+Hot Dip Galvanized
+dan aksesoris",unit,,370000.0
+940,M.940,"Kabel Tray (Vertikal)
+600 x 100 mm TRC
+OCP dan aksesoris",unit,,390000.0
+941,M.941,"Kabel Tray (Vertikal)
+500 x 100 mm TRU
+Hot Dip Galvanized
+dan aksesoris",unit,,340000.0
+942,M.942,"Kabel Tray (Vertikal)
+500 x 100 mm TRU
+OCP dan aksesoris",unit,,350000.0
+943,M.943,"Kabel Tray (Vertikal)
+500 x 100 mm TRC
+Powder Coating dan
+aksesoris",unit,,360000.0
+944,M.944,"Kabel Tray (Vertikal)
+500 x 100 mm TRC
+Hot Dip Galvanized
+dan aksesoris",unit,,370000.0
+945,M.945,"Kabel Tray (Vertikal)
+500 x 100 mm TRC
+OCP dan aksesoris",unit,,380000.0
+946,M.946,"Kabel Tray (Vertikal)
+400 x 100 mm TRU
+Hot Dip Galvanized
+dan aksesoris",unit,,340000.0
+947,M.947,"Kabel Tray (Vertikal)
+400 x 100 mm TRU
+OCP dan aksesoris",unit,,350000.0
+948,M.948,"Kabel Tray (Vertikal)
+400 x 100 mm TRC
+Powder Coating dan
+aksesoris",unit,,360000.0
+949,M.949,"Kabel Tray (Vertikal)
+400 x 100 mm TRC
+Hot Dip Galvanized
+dan aksesoris",unit,,370000.0
+950,M.950,"Kabel Tray (Vertikal)
+400 x 100 mm TRC
+OCP dan aksesoris",unit,,380000.0
+951,M.951,"Kabel Tray (Vertikal)
+300 x 100 mm TRU
+Hot Dip Galvanized
+dan aksesoris",unit,,340000.0
+952,M.952,"Kabel Tray (Vertikal)
+300 x 100 mm TRU
+OCP dan aksesoris",unit,,350000.0
+953,M.953,"Kabel Tray (Vertikal)
+300 x 100 mm TRC
+Powder Coating dan
+aksesoris",unit,,360000.0
+954,M.954,"Kabel Tray (Vertikal)
+300 x 100 mm TRC
+Hot Dip Galvanized
+dan aksesoris",unit,,370000.0
+955,M.955,"Kabel Tray (Vertikal)
+300 x 100 mm TRC
+OCP dan aksesoris",unit,,380000.0
+956,M.956,"Kabel Tray (Vertikal)
+200 x 100 mm TRU
+Hot Dip Galvanized
+dan aksesoris",unit,,330000.0
+957,M.957,"Kabel Tray (Vertikal)
+200 x 100 mm TRU
+OCP dan aksesoris",unit,,340000.0
+958,M.958,"Kabel Tray (Vertikal)
+200 x 100 mm TRC
+Powder Coating dan
+aksesoris",unit,,350000.0
+959,M.959,"Kabel Tray (Vertikal)
+200 x 100 mm TRC
+Hot Dip Galvanized
+dan aksesoris",unit,,360000.0
+960,M.960,"Kabel Tray (Vertikal)
+200 x 100 mm TRC
+OCP dan aksesoris",unit,,370000.0
+961,M.961,"Kabel Tray (Vertikal)
+150 x 100 mm TRU
+Powder Coating dan
+aksesoris",unit,,330000.0
+962,M.962,"Kabel Tray (Vertikal)
+150 x 100 mm TRU
+Hot Dip Galvanized
+dan aksesoris",unit,,340000.0
+963,M.963,"Kabel Tray (Vertikal)
+150 x 100 mm TRU
+OCP dan aksesoris",unit,,350000.0
+964,M.964,"Kabel Tray (Vertikal)
+150 x 100 mm TRC
+Powder Coating dan
+aksesoris",unit,,360000.0
+965,M.965,"Kabel Tray (Vertikal)
+150 x 100 mm TRC
+Hot Dip Galvanized
+dan aksesoris",unit,,370000.0
+966,M.966,"Kabel Tray (Vertikal)
+150 x 100 mm TRC
+OCP dan aksesoris",unit,,380000.0
+967,M.967,Panel Utama Tegangan Menengah,unit,,3100000.0
+968,M.968,Panel Utama Tegangan Rendah,unit,,1500000.0
+969,M.969,MDP Floor Standing,unit,,4500000.0
+970,M.970,MDP Wall Mounted,unit,,4900000.0
+971,M.971,SDP Floor Standing,unit,,3500000.0
+972,M.972,SDP Wall  Mounted,unit,,3300000.0
+973,M.973,Panel Lantai Wall Mounted 800x600x200,unit,,3200000.0
+974,M.974,Panel Lantai Wall Mounted 600x 400 x200,unit,,3000000.0
+975,M.975,Panel kWh Meter,unit,,2500000.0
+976,M.976,Panel Penerang Luar Outdoor termasuk material batu,unit,,3500000.0
+977,M.977,Panel Kontrol Pompa,unit,,5500000.0
+978,M.978,Panel Power Gondola termasuk material bantu,unit,,5700000.0
+979,M.979,Panel Power Elektronik termasuk material bantu,unit,,3500000.0
+980,M.980,Panel Power AHU termasuk material bantu,unit,,4900000.0
+981,M.981,Panel Power AC termasuk material bantu,unit,,1700000.0
+982,M.982,Panel Power Chiller termasuk material bantu,unit,,2300000.0
+983,M.983,Panel Kontrol Power Chiller termasuk material bantu,unit,,2500000.0
+984,M.984,Panel Kontrol Power Cooling Tower termasuk material bantu,unit,,1900000.0
+985,M.985,Panel Kontrol Fan Presurisasi termasuk material bantu,unit,,2100000.0
+986,M.986,MCB Box,unit,,450000.0
+987,M.987,Genset Kap : 75kVA Silent Type dan aksesoris,unit,,75000000.0
+988,M.988,Genset Kap : 100 kVA Silent Type dan aksesoris,unit,,79000000.0
+989,M.989,Genset Kap : 400 kVA Silent Type dan aksesoris,unit,,85000000.0
+990,M.990,UPS 5 KVA,unit,,18000000.0
+991,M.991,Tangki Solar Harian 500 liter,unit,,4000000.0
+992,M.992,"Hand Pump Solar
+dan aksesoris",unit,,4000000.0
+993,M.993,Trafo Kap : 630 Kva : Synthetic Oil Ester,unit,,17000000.0
+994,M.994,Saklar Tunggal,buah,,24000.0
+995,M.995,Saklar Ganda,buah,,33000.0
+996,M.996,Saklar Triple,buah,,76000.0
+997,M.997,Grid Switch,buah,,108000.0
+998,M.998,Grid Switch 4 x 2 Gang,buah,,180000.0
+999,M.999,Stop Kontak,buah,,70000.0
+1000,M.1000,Stop Kontak AC,buah,,67900.0
+1001,M.1001,Conduit HI 20 mm,m,,4000.0
+1002,M.1002,T Dus,buah,,4000.0
+1003,M.1003,Socket Conduit 20 mm,buah,,700.0
+1004,M.1004,Klem 20 mm,buah,,298.0
+1005,M.1005,Fischer S6 + Sekrup,buah,,21.5
+1006,M.1006,Elbow,buah,,550.0
+1007,M.1007,Isolasi,m,,416.0
+1008,M.1008,Lasdop,buah,,580.0
+1009,M.1009,"Kabel NYM 3 x 2,5
+mm2 (LSOH)",m,,21300.0
+1010,M.1010,kWh meter token 1 phase,unit,,534000.0
+1011,M.1011,kWh meter token 3 phase,unit,,3150000.0
+1012,M.1012,Software sistem kwh meter swakelola prabayar,buah,,2000000.0
+1013,M.1013,PC Server,buah,,33900000.0
+1014,M.1014,Bak Kontrol Pemeriksaan dari Batu Bata 45 x 45 x 45 cm + Tutup Beton 45 x 45 x 10 cm,buah,,829900.0
+1015,M.1015,Terminal Busbar 300 x 50 x 5 mm,buah,,135000.0
+1016,M.1016,Batang Tembaga Pembumian Dia.5/8” (kedalaman min. 12 m),batang,,1135000.0
+1017,M.1017,Pantek (kedalaman min. 12 m),lot,,245000.0
+1018,M.1018,Kabel BC 95 mm2,m,,145000.0
+1019,M.1019,Kabel Skun 95 mm2,m,,26400.0
+1020,M.1020,Rod Coupling,buah,,130000.0
+1021,M.1021,Material Bantu,loat,,50000.0
+1022,M.1022,Batang Tembaga Pembumian Dia.3/4” (kedalaman min. 12 m),batang,,1666000.0
+1023,M.1023,Air Terminal,unit,,1634000.0
+1024,M.1024,Base Air Terminal,unit,,587600.0
+1025,M.1025,DC Clip Non Metalic Clamp,unit,,13500.0
+1026,M.1026,Square Tape Clamp,unit,,55000.0
+1027,M.1027,Bimetallic Connector,unit,,35000.0
+1028,M.1028,Grounding Test Box,unit,,492000.0
+1029,M.1029,"5/8"" Rod Coupling",unit,,45000.0
+1030,M.1030,"5/8"" Driving Stud",unit,,83000.0
+1031,M.1031,Rod to Cable Clamp (Type GUV),unit,,252900.0
+1032,M.1032,Polymer Inspection Pit,unit,,530000.0
+1033,M.1033,Coupling Bonding Grounded Rod 70 mm2,unit,,2040000.0
+1034,M.1034,Clamp BC L ukuran BC 70 mm2,unit,,25500.0
+1035,M.1035,"Clamp PVC 1""",unit,,1500.0
+1036,M.1036,Copper Air Terminal Base 15 mm,unit,,189000.0
+1037,M.1037,15x500 mm Aluminium Air Rod,unit,,160000.0
+1038,M.1038,15x500 mm Copper Air Rod,unit,,582000.0
+1039,M.1039,25x3 mm Bare Aluminium Tape,unit,,58620.0
+1040,M.1040,"5/8"" x 1800 mm Extensible Copperbond Rod",unit,,496000.0
+1041,M.1041,"5/8"" Copperbond Rod",unit,,185000.0
+1042,M.1042,"Grounding Rod Gip 1"" Panjang 1 m",unit,,142500.0
+1043,M.1043,"Grounding Rod Gip 1"" Panjang 2 m",unit,,285000.0
+1044,M.1044,Exothermic Welding,unit,,185000.0
+1045,M.1045,Surge Arrester 1 Phase (15 KA),unit,,690000.0
+1046,M.1046,Surge Arrester 3 Phase (15 KA),unit,,962000.0
+1047,M.1047,Flexible Conduit 20 mm,m,,5400.0
+1048,M.1048,"Downlight 5 Inch 14, 5 Watt LED + Aksesoris",buah,,82000.0
+1049,M.1049,Lampu LED E27 10 watt + Aksesoris,buah,,22000.0
+1050,M.1050,Fitting E27 + Aksesoris,buah,,5200.0
+1051,M.1051,Nicad Battery,buah,,110000.0
+1052,M.1052,Lampu LED E27 19 watt,buah,,70500.0
+1053,M.1053,RM TKI 2 x 16 Watt LED,unit,,265000.0
+1054,M.1054,Lampu Sorot LED 100 Watt,unit,,125000.0
+1055,M.1055,Lampu Sorot RGB 30 Watt untuk Outdoor,unit,,34000.0
+1056,M.1056,Pelindung Lampu,unit,,18000.0
+1057,M.1057,Lampu High Bay 100 Watt,unit,,1620000.0
+1058,M.1058,Lampu Eksit LED 3 Watt c/w Battery,buah,,148000.0
+1059,M.1059,Lampu TLED 1  x 14 Watt 2.100 Lumen,buah,,65000.0
+1060,M.1060,Lampu TLED 1 x 24 Watt 2.100 Lumen,buah,,72000.0
+1061,M.1061,Lampu TLED 2 x 24 Watt 2.100 Lumen,buah,,144000.0
+1062,M.1062,Lampu PJU LED 50 Watt,buah,,495000.0
+1063,M.1063,Tiang PJU Kawasan 6-7 m,buah,,2000000.0
+1064,M.1064,Lampu PJU LED 50 Watt + Solar Cell,buah,,700000.0
+1065,M.1065,Lampu Taman 25 Watt +Tiang 1 m,buah,,155000.0
+1066,M.1066,Lampu LED 7 Watt,buah,,27000.0
+1067,M.1067,Fitting,buah,,16000.0
+1068,M.1068,Lampu LED 9 Watt,buah,,34000.0
+1069,M.1069,Lampu Baret 20 Watt,buah,,77000.0
+1070,M.1070,Lampu Baret 32 Watt,buah,,97000.0
+1071,M.1071,Lampu Pijar 40 Watt,buah,,28000.0
+1072,M.1072,Lampu TL 18 Watt,buah,,20000.0
+1073,M.1073,Lampu TLED 18 Watt,buah,,30000.0
+1074,M.1074,Lampu TL  36 Watt,buah,,25000.0
+1075,M.1075,Lampu TLED  36 Watt,buah,,75000.0
+1076,M.1076,Lampu Sport Floodlight Led,buah,,375000.0
+1077,M.1077,Brackket,buah,,11500.0
+1078,M.1078,Junction Box IP Rated,buah,,142000.0
+1079,M.1079,Kabel Fiber Optic Dual Core Single Mode,m,,11300.0
+1080,M.1080,Pipa HDPE Conduit 20 mm,m,,3800.0
+1081,M.1081,DMX LED Controller 1 Universe,buah,,1400000.0
+1082,M.1082,Sensor Cahaya,buah,,58000.0
+1083,M.1083,Sensor Gerak,buah,,65900.0
+1084,M.1084,MCP-FA (Semi Addressable 1 Loop),unit,,26250000.0
+1085,M.1085,PC Komputer,unit,,3500000.0
+1086,M.1086,Alarm Printer,unit,,2500000.0
+1087,M.1087,Report Printer,unit,,1900000.0
+1088,M.1088,Announciator,unit,,2100000.0
+1089,M.1089,Terminal Box Fire Alarm,unit,,265000.0
+1090,M.1090,Smoke Detector Addressable,unit,,780000.0
+1091,M.1091,Rate of Rise Detector Addressable,unit,,343000.0
+1092,M.1092,Fix Heat Detector Addressable,unit,,318000.0
+1093,M.1093,Smoke Detector Konvensional,unit,,245000.0
+1094,M.1094,Rate of Rise Detector Konvensional,unit,,240000.0
+1095,M.1095,Fix Heat Detector Konvensioanl,unit,,290000.0
+1096,M.1096,Lamp Indicator,unit,,57000.0
+1097,M.1097,Manual Break Glass,unit,,60000.0
+1098,M.1098,Horn Strobe,unit,,175000.0
+1099,M.1099,Fire Fighting Telepon,unit,,135000.0
+1100,M.1100,Alarm Bell,unit,,85000.0
+1101,M.1101,Kabel STP AWG 18,m,,4500.0
+1102,M.1102,"Kabel FRC 2 x 1,5 mm²",m,,23000.0
+1103,M.1103,"Kabel ITC 2x2x0,6 mm2",m,,3924.0
+1104,M.1104,Sirine Module,buah,,650000.0
+1105,M.1105,Control Module,buah,,350000.0
+1106,M.1106,Relay Module,buah,,103500.0
+1107,M.1107,Isolator Module,buah,,220000.0
+1108,M.1108,Monitor Module,buah,,200000.0
+1109,M.1109,Rectifier,unit,,3500000.0
+1110,M.1110,Power Surge Arrester,unit,,1279000.0
+1111,M.1111,UPS 2 KVA 15 Menit,unit,,3800000.0
+1112,M.1112,UPS 2 KVA 30 Menit,unit,,4100000.0
+1113,M.1113,UPS 2 KVA 1 Jam,unit,,4900000.0
+1114,M.1114,UPS 2 KVA 2 Jam,unit,,5200000.0
+1115,M.1115,UPS 2 KVA 4 Jam,unit,,5700000.0
+1116,M.1116,End of Line Resistor,unit,,20000.0
+1117,M.1117,Patch Panel UTP Cat 6 4 Port,unit,,1540000.0
+1118,M.1118,Wiring Management,unit,,110000.0
+1119,M.1119,PoE Switch HUB,unit,,273000.0
+1120,M.1120,Network  Video Recorder (NVR) Kapasitas 32 Chanel,unit,,5500000.0
+1121,M.1121,8 TB Hardisk,unit,,1960000.0
+1122,M.1122,"Rak 19"" 12 U Lengkap dengan Power Outlet",unit,,770000.0
+1123,M.1123,"LCD Monitor 32""",unit,,2380000.0
+1124,M.1124,"Bracket Monitor 32""",unit,,88500.0
+1125,M.1125,"LCD Monitor 50""",unit,,3500000.0
+1126,M.1126,"Bracket Monitor 50""",unit,,150000.0
+1127,M.1127,Keyboard + Mouse,unit,,350000.0
+1128,M.1128,Indoor Fix Dome IP Camera,unit,,465000.0
+1129,M.1129,Outdoor Fix Dome IP Camera,unit,,504000.0
+1130,M.1130,MDF-SS,unit,,1450000.0
+1131,M.1131,Selector Switch c/w Control Panel,unit,,850000.0
+1132,M.1132,Power Amplifier 360 Watt,unit,,1500000.0
+1133,M.1133,Power Amplifier 240 Watt,unit,,1200000.0
+1134,M.1134,Power Amplifier 120 Watt,unit,,1000000.0
+1135,M.1135,System Controller (Mixer Pre Amp + Equalizer),unit,,250000.0
+1136,M.1136,VCD/DVD/MP3/Mp4,unit,,250000.0
+1137,M.1137,Automatic Alarm System,unit,,1000000.0
+1138,M.1138,Paging Mic Keypad,unit,,640000.0
+1139,M.1139,UPS 1 KVA 4 Jam,unit,,2475000.0
+1140,M.1140,Rack Cabinet,unit,,670000.0
+1141,M.1141,Terminal Box Tata Suara (TBTS),unit,,75000.0
+1142,M.1142,Ceiling Speaker,unit,,680000.0
+1143,M.1143,Wall Speaker,unit,,650000.0
+1144,M.1144,Horn Speaker,unit,,250000.0
+1145,M.1145,Tiang,m,,55500.0
+1146,M.1146,MDF 2 x 8 Pair,unit,,125000.0
+1147,M.1147,MDF 2 x 10 Pair,unit,,150000.0
+1148,M.1148,Pemasangan 1 Unit PABX Kap: 1 Line 10 Extension,unit,,1000000.0
+1149,M.1149,Pemasangan 1 Unit PABX Kap: 1 Line 8 Extension,unit,,870000.0
+1150,M.1150,Terminal Box Telepon,unit,,250000.0
+1151,M.1151,Outlet Telepon,unit,,102000.0
+1152,M.1152,"Server / Gateway c/w PC, Monitor, Keyboard, Mouse",Unit,,6500000.0
+1153,M.1153,Main Switch HUB 24 Port,Unit,,950000.0
+1154,M.1154,Main Switch HUB 12 Port,Unit,,650000.0
+1155,M.1155,Router Broadband,Unit,,550000.0
+1156,M.1156,Fire Wall + Anti Virus,Unit,,250000.0
+1157,M.1157,Outlet Data,Unit,,150000.0
+1158,M.1158,Patch Cord,unit,,30000.0
+1159,M.1159,Patch Panel 24 Port,unit,,500000.0
+1160,M.1160,Wifi Access Point (Wifi 6 Radius 50 M),unit,,1500000.0
+1161,M.1161,Switch Hub 8 Port,unit,,250000.0
+1162,M.1162,Media Converter,unit,,110000.0
+1163,M.1163,OTB,unit,,150000.0
+1164,M.1164,"Touch Screen Panel 7""",unit,,2300000.0
+1165,M.1165,"Touch Screen Panel 10""",unit,,2500000.0
+1166,M.1166,"Touch Screen Panel 12""",unit,,2900000.0
+1167,M.1167,"Touch Screen Panel 14""",unit,,3200000.0
+1168,M.1168,Wall Mounted Rack 15U,unit,,150000.0
+1169,M.1169,"Workstation, Meja+Kursi",unit,,2550000.0
+1170,M.1170,Connector,buah,,2550.0
+1171,M.1171,Splitter TV 6 Port,Unit,,100000.0
+1172,M.1172,Splitter TV 7 Port,Unit,,125000.0
+1173,M.1173,Terminal Bocx TV,Unit,,250000.0
+1174,M.1174,Antena UHF,Unit,,130000.0
+1175,M.1175,Antena VHF,Unit,,150000.0
+1176,M.1176,AC Wall Mounted Kap : 5.000 BTUH,Unit,,3200000.0
+1177,M.1177,AC Wall Mounted Kap : 6.500 BTUH,Unit,,3800000.0
+1178,M.1178,AC Wall Mounted Kap : 7.000 BTUH,Unit,,4200000.0
+1179,M.1179,AC Wall Mounted Kap : 9.000 BTUH,Unit,,4500000.0
+1180,M.1180,AC Wall Mounted Kap : 12.000 BTUH,Unit,,5300000.0
+1181,M.1181,AC Wall Mounted Kap : 24.000 BTUH,Unit,,7600000.0
+1182,M.1182,AC Wall Mounted Kap : 35.000 BTUH,Unit,,10000000.0
+1183,M.1183,"Ceiling Fan, 50 CFM",Unit,,900000.0
+1184,M.1184,"Ceiling Fan, 75 CFM",Unit,,1200000.0
+1185,M.1185,"Ceiling Fan, 100 CFM",Unit,,1350000.0
+1186,M.1186,"Ceiling Fan, 200 CFM",Unit,,1500000.0
+1187,M.1187,"Inline  Fan, 500 CFM",Unit,,1300000.0
+1188,M.1188,"Inline  Fan, 700 CFM",Unit,,1700000.0
+1189,M.1189,Axial Fan ; 2.600 CFM,Unit,,780000.0
+1190,M.1190,Axial Fan ; 2.800 CFM,Unit,,860000.0
+1191,M.1191,Axial Fan ; 3.200 CFM,Unit,,995000.0
+1192,M.1192,Axial Fan ; 3.500 CFM,Unit,,1020000.0
+1193,M.1193,Axial Fan ; 4.000 CFM,Unit,,1350000.0
+1194,M.1194,Axial Fan ; 5.500 CFM,Unit,,1700000.0
+1195,M.1195,Rotary Fan,Unit,,750000.0
+1196,M.1196,Ceiling Fan Rotary,Unit,,1500000.0
+1197,M.1197,Bifurcated Fan; 1.500 CFM,Unit,,8300000.0
+1198,M.1198,"Propeller Fan, 75 CFM",Unit,,1800000.0
+1199,M.1199,"Propeller Fan, 100 CFM",Unit,,2100000.0
+1200,M.1200,"Propeller Fan, 150 CFM",Unit,,2300000.0
+1201,M.1201,"Propeller Fan, 375 CFM",Unit,,2900000.0
+1202,M.1202,"Propeller Fan, 500 CFM",Unit,,3500000.0
+1203,M.1203,"Propeller Fan, 600 CFM",Unit,,3900000.0
+1204,M.1204,Intake Grille 600 x 300 mm,Unit,,95000.0
+1205,M.1205,Intake Grille 650 x 350 mm,Unit,,115000.0
+1206,M.1206,Intake Grille 800 x 350 mm,Unit,,130000.0
+1207,M.1207,Intake Grille 800 x 400 mm,Unit,,145000.0
+1208,M.1208,Intake Louvre 700 x 400 mm,Unit,,135000.0
+1209,M.1209,Fan Louvre 750 x 400 mm,Unit,,150000.0
+1210,M.1210,Fan Louvre 900 x 500 mm,Unit,,220000.0
+1211,M.1211,Fan Louvre 1.000 x 400 mm,Unit,,250000.0
+1212,M.1212,Fan Louvre 1.000 x 450 mm,Unit,,270000.0
+1213,M.1213,Exhaust Grille 150 x 150 mm,Unit,,140000.0
+1214,M.1214,Exhaust Grille 200 x 200 mm,Unit,,160000.0
+1215,M.1215,Exhaust Grille 600 x 300 mm,Unit,,200000.0
+1216,M.1216,Exhaust Grille 650 x 350 mm,Unit,,230000.0
+1217,M.1217,Exhaust Grille 900 x 400 mm,Unit,,300000.0
+1218,M.1218,Exhaust Louvre,Unit,,450000.0
+1219,M.1219,"Propeller Fan, 370 CFM",m,,250000.0
+1220,M.1220,"Propeller Fan, 1200 CFM",unit,,4500000.0
+1221,M.1221,ZINK BJLS,m3,,222000.0
+1222,M.1222,Flinkote,lot,,56500.0
+1223,M.1223,Finish Cat,lot,,92000.0
+1224,M.1224,Hanger + Support,lot,,55000.0
+1225,M.1225,"Pipa Tembaga B280 1/4""",m',,34300.0
+1226,M.1226,Duct Tape,Gulung,,9050.0
+1227,M.1227,"Pipa Tembaga B280 3/8""",m',,45300.0
+1228,M.1228,"Pipa Tembaga B280 1/2""",m',,46400.0
+1229,M.1229,"Pipa Tembaga B280 5/8""",m',,101600.0
+1230,M.1230,"Pipa Tembaga B280 3/4""",m',,122700.0
+1231,M.1231,"Pipa Tembaga B280 7/8""",m',,351600.0
+1232,M.1232,"Pipa Tembaga B280 1""",m',,370000.0
+1233,M.1233,"Pipa Tembaga B280 1-1/8""",m',,375000.0
+1234,M.1234,"Pipa Tembaga B280 1-3/8""",m',,380000.0
+1235,M.1235,"Pipa Tembaga B280 1-5/8""",m',,290000.0
+1236,M.1236,"PIPA PVC AW ; DN.
+1/2"" (15 mm) dan
+aksesoris",m',,6900.0
+1237,M.1237,"PIPA PVC AW ; DN.
+3/4"" (20 mm) dan
+aksesoris",m',,8900.0
+1238,M.1238,"PIPA PVC AW ; DN. 1""
+(25 mm) dan
+aksesoris",m',,11500.0
+1239,M.1239,"PIPA PVC AW ; DN. 1-
+1/4"" (32 mm) dan
+aksesoris",m',,18900.0
+1240,M.1240,"PIPA PVC AW ; DN. 1-
+1/2"" (40 mm) dan
+aksesoris",m',,20500.0
+1241,M.1241,"PIPA PVC AW ; DN. 2""
+(50 mm) dan
+aksesoris",m',,26500.0
+1242,M.1242,"PIPA PVC AW ; DN. 2-
+1/2"" (65 mm) dan
+aksesoris",m',,33900.0
+1243,M.1243,"PIPA PVC AW ; DN. 3""
+(80 mm) dan
+aksesoris",m',,51500.0
+1244,M.1244,"PIPA PVC AW ; DN. 4""
+(100 mm) dan
+aksesoris",m',,72700.0
+1245,M.1245,PRV SET dia. 50 mm dan aksesoris,unit,,6131000.0
+1246,M.1246,PRV SET dia. 65 mm dan aksesoris,unit,,8397000.0
+1247,M.1247,PRV SET dia. 80 mm dan aksesoris,unit,,8550000.0
+1248,M.1248,PRV SET dia. 100 mm dan aksesoris,unit,,14250000.0
+1249,M.1249,PRV SET dia. 150 mm dan aksesoris,unit,,14500000.0
+1250,M.1250,PRV SET dia. 200 mm dan aksesoris,unit,,15500000.0
+1251,M.1251,MCV Set dia. 80 mm,unit,,20500000.0
+1252,M.1252,MCV Set dia. 100 mm,unit,,20900000.0
+1253,M.1253,MCV Set dia. 150 mm,unit,,30300000.0
+1254,M.1254,BCV Set dia. 50 mm,Set,,1700000.0
+1255,M.1255,Temper Switch,buah,,700000.0
+1256,M.1256,Flow Switch,buah,,104000.0
+1257,M.1257,Sigh Glass,buah,,85000.0
+1258,M.1258,Test Drain Valve,buah,,750000.0
+1259,M.1259,Coupling 1 set,set,,115000.0
+1260,M.1260,BCV Set dia. 65 mm,Set,,1900000.0
+1261,M.1261,BCV Set dia. 80 mm,Set,,2100000.0
+1262,M.1262,BCV Set dia. 100 mm,Set,,2400000.0
+1263,M.1263,BCV Set dia. 150 mm,Set,,2600000.0
+1264,M.1264,Automatic Air Vent  dia. 50 mm,unit,,635000.0
+1265,M.1265,Automatic Air Vent  dia. 80 mm,unit,,766500.0
+1266,M.1266,Automatic Air Vent  dia. 100 mm,unit,,980000.0
+1267,M.1267,Automatic Air Vent  dia. 150 mm,unit,,1150000.0
+1268,M.1268,Flow Meter Analog dia. 100 mm,unit,,1300000.0
+1269,M.1269,Flow Meter Analog dia. 200 mm,unit,,1500000.0
+1270,M.1270,"Landing Velve 2,5""",unit,,1259000.0
+1271,M.1271,Orifice Plate dia. 25 mm,unit,,1500000.0
+1272,M.1272,Sprinkler Head Pendant dan Aksesoris,unit,,85000.0
+1273,M.1273,Sprinkler Head Upright dan Aksesoris,unit,,82900.0
+1274,M.1274,Hydrant Pillar dan Aksesoris,unit,,3750000.0
+1275,M.1275,Indoor Hydrant Box dan Aksesoris,unit,,1200000.0
+1276,M.1276,Outdoor Hydrant Box dan Aksesoris,unit,,1700000.0
+1277,M.1277,Siamesse Connection dan Aksesoris,unit,,2200000.0
+1278,M.1278,Fire Extinguisher 3 kg  dan Aksesoris,unit,,171500.0
+1279,M.1279,Fire Extinguisher 5 kg  dan Aksesoris,unit,,227900.0
+1280,M.1280,Fire Extinguisher 25 kg  dan Aksesoris,unit,,1900000.0
+1281,M.1281,Jockey Fire Pump Vertical Multi Stage 25 USGPM,unit,,7400000.0
+1282,M.1282,Main Fire Pump Centrifugal  End Suction 1.000 USGPM,unit,,10000000.0
+1283,M.1283,Diesel Fire Pump Centrifugal End Suction dan Aksesoris,unit,,12000000.0
+1284,M.1284,Main Fire Pump Centrifugal End Suction dan Aksesoris,unit,,14000000.0
+1285,M.1285,Roof tank fiberglass kap. 2 m3,unit,,6000000.0
+1286,M.1286,Roof tank fiberglass kap. 4 m3,unit,,12000000.0
+1287,M.1287,Roof tank fiberglass kap. 12 m3,unit,,36000000.0
+1288,M.1288,Roof tank stainless kap. 2 m3,unit,,6400000.0
+1289,M.1289,Roof tank stainless kap. 4 m3,unit,,15000000.0
+1290,M.1290,Roof tank stainless kap. 12 m3,unit,,48000000.0
+1291,M.1291,"Tangki toren kap. 0,7 m3",unit,,1100000.0
+1292,M.1292,"Tangki toren kap. 1,5 m3",unit,,1700000.0
+1293,M.1293,"Tangki toren kap. 2,5 m3",unit,,3400000.0
+1294,M.1294,Tangki toren kap. 3 m3,unit,,4600000.0
+1295,M.1295,Tangki toren kap. 4 m3,unit,,5500000.0
+1296,M.1296,Tangki toren kap. 5 m3,unit,,6900000.0
+1297,M.1297,"Tangki toren kap. 5,5 m3",unit,,7100000.0
+1298,M.1298,Tangki toren kap. 6 m3,unit,,7850000.0
+1299,M.1299,Tangki Panel FRP kap. 12 m3,unit,,15000000.0
+1300,M.1300,Tangki panel Stainless Steel kapasitas 12 m3 + Material Bantu / Aksesoris,unit,,12500000.0
+1301,M.1301,"Tangki panel GRP
+kapasitas 12 m3 +
+Material Bantu /
+Aksesoris",unit,,12000000.0
+1302,M.1302,"Tangki Toren Kapasitas 0,5 m3",unit,,650000.0
+1303,M.1303,Pompa transfer 150 lpm (centrifugal end suction),unit,,1000000.0
+1304,M.1304,Pompa booster 450 lpm (centrifugal end suction),unit,,2970000.0
+1305,M.1305,Pompa booster 150 lpm (vertical in line-packaged),unit,,1200000.0
+1306,M.1306,Pompa jet 27 lpm,unit,,900000.0
+1307,M.1307,Pompa jet 34 lpm,unit,,1200000.0
+1308,M.1308,Pompa jet 100 lpm,unit,,2000000.0
+1309,M.1309,Pompa lift 80 lpm,unit,,1000000.0
+1310,M.1310,Pompa lift 250 lpm,unit,,3500000.0
+1311,M.1311,Pompa Jet 30 lpm,unit,,730000.0
+1312,M.1312,"Sand filter kap. 0,1 m3/hari",unit,,2500000.0
+1313,M.1313,Sand filter kap. 14 m3/hari,unit,,4800000.0
+1314,M.1314,"Carbon filter kap. 0,1 m3/hari",unit,,650000.0
+1315,M.1315,"Carbon filter kap. 0,6 m3/hari",unit,,3000000.0
+1316,M.1316,"Silika filter kap. 0,1 m3/hari",unit,,500000.0
+1317,M.1317,Priming tank fiber 500 liter,unit,,1300000.0
+1318,M.1318,Priming tank fiber 800 liter,unit,,2080000.0
+1319,M.1319,Priming tank fiber 1.000 liter,unit,,2850000.0
+1320,M.1320,Priming tank fiber 2.000 liter,unit,,4000000.0
+1321,M.1321,Pressure tank 1.000 liter,unit,,17000000.0
+1322,M.1322,Sewage Treatment Plant (STP) fiberglass kap. 2 m3,unit,,19500000.0
+1323,M.1323,Sewage Treatment Plant (STP) fiberglass kap. 5 m3,unit,,33000000.0
+1324,M.1324,Sewage Treatment Plant (STP) fiberglass kap. 10 m3,unit,,53200000.0
+1325,M.1325,Sewage Treatment Plant (STP) fiberglass kap. 30 m3,unit,,100000000.0
+1326,M.1326,Sewage Treatment Plant (STP) precast kap. 30 m3,unit,,84000000.0
+1327,M.1327,Submersible cutter pump kap. 100 lpm,unit,,8500000.0
+1328,M.1328,"Grease trap portable fiberglass, kap. 30 Liter",unit,,1000000.0
+1329,M.1329,"Grease trap portable stainless, kap. 30 Liter",unit,,1500000.0
+1330,M.1330,"Grease trap central fiberglass, kap. 5 m3",unit,,20000000.0
+1331,M.1331,Galian tanah biasa,M3,,45000.0
+1332,M.1332,Buis beton dia. 80 cm,buah,,255400.0
+1333,M.1333,Beton,m3,,825000.0
+1334,M.1334,Tulangan,kg,,10300.0
+1335,M.1335,Bekisting,m2,,37500.0
+1336,M.1336,"Pipa PVC D Ø 4""",m',,39575.0
+1337,M.1337,Urukan Tanah,m2,,65000.0
+1338,M.1338,"Pipa PVC AW ; DN.
+1/2"" (15 mm) +
+fitting & aksesoris",m',,7100.0
+1339,M.1339,"Pipa PVC AW ; DN.
+3/4"" (20 mm) +
+fitting & aksesoris",m',,9300.0
+1340,M.1340,"Pipa PVC AW ; DN. 1""
+(25 mm) + fitting &
+aksesoris",m',,11700.0
+1341,M.1341,"Pipa PVC AW ; DN. 1-
+1/4"" (32 mm) +
+fitting & aksesoris",m',,19000.0
+1342,M.1342,"Pipa PVC AW ; DN. 1-
+1/2"" (40 mm) +
+fitting & aksesoris",m',,22000.0
+1343,M.1343,"Pipa PVC AW ; DN. 2"" (50 mm) + fitting & aksesoris",m',,28000.0
+1344,M.1344,"Pipa PVC AW ; DN. 2-1/2"" (65 mm) + fitting & aksesoris",m',,40000.0
+1345,M.1345,"Pipa PVC AW ; DN. 3""
+(80 mm) + fitting &
+aksesoris",m',,53000.0
+1346,M.1346,"Pipa PVC AW ; DN. 4""
+(100 mm) + fitting &
+aksesoris",m',,74000.0
+1347,M.1347,"Pipa PVC AW ; DN. 5""
+(125 mm) + fitting &
+aksesoris",m',,101000.0
+1348,M.1348,"Pemasangan 1 m pipa PVC AW, DN. 6"" (150 mm)",m',,108000.0
+1349,M.1349,"Pipa PVC AW ; DN. 8""
+(200 mm) + fitting &
+aksesoris",m',,133000.0
+1350,M.1350,"Pipa PVC AW ; DN.
+10"" (250 mm) +
+fitting & aksesoris",m',,232000.0
+1351,M.1351,"Pipa PVC AW ; DN. 12"" (300 mm) + fitting & aksesoris",m',,179000.0
+1352,M.1352,"Pipa PVC AW ; DN. 14"" (350 mm) + fitting & aksesoris",m',,201000.0
+1353,M.1353,"Pipa PVC AW ; DN. 16"" (400 mm) + fitting & aksesoris",m',,234000.0
+1354,M.1354,"Pipa PVC D ; DN. 1-1/4"" (32 mm) + fitting & aksesoris",m',,11000.0
+1355,M.1355,"Pipa PVC D ; DN. 1-1/2"" (40 mm) + fitting & aksesoris",m',,12000.0
+1356,M.1356,"Pipa PVC D ; DN. 2"" (50 mm) + fitting & aksesoris",m',,15000.0
+1357,M.1357,"Pipa PVC D ; DN.
+2-1/2"" (65 mm) +
+fitting & aksesoris",m',,21000.0
+1358,M.1358,"Pipa PVC D ; DN.
+3"" (80 mm) + fitting &
+aksesoris",m',,29000.0
+1359,M.1359,"Pipa PVC D ; DN. 4"" (100 mm) + fitting & aksesoris",m',,40000.0
+1360,M.1360,"Pipa PVC D ; DN. 5"" (125 mm) + fitting & aksesoris",m',,64000.0
+1361,M.1361,"Pipa PVC D ; DN. 6"" (150 mm) + fitting & aksesoris",m',,80000.0
+1362,M.1362,"Pipa PVC D ; DN. 8"" (200 mm) + fitting & aksesoris",m',,140000.0
+1363,M.1363,"Pipa PVC D ; DN.
+10"" (250 mm) +
+fitting & aksesoris",m',,233000.0
+1364,M.1364,"Pipa PVC D ; DN.
+12"" (300 mm) +
+fitting & aksesoris",m',,320000.0
+1365,M.1365,"Pipa PVC D ; DN.
+14"" (350 mm) +
+fitting & aksesoris",m',,323000.0
+1366,M.1366,"Pipa PVC D ; DN.
+16"" (400 mm) +
+fitting & aksesoris",m',,363000.0
+1367,M.1367,"Pipa galvanis MED CLASS ; DN. 1/2"" (15 mm) + fitting & aksesoris",m',,28000.0
+1368,M.1368,"Pipa galvanis MED CLASS ; DN. 3/4"" (20 mm) + fitting & aksesoris",m',,36000.0
+1369,M.1369,"Pipa galvanis MED
+CLASS ; DN. 1"" (25
+mm) + fitting &
+aksesoris",m',,50000.0
+1370,M.1370,"Pipa galvanis MED
+CLASS ; DN. 1-1/4""
+(32 mm) + fitting &
+aksesoris",m',,81000.0
+1371,M.1371,"Pipa galvanis MED CLASS ; DN. 1-1/2"" (40 mm) + fitting & aksesoris",m',,82500.0
+1372,M.1372,"Pipa galvanis MED CLASS ; DN. 2"" (50 mm) + fitting & aksesoris",m',,94000.0
+1373,M.1373,"Pipa galvanis MED CLASS ; DN. 2-1/2"" (65 mm) + fitting & aksesoris",m',,95000.0
+1374,M.1374,"Pipa galvanis MED CLASS ; DN. 3"" (80 mm) + fitting & aksesoris",m',,176000.0
+1375,M.1375,"Pipa galvanis MED CLASS ; DN. 4"" (100 mm) + fitting & aksesoris",m',,253500.0
+1376,M.1376,"Pipa galvanis MED CLASS ; DN. 5"" (125 mm) + fitting & aksesoris",m',,336000.0
+1377,M.1377,"Pipa galvanis MED CLASS ; DN. 6"" (150 mm) + fitting & aksesoris",m',,266000.0
+1378,M.1378,"Pipa galvanis MED CLASS ; DN. 8"" (200 mm) + fitting & aksesoris",m',,384000.0
+1379,M.1379,"Pipa galvanis MED CLASS ; DN. 10"" (250 mm) + fitting & aksesoris",m',,391000.0
+1380,M.1380,"Pipa galvanis MED CLASS ; DN. 12"" (300 mm) + fitting & aksesoris",m',,340000.0
+1381,M.1381,"Pipa galvanis MED CLASS ; DN. 14"" (350 mm) + fitting & aksesoris",m',,411000.0
+1382,M.1382,"Pipa galvanis MED CLASS ; DN. 16"" (400 mm) + fitting & aksesoris",m',,418000.0
+1383,M.1383,"Pipa galvanis SCH 40 ; DN. 1/2"" (15 mm) + fitting & aksesoris",m',,40000.0
+1384,M.1384,"Pipa galvanis SCH 40 ; DN. 3/4"" (20 mm) + fitting & aksesoris",m',,48000.0
+1385,M.1385,"Pipa galvanis SCH 40 ; DN. 1"" (25 mm) + fitting & aksesoris",m',,66500.0
+1386,M.1386,"Pipa galvanis SCH 40 ; DN. 1-1/4"" (32 mm) + fitting & aksesoris",m',,88500.0
+1387,M.1387,"Pipa galvanis SCH 40 ; DN. 1-1/2"" (40 mm) + fitting & aksesoris",m',,103000.0
+1388,M.1388,"Pipa galvanis SCH 40 ; DN. 2"" (50 mm) + fitting & aksesoris",m',,189000.0
+1389,M.1389,"Pipa galvanis SCH 40 ; DN. 2-1/2"" (65 mm) + fitting & aksesoris",m',,206000.0
+1390,M.1390,"Pipa galvanis SCH 40 ; DN. 3"" (80 mm) + fitting & aksesoris",m',,360000.0
+1391,M.1391,"Pipa galvanis SCH 40 ; DN. 4"" (100 mm) + fitting & aksesoris",m',,381000.0
+1392,M.1392,"Pipa galvanis SCH 40 ; DN. 5"" (125 mm) + fitting & aksesoris",m',,502000.0
+1393,M.1393,"Pipa galvanis SCH 40 ; DN. 6"" (150 mm) + fitting & aksesoris",m',,636000.0
+1394,M.1394,"Pipa galvanis SCH 40 ; DN. 8"" (200 mm) + fitting & aksesoris",m',,987500.0
+1395,M.1395,"Pipa galvanis SCH 40 ; DN. 10"" (250 mm) + fitting & aksesoris",m',,1322500.0
+1396,M.1396,"Pipa galvanis SCH 40 ; DN. 12"" (300 mm) + fitting & aksesoris",m',,1406000.0
+1397,M.1397,"Pipa galvanis SCH 40 ; DN. 14"" (350 mm) + fitting & aksesoris",m',,1464000.0
+1398,M.1398,"Pipa galvanis SCH 40 ; DN. 16"" (400 mm) + fitting & aksesoris",m',,1502000.0
+1399,M.1399,"Pipa PPR PN 10 ; DN. 1/2"" (15 mm) + fitting & aksesoris",m',,16100.0
+1400,M.1400,"Pipa PPR PN 10 ; DN. 3/4"" (20 mm) + fitting & aksesoris",m',,19700.0
+1401,M.1401,"Pipa PPR PN 10 ; DN. 1"" (25 mm) + fitting & aksesoris",m',,28500.0
+1402,M.1402,"Pipa PPR PN 10 ; DN. 1-1/4"" (32 mm) + fitting & aksesoris",m',,42000.0
+1403,M.1403,"Pipa PPR PN 10 ; DN. 1-1/2"" (40 mm) + fitting & aksesoris",m',,62500.0
+1404,M.1404,"Pipa PPR PN 10 ; DN. 2"" (50 mm) + fitting & aksesoris",m',,96000.0
+1405,M.1405,"Pipa PPR PN 10 ; DN. 2-1/2"" (65 mm) + fitting & aksesoris",m',,132000.0
+1406,M.1406,"Pipa PPR PN 10 ; DN. 3"" (80 mm) + fitting & aksesoris",m',,183500.0
+1407,M.1407,"Pipa PPR PN 10 ; DN. 4"" (100 mm) + fitting & aksesoris",m',,276600.0
+1408,M.1408,"Pipa PPR PN 10 ; DN. 6"" (150 mm) + fitting & aksesoris",m',,930500.0
+1409,M.1409,"Pipa PPR PN 20 ; DN. 1/2"" (15 mm) + fitting & aksesoris",m',,931000.0
+1410,M.1410,"Pipa PPR PN 20 ; DN. 3/4"" (20 mm) + fitting & aksesoris",m',,29000.0
+1411,M.1411,"Pipa PPR PN 20 ; DN. 1"" (25 mm) + fitting & aksesoris",m',,44000.0
+1412,M.1412,"Pipa PPR PN 20 ; DN. 1-1/4"" (32 mm) + fitting & aksesoris",m',,65000.0
+1413,M.1413,"Pipa PPR PN 20 ; DN. 1-1/2"" (40 mm) + fitting & aksesoris",m',,98500.0
+1414,M.1414,"Pipa PPR PN 20 ; DN. 2"" (50 mm) + fitting & aksesoris",m',,153000.0
+1415,M.1415,"Pipa PPR PN 20 ; DN. 2-1/2"" (65 mm) + fitting & aksesoris",m',,214500.0
+1416,M.1416,"Pipa PPR PN 20 ; DN. 3"" (80 mm) + fitting & aksesoris",m',,305500.0
+1417,M.1417,"Pipa PPR PN 20 ; DN. 4"" (100 mm) + fitting & aksesoris",m',,454000.0
+1418,M.1418,"Pipa PPR PN 20 ; DN. 6"" (150 mm) + fitting & akseso",m',,1535000.0
+1419,M.1419,"Pipa BS MED CLASS ; DN. 1/2"" (15 mm) + fitting & aksesoris",m',,30500.0
+1420,M.1420,"Pipa BS MED CLASS ; DN. 3/4"" (20 mm) + fitting & aksesoris",m',,37500.0
+1421,M.1421,"Pipa BS MED CLASS ; DN. 1"" (25 mm) + fitting & aksesoris",m',,53000.0
+1422,M.1422,"Pipa BS MED CLASS DN. 1-1/4"" (32 mm) + fitting & aksesoris",m',,68000.0
+1423,M.1423,"Pipa BS MED CLASS DN. 1-1/2"" (40 mm) + fitting & aksesoris",m',,77000.0
+1424,M.1424,"Pipa BS MED CLASS ; DN. 2"" (50 mm) + fitting & aksesoris",m',,103000.0
+1425,M.1425,"Pipa BS MED CLASS DN. 2-1/2"" (65 mm) + fitting & aksesoris",m',,130000.0
+1426,M.1426,"Pipa BS MED CLASS ; DN. 3"" (80 mm) + fitting & aksesoris",m',,166000.0
+1427,M.1427,"Pipa BS MED CLASS ; DN. 4"" (100 mm) + fitting & aksesoris",m',,237500.0
+1428,M.1428,"Pipa BS MED CLASS ; DN. 5"" (125 mm) + fitting & aksesoris",m',,317500.0
+1429,M.1429,"Pipa BS MED CLASS ; DN. 6"" (150 mm) + fitting & aksesoris",m',,377000.0
+1430,M.1430,"Pipa BS MED CLASS ; DN. 8"" (200 mm) + fitting & aksesoris",m',,663500.0
+1431,M.1431,"Pipa BS MED CLASS ; DN. 10"" (250 mm) + fitting & aksesoris",m',,756000.0
+1432,M.1432,"Pipa BS MED CLASS ; DN. 12"" (300 mm) + fitting & aksesoris",m',,883000.0
+1433,M.1433,"Pipa BS MED CLASS ; DN. 14"" (350 mm) + fitting & aksesoris",m',,1086000.0
+1434,M.1434,"Pipa BS MED CLASS ; DN. 16"" (400 mm) + fitting & aksesoris",m',,1241000.0
+1435,M.1435,"Pipa BS SCH 40 ; DN. 1/2"" (15 mm) + fitting & aksesoris",m',,250000.0
+1436,M.1436,"Pipa BS SCH 40 ; DN. 3/4"" (20 mm) + fitting & aksesoris",m',,260000.0
+1437,M.1437,"Pipa BS SCH 40 ; DN. 1-1/4"" (32 mm) + fitting & aksesoris",m',,270000.0
+1438,M.1438,"Pipa BS SCH 40 ; DN. 1-1/2"" (40 mm) + fitting & aksesoris",m',,280000.0
+1439,M.1439,"Pipa BS SCH 40 ; DN. 2"" (50 mm) + fitting & aksesoris",m',,290000.0
+1440,M.1440,"Pipa BS SCH 40 ; DN. 2-1/2"" (65 mm) + fitting & aksesoris",m',,300000.0
+1441,M.1441,"Pipa BS SCH 40 ; DN. 3"" (80 mm) + fitting & aksesoris",m',,310000.0
+1442,M.1442,"Pipa BS SCH 40 ; DN. 4"" (100 mm) + fitting & aksesoris",m',,320000.0
+1443,M.1443,"Pipa BS SCH 40 ; DN. 5"" (125 mm) + fitting & aksesoris",m',,330000.0
+1444,M.1444,"Pipa BS SCH 40 ; DN. 6"" (150 mm) + fitting & aksesoris",m',,340000.0
+1445,M.1445,"Pipa BS SCH 40 ; DN. 8"" (200 mm) + fitting & aksesoris",m',,350000.0
+1446,M.1446,"Pipa BS SCH 40 ; DN. 10"" (250 mm) + fitting & aksesoris",m',,360000.0
+1447,M.1447,"Pipa BS SCH 40 ; DN. 12"" (300 mm) + fitting & aksesoris",m',,370000.0
+1448,M.1448,"Pipa BS SCH 40 ; DN. 14"" (350 mm) + fitting & aksesoris",m',,380000.0
+1449,M.1449,"Pipa BS SCH 40 ; DN. 16"" (400 mm) + fitting & aksesoris",m',,390000.0
+1450,M.1450,"Pipa Tanah, DN. 6"" (150 mm",m',,187500.0
+1451,M.1451,"Pipa Tanah, DN. 8"" (200 mm)",m',,205000.0
+1452,M.1452,"Gate Valve dia. 1/2""",unit,,1500000.0
+1453,M.1453,"Gate Valve dia. 3/4""",unit,,1700000.0
+1454,M.1454,"Gate Valve dia. 1""",unit,,1900000.0
+1455,M.1455,"Gate Valve dia. 1-1/4""",unit,,2050000.0
+1456,M.1456,"Gate Valve dia. 1-1/2""",unit,,2125000.0
+1457,M.1457,"Gate Valve dia.2""",unit,,2315000.0
+1458,M.1458,"Gate Valve dia.2-1/2""",unit,,2475000.0
+1459,M.1459,"Gate Valve dia.3""",unit,,2750000.0
+1460,M.1460,"Gate Valve dia.4""",unit,,2995000.0
+1461,M.1461,"Gate Valve dia.5""",unit,,3250000.0
+1462,M.1462,"Gate Valve dia.6""",unit,,3570000.0
+1463,M.1463,"Gate Valve dia.8""",unit,,3950000.0
+1464,M.1464,"Gate Valve dia.10""",unit,,4210000.0
+1465,M.1465,"Gate Valve dia.12""",unit,,4520000.0
+1466,M.1466,"Ball Velve dia. 1/2""",unit,,25000.0
+1467,M.1467,"Ball Velve dia. 3/4""",unit,,36750.0
+1468,M.1468,"Ball Velve dia. 1""",unit,,46100.0
+1469,M.1469,"Ball Velve dia. 1-1/4""",unit,,68000.0
+1470,M.1470,"Ball Velve dia. 1-1/2""",unit,,79000.0
+1471,M.1471,"Ball Velve dia. 2""",unit,,118000.0
+1472,M.1472,"Ball Velve dia. 2-1/2""",unit,,145000.0
+1473,M.1473,"Ball Velve dia. 3""",unit,,215000.0
+1474,M.1474,"Ball Velve dia. 4""",unit,,233300.0
+1475,M.1475,"Check Velve dia. 1/2""",unit,,39000.0
+1476,M.1476,"Check Velve dia. 3/4""",unit,,59000.0
+1477,M.1477,"Check Velve dia. 1""",unit,,88350.0
+1478,M.1478,"Check Velve dia. 1-1/4""",unit,,110960.0
+1479,M.1479,"Check Velve dia. 1-1/2""",unit,,148960.0
+1480,M.1480,"Check Velve dia. 2""",unit,,215460.0
+1481,M.1481,"Check Velve dia. 2-1/2""",unit,,265000.0
+1482,M.1482,"Check Velve dia. 3""",unit,,587000.0
+1483,M.1483,"Check Velve dia. 4""",unit,,1440000.0
+1484,M.1484,"Check Velve dia. 5""",unit,,2750000.0
+1485,M.1485,"Check Velve dia. 6""",unit,,3050000.0
+1486,M.1486,"Check Velve dia. 8""",unit,,3470000.0
+1487,M.1487,"Check Velve dia. 10""",unit,,3680000.0
+1488,M.1488,"Check Velve dia. 12""",unit,,3970000.0
+1489,M.1489,"Strainer dia. 1/2""",unit,,36000.0
+1490,M.1490,"Strainer dia. 3/4""",unit,,47000.0
+1491,M.1491,"Strainer dia. 1""",unit,,59000.0
+1492,M.1492,"Strainer dia. 1-1/4""",unit,,95600.0
+1493,M.1493,"Strainer dia. 1-1/2""",unit,,143000.0
+1494,M.1494,"Strainer dia. 2""",unit,,303600.0
+1495,M.1495,"Strainer dia. 2-1/2""",unit,,415600.0
+1496,M.1496,"Strainer dia. 3""",unit,,552000.0
+1497,M.1497,"Strainer dia. 4""",unit,,809600.0
+1498,M.1498,"Strainer dia. 5""",unit,,873000.0
+1499,M.1499,"Strainer dia. 6""",unit,,970500.0
+1500,M.1500,"Strainer dia. 8""",unit,,1260000.0
+1501,M.1501,"Strainer dia. 10""",unit,,1540000.0
+1502,M.1502,"Strainer dia. 12""",unit,,1670000.0
+1503,M.1503,"Strainer dia. 14""",unit,,1820000.0
+1504,M.1504,"Floater Velve dia. 1/2""",unit,,221000.0
+1505,M.1505,"Floater Velve dia. 3/4""",unit,,250000.0
+1506,M.1506,"Floater Velve dia. 1""",unit,,375000.0
+1507,M.1507,"Floater Velve dia. 1-1/4""",unit,,485000.0
+1508,M.1508,"Floater Velve dia. 1-1/2""",unit,,630000.0
+1509,M.1509,"Floater Velve dia. 2""",unit,,870000.0
+1510,M.1510,"Floater Velve dia. 2-1/2""",unit,,980000.0
+1511,M.1511,"Floater Velve dia. 3""",unit,,1170000.0
+1512,M.1512,"Floater Velve dia. 4""",unit,,1370000.0
+1513,M.1513,"Floater Velve dia. 5""",unit,,1520000.0
+1514,M.1514,"Floater Velve dia. 6""",unit,,1740000.0
+1515,M.1515,"Floater Velve dia. 8""",unit,,1960000.0
+1516,M.1516,"Floater Velve dia. 10""",unit,,2130000.0
+1517,M.1517,"Floater Velve dia. 12""",unit,,2480000.0
+1518,M.1518,"Foot Velve dia. 1/2""",unit,,21450.0
+1519,M.1519,"Foot Velve dia. 3/4""",unit,,69400.0
+1520,M.1520,"Foot Velve dia. 1-1/4""",unit,,134600.0
+1521,M.1521,"Foot Velve dia. 1-1/2""",unit,,202000.0
+1522,M.1522,"Foot Velve dia. 2""",unit,,331300.0
+1523,M.1523,"Foot Velve dia. 2-1/2""",unit,,348000.0
+1524,M.1524,"Foot Velve dia. 3""",unit,,609000.0
+1525,M.1525,"Foot Velve dia. 4""",unit,,870000.0
+1526,M.1526,"Foot Velve dia. 5""",unit,,920500.0
+1527,M.1527,"Foot Velve dia. 6""",unit,,1055000.0
+1528,M.1528,"Foot Velve dia. 8""",unit,,1315000.0
+1529,M.1529,"Foot Velve dia. 10""",unit,,1525000.0
+1530,M.1530,"Foot Velve dia. 12""",unit,,1740000.0
+1531,M.1531,"Foot Velve dia. 14""",unit,,1980000.0
+1532,M.1532,"Flexible Joint dia. 1/2""",unit,,33600.0
+1533,M.1533,"Flexible Joint dia. 3/4""",unit,,46500.0
+1534,M.1534,"Flexible Joint dia. 1""",unit,,87500.0
+1535,M.1535,"Flexible Joint dia. 1-1/4""",unit,,97800.0
+1536,M.1536,"Flexible Joint dia. 1-1/2""",unit,,105700.0
+1537,M.1537,"Flexible Joint dia. 2""",unit,,136500.0
+1538,M.1538,"Flexible Joint dia. 2-1/2""",unit,,157900.0
+1539,M.1539,"Flexible Joint dia. 3""",unit,,165400.0
+1540,M.1540,"Flexible Joint dia. 4""",unit,,360000.0
+1541,M.1541,"Flexible Joint dia. 5""",unit,,740900.0
+1542,M.1542,"Flexible Joint dia. 6""",unit,,937500.0
+1543,M.1543,"Flexible Joint dia. 8""",unit,,1050900.0
+1544,M.1544,"Flexible Joint dia. 10""",unit,,1345000.0
+1545,M.1545,"Flexible Joint dia. 12""",unit,,1678000.0
+1546,M.1546,"Flexible Joint dia. 14""",unit,,1945000.0
+1547,M.1547,"Butterfly Velve dia. 2""",unit,,136100.0
+1548,M.1548,"Butterfly Velve dia. 2-1/2""",unit,,170700.0
+1549,M.1549,"Butterfly Velve dia. 3""",unit,,276400.0
+1550,M.1550,"Butterfly Velve dia. 4""",unit,,303600.0
+1551,M.1551,"Butterfly Velve dia. 5""",unit,,515200.0
+1552,M.1552,"Butterfly Velve dia. 6""",unit,,829300.0
+1553,M.1553,"Butterfly Velve dia. 8""",unit,,1364500.0
+1554,M.1554,"Butterfly Velve dia. 10""",unit,,1808900.0
+1555,M.1555,"Butterfly Velve dia. 12""",unit,,2170800.0
+1556,M.1556,"Globe Velve dia. 1/2""",unit,,104500.0
+1557,M.1557,"Globe Velve dia. 3/4""",unit,,118000.0
+1558,M.1558,"Globe Velve dia. 1""",unit,,140500.0
+1559,M.1559,"Globe Velve dia. 1-1/4""",unit,,189900.0
+1560,M.1560,"Globe Velve dia. 1-1/2""",unit,,252900.0
+1561,M.1561,"Globe Velve dia. 2""",unit,,966300.0
+1562,M.1562,"Globe Velve dia. 2-1/2""",unit,,1214300.0
+1563,M.1563,"Globe Velve dia. 3""",unit,,1573100.0
+1564,M.1564,"Globe Velve dia. 4""",unit,,2121400.0
+1565,M.1565,"Globe Velve dia. 5""",unit,,3890000.0
+1566,M.1566,"Globe Velve dia. 6""",unit,,4996000.0
+1567,M.1567,"Globe Velve dia. 8""",unit,,5740000.0
+1568,M.1568,"Pressure Gauge Dia. 1/2""",Unit,,58000.0
+1569,M.1569,"Pressure Gauge dia. 1""",unit,,79800.0
+1570,M.1570,"Pressure Gauge dia. 2""",unit,,123000.0
+1571,M.1571,"Pressure Gauge dia. 3""",unit,,165400.0
+1572,M.1572,"Pressure Gauge dia. 4""",unit,,218500.0
+1573,M.1573,"Water Meter dia. 1/2""",Bh,,270750.0
+1574,M.1574,"Water Meter dia. 3/4""",Bh,,655914.0
+1575,M.1575,"Water Meter dia. 1""",Bh,,1416800.0
+1576,M.1576,"Water Meter dia. 1-1/2""",Bh,,1740600.0
+1577,M.1577,"Water Meter dia. 2""",Bh,,2392000.0
+1578,M.1578,"Water Meter dia. 3""",BH,,2700000.0
+1579,M.1579,"Water Meter dia. 4""",Bh,,2980000.0
+1580,M.1580,"Water Meter dia. 6""",Bh,,3540900.0
+1581,M.1581,"Water Meter dia. 8""",Bh,,3947000.0
+1582,M.1582,"Water Meter dia. 10""",Bh,,4230900.0
+1583,M.1583,"Water Meter dia. 12""",Bh,,4560000.0
+1584,M.1584,"Water Meter dia. 16""",Bh,,4760900.0
+1585,M.1585,"Flow Meter Analog dia.4""",Bh,,2449000.0
+1586,M.1586,"Clean Out dia. 2""",Bh,,47500.0
+1587,M.1587,"Clean Out dia. 2-1/2""",Bh,,56700.0
+1588,M.1588,"Clean Out dia. 3""",Bh,,65000.0
+1589,M.1589,"Clean Out dia. 4""",Bh,,72500.0
+1590,M.1590,"Clean Out dia. 5""",Bh,,178900.0
+1591,M.1591,"Clean Out dia. 6""",Bh,,230880.0
+1592,M.1592,"Clean Out dia. 8""",Bh,,370000.0
+1593,M.1593,"Roof Drain dia. 2""",Bh,,29800.0
+1594,M.1594,"Roof Drain dia. 2-1/2""",Bh,,33925.0
+1595,M.1595,"Roof Drain dia. 3""",Bh,,37375.0
+1596,M.1596,"Roof Drain dia. 4""",Bh,,40250.0
+1597,M.1597,"Roof Drain dia. 5""",Bh,,51700.0
+1598,M.1598,"Roof Drain dia. 6""",Bh,,61100.0
+1599,M.1599,"Roof Drain dia. 8""",Bh,,90250.0
+1600,M.1600,"Roof Drain dia. 10""",Bh,,142500.0
+1601,M.1601,"Roof Drain dia. 12""",Bh,,167500.0
+1602,M.1602,"Floor Clean Out dia. 2""",Bh,,136800.0
+1603,M.1603,"Floor Clean Out dia. 2-1/2""",Bh,,163100.0
+1604,M.1604,"Floor Clean Out dia. 3""",Bh,,199500.0
+1605,M.1605,"Floor Clean Out dia. 4""",Bh,,300300.0
+1606,M.1606,"Floor Clean Out dia. 6""",Bh,,415500.0
+1607,M.1607,"Floor Clean Out dia. 8""",Bh,,507600.0
+1608,M.1608,"Vent Cap dia. 2""",Bh,,45000.0
+1609,M.1609,"Vent Cap dia. 3""",Bh,,65000.0
+1610,M.1610,"Vent Cap dia. 4""",Bh,,80000.0
+1611,M.1611,"PRV Set dia. 2""",Bh,,4900000.0
+1612,M.1612,"PRV Set dia. 2-1/2""",Bh,,5350000.0
+1613,M.1613,"PRV Set dia. 3""",Bh,,7500000.0
+1614,M.1614,"PRV set dia. 4""",Bh,,8450000.0
+1615,M.1615,"PRV Set dia. 6""",Bh,,8930000.0
+1616,M.1616,"PRV Set dia. 8""",Bh,,9430000.0
+1617,M.1617,"AAV dia. 1/2""",Bh,,250000.0
+1618,M.1618,"AAV dia.1""",Bh,,850000.0
+1619,M.1619,"AAV dia. 2""",Bh,,1050000.0
+1620,M.1620,"AAV dia. 3""",Bh,,1230800.0
+1621,M.1621,"AAV dia. 4""",Bh,,1432000.0
+1622,M.1622,"AAV dia. 6""",Bh,,1653000.0
+1623,M.1623,"Vent Out dia. 2""",Bh,,235000.0
+1624,M.1624,WLC dan Pengkabelan,unit,,81100.0
+1625,M.1625,Pressure Switch,unit,,220800.0
+1626,M.1626,"Header Pipa PVC AW Dia. 4""",m',,1325000.0
+1627,M.1627,"Header Pipa Galvanis MED Class Dia. 4""",m',,5600000.0
+1628,M.1628,"Header Pipa BS SCH 40 Dia. 8""",m',,3500000.0
+1629,M.1629,"Header Pipa BS SCH 40 Dia. 10""",m',,4600000.0
+1630,M.1630,"Dop PVC dia. 3""",buah,,9950.0
+1631,M.1631,"Dop PVC dia. 4""",buah,,19500.0
+1632,M.1632,"Dop PVC dia. 6""",buah,,28000.0
+1633,M.1633,"Pipa PVC AW Ø 4""",m',,72375.0
+1634,M.1634,Paving Block Tebal 6 cm fc 20 Mpa,m2,,70000.0
+1635,M.1635,Pasir Filler,m3,,300000.0
+1636,M.1636,Paving Block Tebal 6 cm fc 25 Mpa,m2,,82000.0
+1637,M.1637,Paving Block Tebal 8 cm fc 20 Mpa,m2,,85000.0
+1638,M.1638,Paving Block Tebal 8 cm fc 25 Mpa,m2,,97000.0
+1639,M.1639,Kanstin uk. 10x20x40,buah,,27383.0
+1640,M.1640,Kanstin uk. 15x40x60,buah,,93000.0
+1641,M.1641,Agregar Kasar,kg,,226.47058823529412
+1642,M.1642,Multiplek tebal 12 mm,lembar,,152600.0
+1643,M.1643,Adukan beton K-100 ready mix,m3`,,788100.0
+1644,M.1644,Joint Sealant,kg,,22000.0
+1645,M.1645,Curing Compound,liter,,44100.0
+1646,M.1646,Polytene 125 Mikron,kg,,46000.0
+1647,M.1647,Zat Aditif,kg,,25000.0
+1648,M.1648,Dowel dia. 25 mm (BjTs),kg,,15367.965367965367
+1649,M.1649,Tie Bar Dia. 16 mm (BjTS),kg,,17721.518987341773
+1650,M.1650,Adukan beton K-300 ready mix,m3,,961200.0
+1651,M.1651,Adukan beton K-350 ready mix,m3,,1001900.0
+1652,M.1652,"Lolos screen 2 ukuran 9,5-19,0",m3,,1970000.0
+1653,M.1653,Lolos screen 2 ukuran 0-5,m3,,1799000.0
+1654,M.1654,Lantai Kerja fc 10 Mpa,m3,,1236000.0
+1655,M.1655,Urukan Pasir Uruk,m3,,488180.0
+1656,M.1656,U-Ditch 30x30x120 cm,buah,,220000.0
+1657,M.1657,U-Ditch 30x40x120 cm,buah,,240000.0
+1658,M.1658,U-Ditch 40x40x120 cm,buah,,270000.0
+1659,M.1659,U-Ditch 40x50x120 cm,buah,,290000.0
+1660,M.1660,U-Ditch 40x60x120 cm,buah,,320000.0
+1661,M.1661,U-Ditch 50x50x120 cm,buah,,340000.0
+1662,M.1662,U-Ditch 50x60x120 cm,buah,,370000.0
+1663,M.1663,U-Ditch 50x70x120 cm,buah,,390000.0
+1664,M.1664,U-Ditch 60x60x120 cm,buah,,420000.0
+1665,M.1665,U-Ditch 60x70x120 cm,buah,,440000.0
+1666,M.1666,U-Ditch 60x80x120 cm,buah,,470000.0
+1667,M.1667,U-Ditch 80x60x120 cm,buah,,490000.0
+1668,M.1668,U-Ditch 80x80x120 cm,buah,,520000.0
+1669,M.1669,U-Ditch 80x100x120 cm,buah,,540000.0
+1670,M.1670,U-Ditch 100x100x120 cm,buah,,570000.0
+1671,M.1671,U-Ditch 100x120x120 cm,buah,,590000.0
+1672,M.1672,U-Ditch 120x120x120 cm,buah,,620000.0
+1673,M.1673,U-Ditch 120x140x120 cm,buah,,640000.0
+1674,M.1674,U-Ditch 140x140x120 cm,buah,,670000.0
+1675,M.1675,U-Ditch 150x100x120 cm,buah,,680000.0
+1676,M.1676,U-Ditch 150x150x120 cm,buah,,710000.0
+1677,M.1677,U-Ditch 150x170x120 cm,buah,,730000.0
+1678,M.1678,U-Ditch 160x160x120 cm,buah,,750000.0
+1679,M.1679,U-Ditch 160x180x120 cm,buah,,780000.0
+1680,M.1680,U-Ditch 180x180x120 cm,buah,,800000.0
+1681,M.1681,U-Ditch 180x200x120 cm,buah,,830000.0
+1682,M.1682,U-Ditch 200x200x120 cm,buah,,850000.0
+1683,M.1683,"Lantai Kerja fc 7,5 Mpa",m3,,928000.0
+1684,M.1684,Tutup U-Ditch 39x60x6 (tipe LD),buah,,70000.0
+1685,M.1685,Tutup U-Ditch 51x60x7 (tipe LD),buah,,100000.0
+1686,M.1686,"Tutup U-Ditch 62x60x7,5 (tipe LD)",buah,,125000.0
+1687,M.1687,"Tutup U-Ditch 73x60x7,8 (tipe LD)",buah,,165000.0
+1688,M.1688,Tutup U-Ditch 94x60x10 (tipe LD),buah,,195000.0
+1689,M.1689,Tutup U-Ditch 39x60x9 (tipe HD),buah,,125000.0
+1690,M.1690,Tutup U-Ditch 51x60x10 (tipe HD),buah,,176000.0
+1691,M.1691,Tutup U-Ditch 73x60x14 (tipe HD),buah,,235000.0
+1692,M.1692,Tutup U-Ditch 94x60x15 (tipe HD),buah,,375000.0
+1693,M.1693,Plat Strip 3/30 mm,m,,9900.0
+1694,M.1694,Besi siku 40x40x4,m,,20825.0
+1695,M.1695,Pemasangan Plesteran 1  SP : 4 PP Tebal 15 mm,m2,,56784.2
+1696,M.1696,Buis beton 1/2 dia. 30 cm,buah,,93000.0
+1697,M.1697,Buis beton 1/2 dia. 40 cm,buah,,110250.0
+1698,M.1698,Buis beton 1/2 dia. 50 cm,buah,,115000.0
+1699,M.1699,Buis beton 1/2 dia. 60 cm,buah,,125500.0
+1700,M.1700,Buis beton 1/2 dia. 80 cm,buah,,150600.0
+1701,M.1701,Buis Beton 1/2 dia. 100 cm,buah,,190000.0
+1702,M.1702,Buis Beton dia. 30 cm,buah,,75000.0
+1703,M.1703,Buis beton dia. 40 cm,buah,,120000.0
+1704,M.1704,Buis beton dia. 50 cm,buah,,150000.0
+1705,M.1705,Buis beton dia. 60 cm,buah,,250000.0
+1706,M.1706,Buis Beton dia. 100 cm,buah,,269500.0
+1707,M.1707,Box Culvert 40x40x100 cm,buah,,855000.0
+1708,M.1708,Box Culvert 50x50x100 cm,buah,,1119000.0
+1709,M.1709,Box Culvert 60x60x100 cm,buah,,1504000.0
+1710,M.1710,Box Culvert 80x80x100 cm,buah,,2560000.0
+1711,M.1711,Box Culvert 100x100x100 cm,buah,,3052000.0
+1712,M.1712,Box Culvert 150x150x100 cm,buah,,3570000.0
+1713,M.1713,Box Culvert 200x200x100 cm,buah,,3930000.0
+1714,M.1714,Box Culvert 300x300x100 cm,buah,,4110000.0
+1715,M.1715,"Pipa PVC, DN. 2-1/2""
+(65 mm)",m,,15000.0
+1716,M.1716,"Pipa PVC, DN. 3"" (80
+mm)",m,,29000.0
+1717,M.1717,"Pipa PVC, DN. 4"" (100
+mm)",m,,40000.0
+1718,M.1718,"Pipa PVC, DN. 6"" (150
+mm)",m,,64000.0
+1719,M.1719,"Pipa PVC, DN. 8"" (200
+mm)",m,,140000.0
+1720,M.1720,"Pipa PVC, DN. 10""
+(250 mm)",m,,288000.0
+1721,M.1721,"Pipa PVC, DN. 12""
+(300 mm)",m,,306000.0
+1722,M.1722,"Pipa PVC, DN. 16""
+(400 mm)",m,,337000.0
+1723,M.1723,"Pipa PVC, DN. 18""
+(450 mm)",m,,369000.0
+1724,M.1724,"Pipa PVC, DN. 20""
+(500 mm)",m,,399000.0
+1725,M.1725,"Pipa PVC, DN. 24""
+(600 mm)",m,,426000.0
+1726,M.1726,"Pipa PVC, DN. 32""
+(800 mm",m,,488000.0
+1727,M.1727,"Pipa PVC, DN. 36""
+(900 mm",m,,516000.0
+1728,M.1728,"Pipa PVC, DN. 40""
+(1000 mm)",m,,548000.0
+1729,M.1729,"Pipa PVC, DN. 44""
+(1100 mm)",m,,590000.0
+1730,M.1730,"Pipa PVC, DN. 48""
+(1200 mm)",m,,618000.0
+1731,M.1731,"Pipa PVC, DN. 1/2""
+(15 mm)",m,,5300.0
+1732,M.1732,"Pipa PVC, DN. 3/4""
+(20 mm)",m,,7600.0
+1733,M.1733,"Pipa PVC, DN. 1"" (25 mm)",m,,8400.0
+1734,M.1734,"Pipa PVC, DN. 1-1/4""
+(32 mm",m,,10000.0
+1735,M.1735,"Pipa PVC, DN. 1-1/2""
+(40 mm)",m,,10600.0
+1736,M.1736,"Pipa PVC, DN. 2"" (50 mm)",m,,13800.0
+1737,M.1737,"Pipa Galvanis, DN. 2-
+1/2"" (65 mm)",m,,185000.0
+1738,M.1738,"Pipa Galvanis, DN. 4""
+(100 mm)",m,,310000.0
+1739,M.1739,"Pipa Galvanis, DN. 5""
+(125 mm)",m,,436000.0
+1740,M.1740,"Pipa Galvanis, DN. 6""
+(150 mm)",m,,396000.0
+1741,M.1741,"Pipa Galvanis, DN. 8""
+(200 mm)",m,,418000.0
+1742,M.1742,"Pipa Galvanis,
+DN.10"" (250 mm)",m,,468000.0
+1743,M.1743,"Pipa Galvanis, DN. 12""
+(300 mm",m,,513000.0
+1744,M.1744,"Pipa Galvanis, DN. 16""
+(400 mm)",m,,594000.0
+1745,M.1745,"Pipa Galvanis, DN. 18""
+(450 mm",m,,61300.0
+1746,M.1746,"Pipa Galvanis, DN. 20""
+(500 mm)",m,,656000.0
+1747,M.1747,"Pipa Galvanis, DN. 24"" (600 mm)",m,,698000.0
+1748,M.1748,"Pipa Galvanis, DN. 32"" (800 mm)",m,,716000.0
+1749,M.1749,"Pipa Galvanis, DN. 36"" (900 mm)",m,,757000.0
+1750,M.1750,"Pipa Galvanis,
+DN. 40"" (1000 mm)",m,,780000.0
+1751,M.1751,"Pipa Galvanis,
+DN. 44"" (1100 mm)",m,,831000.0
+1752,M.1752,"Pipa Galvanis,
+DN. 48"" (1200 mm",m,,868000.0
+1753,M.1753,"Pipa Galvanis,
+DN. 1/2"" (15 mm)",m,,52000.0
+1754,M.1754,"Pipa Galvanis,
+DN. 3/4"" (20 mm)",m,,68000.0
+1755,M.1755,"Pipa Galvanis, DN. 1""
+(25 mm)",m,,72000.0
+1756,M.1756,"Pipa Galvanis,
+DN. 1-1/4"" (32 mm)",m,,80000.0
+1757,M.1757,"Pipa Galvanis,
+DN. 1-1/2"" (40 mm)",m,,87000.0
+1758,M.1758,"Pipa Galvanis, DN. 2""
+(50 mm",m,,95000.0
+1759,M.1759,"Pipa HDPE, DN. 2-1/2""
+(65 mm)",m,,25000.0
+1760,M.1760,"Pipa HDPE, DN. 4""
+(100 mm)",m,,50000.0
+1761,M.1761,"Pipa HDPE, DN. 5""
+(125 mm)",m,,58000.0
+1762,M.1762,"Pipa HDPE, DN. 6""
+(150 mm",m,,64000.0
+1763,M.1763,"Pipa HDPE, DN. 8""
+(200 mm)",m,,75000.0
+1764,M.1764,"Pipa HDPE, DN.10""
+(250 mm)",m,,82000.0
+1765,M.1765,"Pipa HDPE, DN. 12""
+(300 mm",m,,94000.0
+1766,M.1766,"Pipa HDPE, DN. 16""
+(400 mm)",m,,102000.0
+1767,M.1767,"Pipa HDPE, DN. 18""
+(450 mm)",m,,124000.0
+1768,M.1768,"Pipa HDPE, DN. 20""
+(500 mm)",m,,143000.0
+1769,M.1769,"Pipa HDPE, DN. 24""
+(600 mm",m,,157000.0
+1770,M.1770,"Pipa HDPE, DN. 32""
+(800 mm)",m,,165000.0
+1771,M.1771,"Pipa HDPE, DN. 36""
+(900 mm)",m,,173000.0
+1772,M.1772,"Pipa HDPE, DN. 40""
+(1000 mm)",m,,187000.0
+1773,M.1773,"Pipa HDPE, DN. 44""
+(1100 mm)",m,,198000.0
+1774,M.1774,"Pipa HDPE, DN. 48""
+(1200 mm)",m,,216000.0
+1775,M.1775,"Pipa HDPE, DN. 1/2""
+(15 mm)",m,,13000.0
+1776,M.1776,"Pipa HDPE, DN. 3/4""
+(20 mm)",m,,18000.0
+1777,M.1777,"Pipa HDPE, DN. 1""
+(25 mm)",m,,21000.0
+1778,M.1778,"Pipa HDPE,
+DN. 1-1/4"" (32 mm)",m,,22000.0
+1779,M.1779,"Pipa HDPE,
+DN. 1-1/2"" (40 mm)",m,,23000.0
+1780,M.1780,"Pipa HDPE, DN. 2""
+(50 mm)",m,,24000.0
+1781,M.1781,"Pipa DCI, DN. 4""
+(100 mm)",m,,1083000.0
+1782,M.1782,"Pipa DCI, DN. 5""
+(125 mm)",m,,1100000.0
+1783,M.1783,"Pipa DCI, DN. 6""
+(150 mm)",m,,1300000.0
+1784,M.1784,"Pipa DCI, DN. 8""
+(200 mm)",m,,1450000.0
+1785,M.1785,"Pipa DCI, DN. 10""
+(250 mm)",m,,1570000.0
+1786,M.1786,"Pipa DCI, DN. 12""
+(300 mm)",m,,1640000.0
+1787,M.1787,"Pipa DCI, DN. 16""
+(400 mm)",m,,1790000.0
+1788,M.1788,"Pipa DCI, DN. 18""
+(450 mm)",m,,1850000.0
+1789,M.1789,"Pipa DCI, DN. 20""
+(500 mm)",m,,1960000.0
+1790,M.1790,"Pipa DCI, DN. 24""
+(600 mm)",m,,2115000.0
+1791,M.1791,"Pipa DCI, DN. 32""
+(800 mm)",m,,2360000.0
+1792,M.1792,"Pipa DCI, DN. 36""
+(900 mm)",m,,2440000.0
+1793,M.1793,"Pipa DCI, DN. 40""
+(1000 mm)",m,,2570000.0
+1794,M.1794,"Pipa DCI, DN. 44""
+(1100 mm)",m,,2730000.0
+1795,M.1795,"Pipa DCI, DN. 48""
+(1200 mm)",m,,236000.0
+1796,M.1796,"Pipa Baja Karbon, DN.
+2-1/2"" (65 mm)",m,,525000.0
+1797,M.1797,"Pipa Baja Karbon, DN.
+4"" (100 mm)",m,,650000.0
+1798,M.1798,"Pipa Baja Karbon, DN.
+5"" (125 mm)",m,,770000.0
+1799,M.1799,"Pipa Baja Karbon, DN.
+6"" (150 mm)",m,,815000.0
+1800,M.1800,"Pipa Baja Karbon, DN.
+8"" (200 mm)",m,,895000.0
+1801,M.1801,"Pipa Baja Karbon, DN.
+10"" (250 mm)",m,,945000.0
+1802,M.1802,"Pipa Baja Karbon, DN.
+12"" (300 mm)",m,,1055000.0
+1803,M.1803,"Pipa Baja Karbon, DN. 16""
+(400 mm)",m,,2305000.0
+1804,M.1804,"Pipa Baja Karbon, DN. 18""
+(450 mm",m,,2455000.0
+1805,M.1805,"Pipa Baja Karbon, DN.
+20"" (500 mm)",m,,2565000.0
+1806,M.1806,"Pipa Baja Karbon, DN. 24""
+(600 mm)",m,,2655000.0
+1807,M.1807,"Pipa Baja Karbon, DN. 32""
+(800 mm)",m,,2795000.0
+1808,M.1808,"Pipa Baja Karbon, DN. 36""
+(900 mm)",m,,2955000.0
+1809,M.1809,"Pipa Baja Karbon, DN. 40""
+(1000 mm)",m,,3115000.0
+1810,M.1810,"Pipa Baja Karbon, DN. 44""
+(1100 mm)",m,,3235000.0
+1811,M.1811,"Pipa Baja Karbon, DN. 48""
+(1200 mm",m,,3355000.0
+1812,M.1812,"Pipa Beton, DN. 8"" (200 mm)",m',,236000.0
+1813,M.1813,"Pipa Beton, DN. 12"" (300 mm)",m',,265000.0
+1814,M.1814,"Pipa Beton, DN. 16"" (400 mm)",m',,286000.0
+1815,M.1815,"Pipa Beton, DN. 20"" (500 mm)",m',,300000.0
+1816,M.1816,"Pipa Beton, DN. 24"" (600 mm)",m',,351000.0
+1817,M.1817,"Pipa Beton, DN. 28"" (700 mm)",m',,411000.0
+1818,M.1818,"Pipa Beton, DN. 32"" (800 mm)",m',,491000.0
+1819,M.1819,"Pipa Beton, DN. 40"" (1000 mm)",m',,571000.0
+1820,M.1820,"Pipa Beton, DN. 48"" (1200 mm)",m',,641000.0
+1821,M.1821,"Valve Ø 6"" (150 mm)",buah,,225000.0
+1822,M.1822,"Valve Ø 8"" (200 mm)",buah,,290000.0
+1823,M.1823,"Valve Ø 10"" (250 mm)",buah,,350000.0
+1824,M.1824,"Valve Ø 12"" (300 mm)",buah,,410000.0
+1825,M.1825,"Valve Ø 16"" (400 mm)",buah,,490000.0
+1826,M.1826,"Valve Ø 18"" (450 mm)",buah,,530000.0
+1827,M.1827,"Valve Ø 20"" (500 mm)",buah,,590000.0
+1828,M.1828,"Valve Ø 24"" (600 mm)",buah,,670000.0
+1829,M.1829,"Valve Ø 28"" (700 mm)",buah,,750000.0
+1830,M.1830,"Valve Ø 32"" (800 mm)",buah,,810000.0
+1831,M.1831,"Valve Ø 36"" (900 mm)",buah,,890000.0
+1832,M.1832,"Valve Ø 40"" (1000 mm)",buah,,950000.0
+1833,M.1833,"Valve Ø 44"" (1100 mm)",buah,,1050000.0
+1834,M.1834,"Valve Ø 48"" (1200 mm)",buah,,1119000.0
+1835,M.1835,"Valve Ø 1/2"" (15 mm)",buah,,95000.0
+1836,M.1836,"Valve Ø 3/4"" (20 mm)",buah,,105000.0
+1837,M.1837,"Valve Ø 1"" (25 mm)",buah,,115000.0
+1838,M.1838,"Valve Ø 1-1/4"" (32 mm)",buah,,129000.0
+1839,M.1839,"Valve Ø 1-1/2"" (40 mm)",buah,,135000.0
+1840,M.1840,"Valve Ø 2"" (50 mm)",buah,,150000.0
+1841,M.1841,"Valve Ø 2-1/2"" (65 mm)",buah,,170000.0
+1842,M.1842,"Valve Ø 3"" (80 mm)",buah,,192000.0
+1843,M.1843,"Valve Ø 4"" (100 mm)",buah,,205000.0
+1844,M.1844,"Valve Ø 5"" (125 mm)",buah,,215000.0
+1845,M.1845,"Tee Ø 6"" (150 mm)",buah,,65000.0
+1846,M.1846,"Tee Ø 8"" (200 mm)",buah,,138000.0
+1847,M.1847,"Tee Ø 10"" (250 mm)",buah,,215000.0
+1848,M.1848,"Tee Ø 18"" (450 mm)",buah,,285000.0
+1849,M.1849,"Tee Ø 20"" (500 mm)",buah,,350000.0
+1850,M.1850,"Tee Ø 24"" (600 mm)",buah,,435000.0
+1851,M.1851,"Tee Ø 28"" (700 mm)",buah,,510000.0
+1852,M.1852,"Tee Ø 32"" (800 mm)",buah,,599000.0
+1853,M.1853,"Tee Ø 36"" (900 mm)",buah,,670000.0
+1854,M.1854,"Tee Ø 40"" (1000 mm)",buah,,750000.0
+1855,M.1855,"Tee Ø 44"" (1100 mm)",buah,,830000.0
+1856,M.1856,"Tee Ø 48"" (1200 mm)",buah,,950000.0
+1857,M.1857,"Tee Ø 1/2"" (15 mm)",buah,,20000.0
+1858,M.1858,"Tee Ø 3/4"" (20 mm)",buah,,27000.0
+1859,M.1859,"Tee Ø 1"" (25 mm)",buah,,30000.0
+1860,M.1860,"Tee Ø 1-1/4"" (32 mm)",buah,,32000.0
+1861,M.1861,"Tee Ø 1-1/2"" (40 mm)",buah,,39000.0
+1862,M.1862,"Tee Ø 2"" (50 mm)",buah,,42000.0
+1863,M.1863,"Tee Ø 2-1/2"" (65 mm)",buah,,48000.0
+1864,M.1864,"Tee Ø 3"" (80 mm)",buah,,59000.0
+1865,M.1865,"Tee Ø 4"" (100 mm)",buah,,62000.0
+1866,M.1866,"Tee Ø 5"" (125 mm)",buah,,55000.0
+1867,M.1867,"Tee Ø 12"" (300 mm)",buah,,235000.0
+1868,M.1868,"Tee Ø 16"" (400 mm)",buah,,255000.0
+1869,M.1869,"1 kg Penulangan Slab untuk BjTP atau BjTS diameter < 12 mm, cara Manual",kg,,18473.95
+1870,M.1870,1 kg Penulangan Wiremesh M6-M10 untuk slab atau dinding atau Ferrocement secara manual,m2,,13807.959
+1871,M.1871,Pembuatan 1 buah Cetakan Panel P1 RISHA (Asumsi 400 kali pakai),buah,,1566728.62775
+1872,M.1872,Pemasangan dan membuat cetakan 1 buah komponen P1 RISHA,unit,,14068.560000000001
+1873,M.1873,"1 m3 beton mutu sedang fc 25 Mpa, Slum (100 ±  25) mm, agregat maks 19 mm secara mekanis",m3,,1382685.2925925925
+1874,M.1874,Penulangan/Menebar Beton 1 m3 untuk Kolom Beton Pracetak,m3,,68915.0
+1875,M.1875,Pembuatan 1 buah Cetakan Panel P2 RISHA (Asumsi 400 kali pakai),buah,,1380634.80775
+1876,M.1876,Pembuatan 1 buah Cetakan Panel P3 RISHA (Asumsi 400 kali pakai),buah,,758435.25175
+1877,M.1877,Pemasangan dan membuat cetakan 1 buah komponen P3 RISHA,unit,,13292.4
+1878,M.1878,Stepping Band Lebar 15 mm,m,,8570.0
+1879,M.1879,Palet Kayu uk. 120x120x10 cm,buah,,123000.0
+1880,M.1880,Panel P1,buah,,179562.0
+1881,M.1881,Panel P2,buah,,155800.0
+1882,M.1882,Panel P3,buah,,121598.0
+1883,M.1883,"Baut dan Mur f12 L=4""",buah,,20000.0
+1884,M.1884,"Baut dan Mur f12, L=6""",buah,,22000.0
+1885,M.1885,"Baut dan Mur f12, L=7""",buah,,23000.0
+1886,M.1886,Ring Plat,buah,,2500.0
+1887,M.1887,"Pelat Strip t=2,6 mm, L=12 cm",buah,,21000.0
+1888,M.1888,"Pelat Strip t=2,6 mm, L=14 cm",buah,,29000.0
+1889,M.1889,"Pelat Strip t=2,6 mm, L=17 cm",buah,,39000.0
+1890,M.1890,"Pelat Strip t=2,6 mm, L=34 cm",buah,,58000.0
+1891,M.1891,Angkur Baja Full Drat ASTM 307 dia. 10 mm Panjang 35 cm,buah,,9200.0
+1892,M.1892,Angkur Baja Full Drat ASTM 307 dia 10 mm Panjang 65 cm,buah,,18000.0

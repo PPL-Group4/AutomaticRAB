@@ -1,0 +1,47 @@
+# Use the official Python image as the base image
+FROM python:3.12-slim
+
+# Prevent Python from writing .pyc files and buffering stdout/stderr
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1
+
+# Set the working directory
+WORKDIR /app
+
+# Copy requirements first (for Docker layer caching)
+COPY requirements.txt /app/
+
+# Install system dependencies and Python packages
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    gcc \
+    pkg-config \
+    libpq-dev \
+    default-libmysqlclient-dev && \
+    pip install --upgrade pip && \
+    pip install -r requirements.txt && \
+    pip install gunicorn && \
+    apt-get remove -y gcc && \
+    apt-get autoremove -y && \
+    rm -rf /var/lib/apt/lists/*
+
+# Copy the entire project
+COPY . /app/
+
+# Create directories for uploads
+RUN mkdir -p /app/media /app/tmp && chmod -R 777 /app/media /app/tmp
+
+# Collectstatic requires Django settings which need a SECRET_KEY env var
+# We use a temporary non-sensitive value only during build (not used at runtime)
+ARG DJANGO_BUILD_CONFIG
+RUN SECRET_KEY=${DJANGO_BUILD_CONFIG:-temporary-build-value} python manage.py collectstatic --noinput
+
+# Expose port 8000 (default for Gunicorn)
+EXPOSE 8000
+
+# Cache busting to force rebuild when commit changes
+ARG CACHE_BUST=1
+
+# Start the application using Gunicorn with increased workers and threads
+CMD ["sh", "-c", "gunicorn --bind 0.0.0.0:${PORT:-8000} --timeout 3600 --workers 4 --threads 2 AutomaticRAB.wsgi:application"]

@@ -12,12 +12,28 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 from pathlib import Path
 import os
+import sys
+from django.core.exceptions import ImproperlyConfigured
 from dotenv import load_dotenv
 # Load environment variables from .env file
 load_dotenv()
 
+
+def _split_env_list(raw_value: str, default: str = ""):
+    """Normalize comma-separated env vars, dropping empties."""
+    effective = raw_value if raw_value is not None else default
+    return [item.strip() for item in effective.split(",") if item.strip()]
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+LOG_DIR = BASE_DIR / "logs"
+LOG_DIR.mkdir(exist_ok=True)
+SECURITY_LOG_FILE = LOG_DIR / "security.log"
+
+# Detect when Django is being executed via its test runner.
+RUNNING_TESTS = any(arg in sys.argv for arg in ["test", "pytest", "py.test"])
+FORCE_MYSQL_FOR_TESTS = os.getenv("TEST_USE_MYSQL", "False").lower() in {"1", "true", "yes"}
+FORCE_SQLITE_FOR_TESTS = os.getenv("TEST_USE_SQLITE", "False").lower() in {"1", "true", "yes"}
 
 
 # Quick-start development settings - unsuitable for production
@@ -25,12 +41,34 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.getenv('SECRET_KEY')
+if not SECRET_KEY:
+    raise ImproperlyConfigured("SECRET_KEY environment variable must be set")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.getenv("DEBUG", "False") == "True" 
 
-ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
+ALLOWED_HOSTS = _split_env_list(os.getenv("ALLOWED_HOSTS", "localhost, 127.0.0.1"), "localhost")
 
+CSRF_TRUSTED_ORIGINS = _split_env_list(os.getenv("CSRF_TRUSTED_ORIGINS", ""))
+
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+SECURE_SSL_REDIRECT = os.getenv("SECURE_SSL_REDIRECT", "False") == "True"
+SECURE_HSTS_SECONDS = int(os.getenv("SECURE_HSTS_SECONDS", "0"))
+SECURE_HSTS_INCLUDE_SUBDOMAINS = os.getenv("SECURE_HSTS_INCLUDE_SUBDOMAINS", "False") == "True"
+SECURE_HSTS_PRELOAD = os.getenv("SECURE_HSTS_PRELOAD", "False") == "True"
+SECURE_CONTENT_TYPE_NOSNIFF = True
+SECURE_REFERRER_POLICY = "strict-origin-when-cross-origin"
+SECURE_CROSS_ORIGIN_OPENER_POLICY = "same-origin"
+
+SESSION_COOKIE_SECURE = os.getenv("SESSION_COOKIE_SECURE", "True") == "True"
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = os.getenv("SESSION_COOKIE_SAMESITE", "Lax")
+
+CSRF_COOKIE_SECURE = os.getenv("CSRF_COOKIE_SECURE", "True") == "True"
+CSRF_COOKIE_HTTPONLY = True
+CSRF_COOKIE_SAMESITE = os.getenv("CSRF_COOKIE_SAMESITE", "Lax")
+
+X_FRAME_OPTIONS = os.getenv("X_FRAME_OPTIONS", "DENY")
 
 # Application definition
 
@@ -41,10 +79,37 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'excel_parser',
+    'pdf_parser',
+    'rest_framework',
+    'automatic_job_matching',
+    'rencanakan_core',
+    'automatic_price_matching',
+    'cost_weight',
+    'efficiency_recommendations',
+    'target_bid',
+    
 ]
+
+REST_FRAMEWORK = {
+    "DEFAULT_RENDERER_CLASSES": [
+        "rest_framework.renderers.JSONRenderer",
+    ],
+    "DEFAULT_PARSER_CLASSES": [
+        "rest_framework.parsers.JSONParser",
+    ],
+    "DEFAULT_THROTTLE_CLASSES": [
+        "rest_framework.throttling.AnonRateThrottle",
+    ],
+    "DEFAULT_THROTTLE_RATES": {
+        "anon": os.getenv("API_THROTTLE_RATE", "100/hour"),
+    },
+}
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'AutomaticRAB.middleware.SecurityHeadersMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -58,7 +123,7 @@ ROOT_URLCONF = 'AutomaticRAB.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [BASE_DIR / "templates"],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -78,10 +143,37 @@ WSGI_APPLICATION = 'AutomaticRAB.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': os.getenv('MYSQL_NAME'),
+        'USER': os.getenv('MYSQL_USER'),
+        'PASSWORD': os.getenv('MYSQL_PASSWORD'),
+        'HOST': os.getenv('MYSQL_HOST'),
+        'PORT': os.getenv('MYSQL_PORT'),
+    },
+    'scraper': {
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': 'ScraperDB',
+        'USER': os.getenv('MYSQL_USER'), 
+        'PASSWORD': os.getenv('MYSQL_PASSWORD'),
+        'HOST': os.getenv('MYSQL_HOST'),
+        'PORT': os.getenv('MYSQL_PORT'),
+    },
 }
+
+if RUNNING_TESTS:
+    if FORCE_SQLITE_FOR_TESTS and not FORCE_MYSQL_FOR_TESTS:
+        DATABASES['default'] = {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'test_db.sqlite3',
+        }
+    else:
+        mysql_config = DATABASES['default'].copy()
+        test_db_name = os.getenv('MYSQL_TEST_NAME')
+        if test_db_name:
+            mysql_test_settings = mysql_config.get('TEST', {}).copy()
+            mysql_test_settings['NAME'] = test_db_name
+            mysql_config['TEST'] = mysql_test_settings
+        DATABASES['default'] = mysql_config
 
 
 # Password validation
@@ -118,9 +210,85 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
-STATIC_URL = 'static/'
+# URL prefix for static files (ensure leading slash for production)
+STATIC_URL = '/static/'
+
+# Where collectstatic gathers files for production serving
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+
+STATIC_ROOT = BASE_DIR / "staticfiles"
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+STATICFILES_DIRS = [
+    BASE_DIR / "excel_parser" / "static",
+]
+
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "verbose": {
+            "format": "%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+        },
+    },
+    "handlers": {
+        "console": {"class": "logging.StreamHandler", "formatter": "verbose"},
+        "security_file": {
+            "class": "logging.FileHandler",
+            "filename": SECURITY_LOG_FILE,
+            "formatter": "verbose",
+        },
+    },
+    "loggers": {
+        "security.audit": {
+            "handlers": ["security_file", "console"],
+            "level": "INFO",
+            "propagate": False,
+        },
+    },
+    "root": {"handlers": ["console"], "level": "DEBUG"},
+}
+
+if RUNNING_TESTS:
+    # During tests, Django doesn't run collectstatic; Manifest storage would raise
+    # 'Missing staticfiles manifest entry'. Use the basic storage instead.
+    STORAGES = {
+        "staticfiles": {
+            "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+        },
+    }
+else:
+    # In dev/prod (non-test), serve compressed, hashed static files via WhiteNoise.
+    STORAGES = {
+        "staticfiles": {
+            "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+        },
+    }
+
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+MEDIA_URL = '/media/'
+
+os.makedirs(MEDIA_ROOT, exist_ok=True)
+
+DATA_UPLOAD_MAX_MEMORY_SIZE = 52428800  # 50MB
+FILE_UPLOAD_MAX_MEMORY_SIZE = 52428800  # 50MB
+DATA_UPLOAD_MAX_NUMBER_FIELDS = int(os.getenv("DATA_UPLOAD_MAX_NUMBER_FIELDS", "2000"))
+
+FILE_UPLOAD_TEMP_DIR = os.path.join(BASE_DIR, 'tmp')
+os.makedirs(FILE_UPLOAD_TEMP_DIR, exist_ok=True)
+
+import sentry_sdk
+from sentry_sdk.integrations.django import DjangoIntegration
+
+sentry_sdk.init(
+    dsn="https://ee22a1ffdc3029795e24cbf5e3e241ff@o4510344475574272.ingest.us.sentry.io/4510344491368448",
+    integrations=[DjangoIntegration()],
+    traces_sample_rate=1.0,
+    send_default_pii=True,
+    environment="development",
+)
