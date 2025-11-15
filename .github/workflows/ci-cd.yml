@@ -51,6 +51,9 @@ jobs:
           coverage xml
           coverage json
           coverage report -m
+          # Debug: Show what coverage actually found
+          echo "=== Coverage Summary ==="
+          python -c "import json; data=json.load(open('coverage.json')); print(f\"Total coverage: {data['totals']['percent_covered']:.1f}%\")"
 
       - name: Generate coverage badge
         run: |
