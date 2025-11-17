@@ -1,5 +1,5 @@
 from decimal import Decimal
-from typing import Mapping, Dict, Union
+from typing import Mapping, Dict, Union, Optional
 
 NumberLike = Union[str, float, int, Decimal]
 
@@ -8,7 +8,7 @@ def handle_zero_division(
     item_costs: Mapping[str, NumberLike],
     *,
     decimal_places: int = 2
-) -> Dict[str, Decimal]:
+) -> Optional[Dict[str, Decimal]]:
     """
     Safely handles cases where the total cost is zero to prevent division errors.
     Returns 0.00 for each item if total cost = 0.
