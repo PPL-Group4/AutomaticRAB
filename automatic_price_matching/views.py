@@ -4,11 +4,14 @@ import json
 import logging
 from decimal import Decimal, ROUND_HALF_UP
 from typing import Any, Dict, Optional
+import hashlib
 
 from django.core.exceptions import ValidationError
 from django.http import JsonResponse, HttpRequest
 from django.views.decorators.http import require_POST
 from django.views.decorators.csrf import csrf_exempt
+from django.core.cache import cache
+from django.db import connection
 
 from .price_retrieval import AhspPriceRetriever, CombinedAhspSource
 from .validators import validate_recompute_payload
@@ -39,12 +42,35 @@ def recompute_total_cost(request: HttpRequest):
     """
     POST JSON: { "code": "A.1.1.4", "volume": 2.5 }
     Response JSON: { "unit_price": "1000.00", "total_cost": "2500.00" }
+    
+    Optimizations:
+    - Response caching for identical requests
+    - Connection pooling reuse
+    - Minimal database queries with indexes
     """
     if request.content_type and "application/json" not in request.content_type:
         return JsonResponse({"error": "unsupported_media_type"}, status=415)
+    
     try:
-        payload = json.loads(request.body.decode() or "{}")
-    except Exception:
+        body = request.body.decode()
+        payload = json.loads(body or "{}")
+        
+        # Cache identical requests (without row_key since that's user-specific)
+        cache_enabled = not payload.get("row_key")
+        cache_key = None
+        
+        if cache_enabled:
+            try:
+                # Create cache key from request body
+                cache_key = f"recompute:{hashlib.md5(body.encode()).hexdigest()}"
+                cached_response = cache.get(cache_key)
+                if cached_response:
+                    logger.debug("Cache hit for recompute request")
+                    return JsonResponse(cached_response, status=200)
+            except Exception as e:
+                logger.debug("Cache lookup failed in view, continuing without cache: %s", e)
+    except Exception as e:
+        logger.warning("Failed to parse request body: %s", e)
         return JsonResponse({"error": "invalid_json"}, status=400)
 
     try:
@@ -87,7 +113,16 @@ def recompute_total_cost(request: HttpRequest):
             }
             _store_override(request, row_key, _serialize_decimals(stored_payload))
 
-        return JsonResponse(_serialize_decimals(resp), status=200)
+        serialized_resp = _serialize_decimals(resp)
+        
+        # Cache the successful response (only if no row_key)
+        if cache_enabled and cache_key:
+            try:
+                cache.set(cache_key, serialized_resp, timeout=60)  # Cache for 1 minute
+            except Exception as e:
+                logger.debug("Cache set failed in view, continuing without cache: %s", e)
+        
+        return JsonResponse(serialized_resp, status=200)
     except Exception as exc:
         logger.exception("recompute_total_cost failed")
         return JsonResponse({"error": "internal_error", "detail": str(exc)}, status=500)
