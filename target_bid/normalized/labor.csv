@@ -1,0 +1,28 @@
+id,code,name,unit,unit_price
+1,L.01,Pekerja,OH,100000.0
+2,L.02,Tukang,OH,145000.0
+3,L.03,Kepala Tukang,OH,175000.0
+4,L.04,Mandor,OH,200000.0
+5,,Tukang pelitur,OH,145000.0
+6,L.05,Juru ukur,OH,175000.0
+7,L.06,Pembantu juru ukur,OH,150000.0
+8,L.14b,Juru gambar,OH,150000.0
+9,L.12d,Ahli topografi,OH,400000.0
+10,,Pekerja,OH,100000.0
+11,,Tukang kayu,OH,145000.0
+12,,Kepala tukang,OH,175000.0
+13,,Mandor,OH,200000.0
+14,,Tukang besi,OH,145000.0
+15,,Tukang batu,OH,145000.0
+16,L.14.b,Tenaga Terampil Operator,OH,145000.0
+17,,Tukang Cat,OH,145000.0
+18,,Tukang alumunium,OH,145000.0
+19,,Tukang las,OH,145000.0
+20,,Tukang tanam,OH,181250.0
+21,,Kepala Tukang Tanam,OH,218750.0
+22,,Tukang Pemelihara Taman,OH,166750.0
+23,,Tukang pemelihara taman (115% Pekerja),OH,114999.99999999999
+24,,Tukang listrik,OH,145000.0
+25,,Tenaga Terampil Operator,OH,145000.0
+26,,Tenaga Ahli Muda,OH,145000.0
+27,,Tukang pipa,OH,145000.0

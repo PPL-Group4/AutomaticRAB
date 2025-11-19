@@ -1,0 +1,117 @@
+id,material_id,brand_name,unit_price,is_default
+1,1,Blescon,5600.0,1
+2,1,LiteBlock Value,5300.0,0
+3,12,Premium Timber Nusantara,10214200.0,1
+4,12,ForestSaver Lumber,9350000.0,0
+5,15,National Cement Co.,1300.0,1
+6,15,SolidMix,1180.0,0
+7,16,RiverPrime Aggregate,300.0,1
+8,16,BuildFlow Supply,280.0,0
+9,49,Heritage Woodworks,10214200.0,1
+10,49,ValueWood Industries,9300000.0,0
+11,52,PrimeBoard Manufacturing,200000.0,1
+12,52,SmartPanel Basic,185000.0,0
+13,2,QuickBond Mortar,3332.0,1
+14,2,MasonEase Lite,3100.0,0
+15,88,Sumatra Timberworks,11950000.0,1
+16,88,EcoSpan Lumber,11200000.0,0
+17,89,SteelForge Strip,7500.0,1
+18,89,BudgetStrip Metals,6900.0,0
+19,90,GripFast Nails 12cm,1500.0,1
+20,90,BudgetNails 12cm,1350.0,0
+21,119,GroutShield Industrial,6000.0,1
+22,119,BondMax Grout,5400.0,0
+23,18,HydroPure Supply,200.0,1
+24,18,ClearFlow Water,180.0,0
+25,444,SteelFlow 3in,42000.0,1
+26,444,PipeEconomy 3in,38500.0,0
+27,447,SteelFlow 2in,31000.0,1
+28,447,PipeEconomy 2in,28200.0,0
+29,448,SteelFlow 1.5in,22000.0,1
+30,448,PipeEconomy 1.5in,20500.0,0
+31,446,PrimeShield Zinc,26000.0,1
+32,446,CorroGuard Primer,23000.0,0
+33,124,WeldCore Premium,45550.0,1
+34,124,ArcEconomy Wire,42000.0,0
+35,205,Island Boards,14000000.0,1
+36,205,TimberLite Panel,12900000.0,0
+37,153,GripFast Nails 1in,15000.0,1
+38,153,FixIt Basic Nails,13200.0,0
+39,348,StickBond Pro,16400.0,1
+40,348,WoodHold Lite,14200.0,0
+41,48,FlexPly Standard,75000.0,1
+42,48,EcoPly Thin,69000.0,0
+43,451,FormicaPrime,170000.0,1
+44,451,LaminateLite,152000.0,0
+45,1331,ExcavaServe,45000.0,1
+46,1331,DigEasy Earthworks,41500.0,0
+47,1332,CylinCast 80,255400.0,1
+48,1332,PipeCast Value 80,232000.0,0
+49,17,StoneBase Aggregate,210.0,1
+50,17,RiverGrain Supply,180.0,0
+51,1333,ReadyMix Plus,825000.0,1
+52,1333,CivicMix Budget,760000.0,0
+53,1334,RebarPrime,10300.0,1
+54,1334,RebarValue,9500.0,0
+55,1335,FormFrame Panels,37500.0,1
+56,1335,FormSaver Sheets,34000.0,0
+57,1633,FlowGuard AW4,72375.0,1
+58,1633,PVC BudgetLine 4,65500.0,0
+59,85,RailSpan Structural,12866.666666666666,1
+60,85,LightFrame Economix,12200.0,0
+61,85,C75 ValueBeam,11850.0,0
+62,85,SwiftSpan Lite,11600.0,0
+63,85,SteelLite Budget,11350.0,0
+64,85,MetroSpan Saver,11000.0,0
+65,86,RivetMaster,200.0,1
+66,86,GripTite Rivets,188.0,0
+67,86,FastFix RivetCo,182.0,0
+68,86,SureHold Rivets,176.0,0
+69,86,EconomiRivet,170.0,0
+70,86,RivetLite Supply,165.0,0
+71,87,RooferPro Reng,33900.0,1
+72,87,RengSave Steel,32200.0,0
+73,87,LightRidge Components,31500.0,0
+74,87,RengFlex Budget,30800.0,0
+75,87,SpanLite Reng,29950.0,0
+76,87,BuildEconomy Reng,29100.0,0
+77,381,HollowPrime 20x40,7500.0,1
+78,381,HollowLite 20x40,7200.0,0
+79,381,HollowSaver,7050.0,0
+80,381,FrameEconomy,6900.0,0
+81,381,MetroHollow Budget,6750.0,0
+82,381,EconoTube 20x40,6600.0,0
+83,225,GypTrim Signature,15800.0,1
+84,225,GypTrim Saver,15000.0,0
+85,225,ProfileLite,14550.0,0
+86,225,CeilingEdge Budget,14100.0,0
+87,225,TrimEconomy,13600.0,0
+88,225,EdgeFlex Value,13250.0,0
+89,171,ScrewMaster,30090.0,1
+90,171,ScrewSaver,28700.0,0
+91,171,FixRite Screws,27950.0,0
+92,171,ThreadLite Supply,27200.0,0
+93,171,BoltEconomy,26500.0,0
+94,171,SecureFit Screws,25800.0,0
+95,151,BubungPrime,8600.0,1
+96,151,RidgeSaver,8200.0,0
+97,151,TileTop Budget,7950.0,0
+98,151,NokLine Value,7700.0,0
+99,151,RidgeLite,7450.0,0
+100,151,EconomyRidge,7200.0,0
+101,122,PasangPrime Sand,275000.0,1
+102,122,PasirLite Supply,258000.0,0
+103,122,SiteSand Saver,246500.0,0
+104,122,BuildFlow Pasir,238000.0,0
+105,122,QuarryEconomy,229500.0,0
+106,122,ProjectSand Value,221000.0,0
+107,124,WeldCore Standard,44500.0,0
+108,124,ArcLite Wire,43000.0,0
+109,124,WeldSaver Coils,41800.0,0
+110,124,FusionEconomy,40500.0,0
+111,124,SpinArc Value,39800.0,0
+112,15,CemBlend Standard,1290.0,0
+113,15,UrbanMix,1275.0,0
+114,15,BuildCem Lite,1245.0,0
+115,15,StructoMix,1215.0,0
+116,15,RapidSet Value,1170.0,0

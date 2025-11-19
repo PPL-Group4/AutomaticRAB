@@ -155,19 +155,29 @@ class CombinedAhspSource:
     def get_price_by_code(self, canonical_code: str) -> Optional[Decimal]:
         if not canonical_code:
             return None
-        # 1) DB variants
-        price = self._try_variants_in_db(canonical_code)
-        if price is not None:
-            return price
-        # 2) CSV fallback
+        db_price = self._try_variants_in_db(canonical_code)
+        csv_price: Optional[Decimal] = None
         try:
-            price = self.csv.get_price_by_code(canonical_code)
-            if price is not None:
-                logger.debug("CombinedAhspSource: CSV hit for code=%s price=%s", canonical_code, price)
-            return price
+            csv_price = self.csv.get_price_by_code(canonical_code)
         except Exception:
             logger.exception("CombinedAhspSource: CSV lookup failed for %s", canonical_code)
-            return None
+
+        if csv_price is not None:
+            if (
+                db_price is not None
+                and db_price.quantize(Decimal("0.01")) != csv_price.quantize(Decimal("0.01"))
+            ):
+                logger.info(
+                    "CombinedAhspSource: Preferring CSV price %s over DB price %s for code=%s",
+                    csv_price,
+                    db_price,
+                    canonical_code,
+                )
+            elif db_price is None:
+                logger.debug("CombinedAhspSource: CSV hit for code=%s price=%s", canonical_code, csv_price)
+            return csv_price
+
+        return db_price
 
 
 @dataclass

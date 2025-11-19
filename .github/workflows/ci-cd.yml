@@ -1,0 +1,250 @@
+name: CI - CD
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.12"]
+    env:
+      DJANGO_SETTINGS_MODULE: AutomaticRAB.settings
+      SECRET_KEY: ${{ secrets.SECRET_KEY || 'insecure-test-key' }}
+      MYSQL_NAME: ${{ secrets.MYSQL_NAME }}
+      MYSQL_USER: ${{ secrets.MYSQL_USER }}
+      MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
+      MYSQL_HOST: ${{ secrets.MYSQL_HOST }}
+      MYSQL_PORT: ${{ secrets.MYSQL_PORT }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Install MySQL dev libs
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libmysqlclient-dev pkg-config
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          pip install coverage
+
+      - name: Run tests with coverage
+        run: |
+          # Use --noinput to prevent Django from prompting to delete existing DB in non-interactive CI
+          # Don't use --keepdb in CI as it can cause issues with stale test databases
+          coverage run --source=. manage.py test --verbosity 2 --noinput
+          coverage xml
+          coverage json
+          coverage report -m
+          # Debug: Show what coverage actually found
+          echo "=== Coverage Summary ==="
+          python -c "import json; data=json.load(open('coverage.json')); print(f\"Total coverage: {data['totals']['percent_covered']:.1f}%\")"
+
+      - name: Generate coverage badge
+        run: |
+          # Install genbadge which works better with coverage.py
+          pip install genbadge[coverage]
+          genbadge coverage -i coverage.xml -o coverage.svg
+          ls -la coverage.svg  # Verify file was created
+
+      - name: Update README with branch-specific badge
+        if: github.event_name == 'push'
+        run: |
+          sed -i "s|\$BRANCH|${{ github.ref_name }}|g" README.md
+          cat README.md | grep coverage.svg  # Verify replacement worked
+
+      - name: Upload coverage badge and README
+        if: github.event_name == 'push'
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "Update coverage badge and README for ${{ github.ref_name }}"
+          file_pattern: "coverage.svg README.md"
+          branch: ${{ github.ref_name }}
+          skip_fetch: true
+          skip_checkout: true
+
+  build:
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/staging' || github.ref == 'refs/heads/development')
+    permissions:
+      contents: read
+    env:
+      DOCKER_IMAGE_NAME: ghazafadhlilbaqi/autorab-ppl
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set environment based on branch
+        id: set-env
+        run: |
+          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            echo "ENVIRONMENT=production" >> $GITHUB_OUTPUT
+            echo "TAG=production" >> $GITHUB_OUTPUT
+            echo "PORT=8000" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.ref }}" == "refs/heads/staging" ]]; then
+            echo "ENVIRONMENT=staging" >> $GITHUB_OUTPUT
+            echo "TAG=staging" >> $GITHUB_OUTPUT
+            echo "PORT=8001" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.ref }}" == "refs/heads/development" ]]; then
+            echo "ENVIRONMENT=development" >> $GITHUB_OUTPUT
+            echo "TAG=development" >> $GITHUB_OUTPUT
+            echo "PORT=8002" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          cache-from: type=registry,ref=${{ env.DOCKER_IMAGE_NAME }}:${{ steps.set-env.outputs.TAG }}
+          cache-to: type=inline
+          build-args: |
+            CACHE_BUST=${{ github.sha }}
+            DJANGO_BUILD_CONFIG=temporary-collectstatic-config
+          tags: |
+            ${{ env.DOCKER_IMAGE_NAME }}:${{ steps.set-env.outputs.TAG }}
+            ${{ env.DOCKER_IMAGE_NAME }}:${{ steps.set-env.outputs.TAG }}-${{ github.sha }}
+
+    outputs:
+      environment: ${{ steps.set-env.outputs.ENVIRONMENT }}
+      tag: ${{ steps.set-env.outputs.TAG }}
+      port: ${{ steps.set-env.outputs.PORT }}
+
+  release:
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/staging' || github.ref == 'refs/heads/development')
+    permissions:
+      contents: write
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Generate version tag
+        id: version
+        run: |
+          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            VERSION="v1.0.0"
+            PRERELEASE=false
+          elif [[ "${{ github.ref }}" == "refs/heads/staging" ]]; then
+            # Staging: release candidate
+            VERSION="v1.0.0-rc.${{ github.run_number }}"
+            PRERELEASE=true
+          elif [[ "${{ github.ref }}" == "refs/heads/development" ]]; then
+            # Development: date-based snapshot
+            VERSION="dev-$(date +%Y.%m.%d)-${{ github.run_number }}"
+            PRERELEASE=true
+          fi
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+          echo "PRERELEASE=$PRERELEASE" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.version.outputs.VERSION }}
+          name: "Release ${{ steps.version.outputs.VERSION }}"
+          body: |
+            ## Changes in this release
+            - Deployed from branch: ${{ github.ref_name }}
+            - Commit: ${{ github.sha }}
+            - Docker Image: ghazafadhlilbaqi/autorab-ppl:${{ needs.build.outputs.tag }}
+            
+            ## Environment
+            - Environment: ${{ needs.build.outputs.environment }}
+            - Port: ${{ needs.build.outputs.port }}
+          prerelease: ${{ steps.version.outputs.PRERELEASE }}
+          draft: false
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: [build, release]
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/staging' || github.ref == 'refs/heads/development')
+    permissions:
+      contents: read
+    env:
+      DOCKER_IMAGE_NAME: ghazafadhlilbaqi/autorab-ppl
+
+    steps:
+      - name: Deploy to Azure VM
+        uses: appleboy/ssh-action@v1.0.0
+        env:
+          ENVIRONMENT: ${{ needs.build.outputs.environment }}
+          TAG: ${{ needs.build.outputs.tag }}
+          PORT: ${{ needs.build.outputs.port }}
+          DOCKER_IMAGE: ${{ env.DOCKER_IMAGE_NAME }}:${{ needs.build.outputs.tag }}
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_KEY }}
+          port: 22
+          envs: ENVIRONMENT,TAG,PORT,DOCKER_IMAGE
+          script: |
+            echo "🚀 Deploying ${ENVIRONMENT} environment"
+
+            # Navigate to environment directory
+            cd /home/${{ secrets.SSH_USERNAME }}/autorab-ppl-${ENVIRONMENT}
+
+            # Pull latest image
+            docker pull ${DOCKER_IMAGE}
+
+            # Stop and remove existing container
+            docker stop autorab-ppl-${ENVIRONMENT} 2>/dev/null || true
+            docker rm autorab-ppl-${ENVIRONMENT} 2>/dev/null || true
+
+            # Run new container with memory limits
+            docker run -d \
+              --name autorab-ppl-${ENVIRONMENT} \
+              --restart unless-stopped \
+              -p ${PORT}:8000 \
+              --env-file .env \
+              -v /home/${{ secrets.SSH_USERNAME }}/autorab-ppl-${ENVIRONMENT}/media:/app/media \
+              -v /home/${{ secrets.SSH_USERNAME }}/autorab-ppl-${ENVIRONMENT}/tmp:/app/tmp \
+              --memory=2g \
+              --memory-swap=2g \
+              ${DOCKER_IMAGE}
+
+            # Clean up old images (keep last 3)
+            docker images ghazafadhlilbaqi/autorab-ppl:${TAG}-* --format "{{.ID}}" | tail -n +4 | xargs -r docker rmi -f 2>/dev/null || true
+
+            # Reload or restart Caddy reverse proxy
+            echo "🔄 Reloading Caddy configuration..."
+            if command -v caddy >/dev/null 2>&1; then
+              if pgrep caddy >/dev/null 2>&1; then
+                sudo caddy reload --config /etc/caddy/Caddyfile || sudo systemctl reload caddy || true
+              else
+                echo "Caddy not running, starting it..."
+                sudo systemctl start caddy || sudo caddy start
+              fi
+            else
+              echo "⚠️ Caddy not found — skipping reverse proxy reload."
+            fi
+
+            echo "✅ Deployment of ${ENVIRONMENT} environment completed successfully!"
