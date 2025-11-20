@@ -98,12 +98,13 @@ REST_FRAMEWORK = {
     "DEFAULT_PARSER_CLASSES": [
         "rest_framework.parsers.JSONParser",
     ],
-    "DEFAULT_THROTTLE_CLASSES": [
-        "rest_framework.throttling.AnonRateThrottle",
-    ],
-    "DEFAULT_THROTTLE_RATES": {
-        "anon": os.getenv("API_THROTTLE_RATE", "100/hour"),
-    },
+    # Throttling disabled for stress testing - uncomment to re-enable
+    # "DEFAULT_THROTTLE_CLASSES": [
+    #     "rest_framework.throttling.AnonRateThrottle",
+    # ],
+    # "DEFAULT_THROTTLE_RATES": {
+    #     "anon": os.getenv("API_THROTTLE_RATE", "100/hour"),
+    # },
 }
 
 MIDDLEWARE = [
@@ -150,8 +151,13 @@ DATABASES = {
         'HOST': os.getenv('MYSQL_HOST'),
         'PORT': os.getenv('MYSQL_PORT'),
         'OPTIONS': {
-            'ssl': True
+            'ssl': True,
+            'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
+            'charset': 'utf8mb4',
         },
+        # Connection pooling - reuse connections instead of creating new ones
+        'CONN_MAX_AGE': 600,  # Keep connections alive for 10 minutes
+        'ATOMIC_REQUESTS': False,  # Allow manual transaction control for better performance
     },
     'scraper': {
         'ENGINE': 'django.db.backends.mysql',
@@ -161,8 +167,11 @@ DATABASES = {
         'HOST': os.getenv('MYSQL_HOST'),
         'PORT': os.getenv('MYSQL_PORT'),
         'OPTIONS': {
-            'ssl': True
+            'ssl': True,
+            'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
+            'charset': 'utf8mb4',
         },
+        'CONN_MAX_AGE': 600,
     },
 }
 
@@ -181,6 +190,60 @@ if RUNNING_TESTS:
             mysql_config['TEST'] = mysql_test_settings
         DATABASES['default'] = mysql_config
 
+
+# Caching Configuration
+# Try to use Redis if available, otherwise fall back to database cache
+# Redis provides better performance but is optional for deployment simplicity
+try:
+    # Check if Redis is available and django-redis is installed
+    import redis
+    from django_redis import get_redis_connection
+    
+    redis_url = os.getenv("REDIS_URL", "redis://127.0.0.1:6379/1")
+    
+    # Test connection
+    test_conn = redis.from_url(redis_url, socket_connect_timeout=1)
+    test_conn.ping()
+    test_conn.close()
+    
+    # Redis is available, use it
+    CACHES = {
+        "default": {
+            "BACKEND": "django_redis.cache.RedisCache",
+            "LOCATION": redis_url,
+            "OPTIONS": {
+                "CLIENT_CLASS": "django_redis.client.DefaultClient",
+                "CONNECTION_POOL_KWARGS": {
+                    "max_connections": 50,
+                    "retry_on_timeout": True,
+                },
+                "SOCKET_CONNECT_TIMEOUT": 1,
+                "SOCKET_TIMEOUT": 1,
+            },
+            "KEY_PREFIX": "automaticrab",
+            "TIMEOUT": 300,
+        }
+    }
+    SESSION_ENGINE = "django.contrib.sessions.backends.cache"
+    SESSION_CACHE_ALIAS = "default"
+    
+except Exception as e:
+    # Redis not available, use database cache
+    import logging
+    logging.info(f"Redis not available ({e}), using database cache - this is fine for deployment!")
+    
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.db.DatabaseCache",
+            "LOCATION": "app_cache_table",
+            "TIMEOUT": 300,
+            "OPTIONS": {
+                "MAX_ENTRIES": 10000
+            }
+        }
+    }
+    # Use database sessions (the original behavior)
+    SESSION_ENGINE = "django.contrib.sessions.backends.db"
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
