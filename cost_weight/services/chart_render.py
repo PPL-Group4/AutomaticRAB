@@ -26,15 +26,15 @@ def render_chart_bytes(
     ax.set_title(title, pad=18)
 
     autopct_fmt = f"%.{decimal_places}f%%" 
-    wedges, texts, autotexts = ax.pie(
+    wedges, _, autotexts = ax.pie(
         data,
         labels=labels,
         autopct=autopct_fmt,
         startangle=90,
         counterclock=False,
         colors=colors,
-        wedgeprops=dict(linewidth=0.5, edgecolor="white"),
-        textprops=dict(color="#111827"),  # slate-900-ish
+        wedgeprops={"linewidth": 0.5, "edgecolor": "white"},
+        textprops={"color": "#111827"},  # slate-900-ish
     )
     ax.axis('equal')  
 
