@@ -113,7 +113,10 @@ class SimilarityCalculatorTests(SimpleTestCase):
     """Test SimilarityCalculator class."""
 
     def setUp(self):
-        self.calculator = SimilarityCalculator(WordWeightConfig())
+        # Mock WordWeightConfig to isolate SimilarityCalculator tests
+        self.mock_config = Mock()
+        self.mock_config.get_word_weight.return_value = 1.0
+        self.calculator = SimilarityCalculator(self.mock_config)
 
     def test_calculate_sequence_similarity(self):
         """Test sequence similarity calculation."""
@@ -590,84 +593,119 @@ class MatchingProcessorTests(SimpleTestCase):
 
     def test_find_best_match_returns_highest_score(self):
         """Test that best match returns highest scoring candidate."""
-        repo = FakeAhsRepo([
+        # Mock calculator
+        calculator = Mock()
+        calculator.calculate_sequence_similarity.side_effect = [0.7, 0.9]
+        calculator.calculate_partial_similarity.side_effect = [0.6, 0.8]
+        
+        # Mock provider
+        provider = Mock()
+        provider.get_candidates_by_head_token.return_value = [
             AhsRow(1, "A.01", "pemasangan batu belah"),
             AhsRow(2, "A.02", "pemasangan batu kali"),
-        ])
-        calculator = SimilarityCalculator(WordWeightConfig())
-        provider = CandidateProvider(repo)
+        ]
+        
         processor = MatchingProcessor(calculator, provider, 0.5)
-
         result = processor.find_best_match("pemasangan batu")
+        
         self.assertIsNotNone(result)
         self.assertIn("id", result)
+        self.assertEqual(result["id"], 2)  # Second candidate has higher score
 
     def test_find_best_match_below_threshold(self):
         """Test that low similarity returns None."""
-        repo = FakeAhsRepo([
+        # Mock calculator with low scores
+        calculator = Mock()
+        calculator.calculate_sequence_similarity.return_value = 0.1
+        calculator.calculate_partial_similarity.return_value = 0.2
+        
+        # Mock provider
+        provider = Mock()
+        provider.get_candidates_by_head_token.return_value = [
             AhsRow(1, "A.01", "xyz abc"),
-        ])
-        calculator = SimilarityCalculator(WordWeightConfig())
-        provider = CandidateProvider(repo)
+        ]
+        
         processor = MatchingProcessor(calculator, provider, 0.9)
-
         result = processor.find_best_match("completely different")
+        
         self.assertIsNone(result)
 
     def test_find_multiple_matches_limit(self):
         """Test that limit is respected."""
-        repo = FakeAhsRepo([
+        # Mock calculator
+        calculator = Mock()
+        calculator.calculate_sequence_similarity.return_value = 0.8
+        calculator.calculate_partial_similarity.return_value = 0.7
+        
+        # Mock provider
+        provider = Mock()
+        provider.get_candidates_by_head_token.return_value = [
             AhsRow(i, f"A.{i:02d}", f"batu {i}") for i in range(1, 11)
-        ])
-        calculator = SimilarityCalculator(WordWeightConfig())
-        provider = CandidateProvider(repo)
+        ]
+        
         processor = MatchingProcessor(calculator, provider, 0.1)
-
         results = processor.find_multiple_matches("batu", limit=5)
+        
         self.assertLessEqual(len(results), 5)
 
     def test_find_multiple_matches_sorted_by_score(self):
         """Test that results are sorted by score."""
-        repo = FakeAhsRepo([
+        # Mock calculator with different scores for each candidate
+        calculator = Mock()
+        calculator.calculate_sequence_similarity.side_effect = [0.5, 0.9]
+        calculator.calculate_partial_similarity.side_effect = [0.4, 0.8]
+        
+        # Mock provider
+        provider = Mock()
+        provider.get_candidates_by_head_token.return_value = [
             AhsRow(1, "A.01", "pemasangan batu belah"),
             AhsRow(2, "A.02", "batu"),
-        ])
-        calculator = SimilarityCalculator(WordWeightConfig())
-        provider = CandidateProvider(repo)
+        ]
+        
         processor = MatchingProcessor(calculator, provider, 0.3)
-
         results = processor.find_multiple_matches("batu", limit=2)
+        
         if len(results) >= 2:
-            self.assertIn("batu", results[0]["name"].lower())
+            # Second candidate (id=2) should be first due to higher score
+            self.assertEqual(results[0]["id"], 2)
 
     def test_find_best_match_with_empty_normalized_query(self):
         """Test best match when query normalizes to empty string."""
-        repo = FakeAhsRepo([
-            AhsRow(1, "A.01", "test"),
-        ])
-        calculator = SimilarityCalculator(WordWeightConfig())
-        provider = CandidateProvider(repo)
+        # Mock calculator (won't be called due to empty query)
+        calculator = Mock()
+        
+        # Mock provider (won't be called due to empty query)
+        provider = Mock()
+        
         processor = MatchingProcessor(calculator, provider, 0.5)
-
         result = processor.find_best_match("   ")
+        
         self.assertIsNone(result)
 
     def test_find_best_match_with_empty_candidate_name(self):
         """Test best match when candidate name is empty."""
-        repo = FakeAhsRepo([
+        # Mock calculator
+        calculator = Mock()
+        calculator.calculate_sequence_similarity.return_value = 0.9
+        calculator.calculate_partial_similarity.return_value = 0.8
+        
+        # Mock provider
+        provider = Mock()
+        provider.get_candidates_by_head_token.return_value = [
             AhsRow(1, "A.01", ""),
             AhsRow(2, "A.02", "test"),
-        ])
-        calculator = SimilarityCalculator(WordWeightConfig())
-        provider = CandidateProvider(repo)
+        ]
+        
         processor = MatchingProcessor(calculator, provider, 0.5)
-
         result = processor.find_best_match("test")
+        
         self.assertIsNotNone(result)
         self.assertEqual(result["id"], 2)
 
     def test_find_best_match_skips_empty_candidate_name(self):
-        """Test best match skips candidates with empty normalized names (line 549)."""
+        """UNMOCKED VERSION: Test best match skips candidates with empty names.
+        
+        This test uses real dependencies to show integration behavior."""
         repo = FakeAhsRepo([
             AhsRow(1, "A.01", ""),
             AhsRow(2, "A.02", "   "),
@@ -681,76 +719,122 @@ class MatchingProcessorTests(SimpleTestCase):
         self.assertIsNotNone(result)
         self.assertEqual(result["id"], 3)
 
+    def test_find_best_match_skips_empty_candidate_name_mocked(self):
+        """MOCKED VERSION: Test best match skips candidates with empty names.
+        
+        Uses mocks to isolate the test from dependencies.
+        If CandidateProvider or SimilarityCalculator fail, this test still passes.
+        """
+        # Mock calculator - always returns high score
+        calculator = Mock()
+        calculator.calculate_sequence_similarity.return_value = 0.9
+        calculator.calculate_partial_similarity.return_value = 0.9
+        
+        # Mock provider - returns our test candidates
+        provider = Mock()
+        provider.get_candidates_by_head_token.return_value = [
+            AhsRow(1, "A.01", ""),
+            AhsRow(2, "A.02", "   "),
+            AhsRow(3, "A.03", "valid name"),
+        ]
+        
+        # Create processor with mocked dependencies
+        processor = MatchingProcessor(calculator, provider, 0.5)
+        
+        result = processor.find_best_match("valid")
+        
+        # Should find the valid candidate, skipping empty ones
+        self.assertIsNotNone(result)
+        self.assertEqual(result["id"], 3)
+
     def test_find_best_match_updates_best_score(self):
-        """Test that best match updates when higher score found (lines 573, 581-582, 589)."""
-        repo = FakeAhsRepo([
+        """Test that best match updates when higher score found."""
+        # Mock calculator with progressively higher scores
+        calculator = Mock()
+        calculator.calculate_sequence_similarity.side_effect = [0.3, 0.5, 0.9]
+        calculator.calculate_partial_similarity.side_effect = [0.4, 0.6, 0.8]
+        
+        # Mock provider
+        provider = Mock()
+        provider.get_candidates_by_head_token.return_value = [
             AhsRow(1, "A.01", "batu"),
             AhsRow(2, "A.02", "batu belah"),
             AhsRow(3, "A.03", "batu belah mesin"),
-        ])
-        calculator = SimilarityCalculator(WordWeightConfig())
-        provider = CandidateProvider(repo)
+        ]
+        
         processor = MatchingProcessor(calculator, provider, 0.3)
-
         result = processor.find_best_match("batu")
+        
         self.assertIsNotNone(result)
         self.assertIn("name", result)
+        self.assertEqual(result["id"], 3)  # Third has highest score
 
     def test_find_multiple_matches_with_empty_query(self):
         """Test multiple matches when query is empty."""
-        repo = FakeAhsRepo([
-            AhsRow(1, "A.01", "test"),
-        ])
-        calculator = SimilarityCalculator(WordWeightConfig())
-        provider = CandidateProvider(repo)
+        # Mock dependencies (won't be called due to empty query)
+        calculator = Mock()
+        provider = Mock()
+        
         processor = MatchingProcessor(calculator, provider, 0.5)
-
         results = processor.find_multiple_matches("   ", limit=5)
+        
         self.assertEqual(len(results), 0)
 
     def test_find_multiple_matches_skips_empty_candidate_names(self):
         """Test multiple matches skips candidates with empty names."""
-        repo = FakeAhsRepo([
+        # Mock calculator
+        calculator = Mock()
+        calculator.calculate_sequence_similarity.return_value = 0.9
+        calculator.calculate_partial_similarity.return_value = 0.8
+        
+        # Mock provider
+        provider = Mock()
+        provider.get_candidates_by_head_token.return_value = [
             AhsRow(1, "A.01", ""),
             AhsRow(2, "A.02", "test"),
-        ])
-        calculator = SimilarityCalculator(WordWeightConfig())
-        provider = CandidateProvider(repo)
+        ]
+        
         processor = MatchingProcessor(calculator, provider, 0.5)
-
         results = processor.find_multiple_matches("test", limit=5)
+        
         self.assertGreater(len(results), 0)
         self.assertEqual(results[0]["id"], 2)
 
     def test_find_multiple_matches_skips_empty_and_appends_valid(self):
-        """Test multiple matches skips empty names and appends valid ones (lines 658, 679-680, 697-698)."""
-        repo = FakeAhsRepo([
+        """Test multiple matches skips empty names and appends valid ones."""
+        # Mock calculator
+        calculator = Mock()
+        calculator.calculate_sequence_similarity.return_value = 0.8
+        calculator.calculate_partial_similarity.return_value = 0.7
+        
+        # Mock provider
+        provider = Mock()
+        provider.get_candidates_by_head_token.return_value = [
             AhsRow(1, "A.01", ""),
             AhsRow(2, "A.02", "batu belah"),
             AhsRow(3, "A.03", "batu kali"),
-        ])
-        calculator = SimilarityCalculator(WordWeightConfig())
-        provider = CandidateProvider(repo)
+        ]
+        
         processor = MatchingProcessor(calculator, provider, 0.3)
-
         results = processor.find_multiple_matches("batu", limit=5)
+        
         self.assertGreater(len(results), 0)
         self.assertEqual(len(results), 2)
 
     def test_min_similarity_bounds_checking_negative(self):
         """Test min_similarity bounds with negative value."""
-        repo = FakeAhsRepo([])
-        calculator = SimilarityCalculator(WordWeightConfig())
-        provider = CandidateProvider(repo)
+        # Mock dependencies (not needed for this test)
+        calculator = Mock()
+        provider = Mock()
 
         processor = MatchingProcessor(calculator, provider, -0.5)
         self.assertEqual(processor._min_similarity, 0.0)
 
     def test_min_similarity_bounds_checking_above_one(self):
         """Test min_similarity bounds with value > 1.0."""
-        repo = FakeAhsRepo([])
-        calculator = SimilarityCalculator(WordWeightConfig())
-        provider = CandidateProvider(repo)
+        # Mock dependencies (not needed for this test)
+        calculator = Mock()
+        provider = Mock()
 
         processor = MatchingProcessor(calculator, provider, 1.5)
         self.assertEqual(processor._min_similarity, 1.0)
