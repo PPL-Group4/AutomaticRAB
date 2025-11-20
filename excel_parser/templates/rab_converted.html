@@ -1,6 +1,6 @@
 {% load static %}
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <title>RAB Editor</title>
 
@@ -157,9 +157,8 @@
       let currentTable = null;
       let tbody = null;
       let bujakCounter = 0;
-      let headerCreated = false;
 
-      rows.forEach(row => {
+      for (const row of rows) {
         // Skip calculation rows that should not appear in the table
         const skipKeywords = ["PAJAK", "JUMLAH SETELAH PAJAK", "DIBULATKAN", "TERBILANG"];
         if (row.description && skipKeywords.some(k => row.description.toUpperCase().includes(k))) {
@@ -194,7 +193,6 @@
           container.appendChild(table);
           currentTable = table;
           tbody = table.querySelector("tbody");
-          headerCreated = true;
         }
 
         if (row.is_section && row.section_type === "CATEGORY") {
@@ -237,7 +235,7 @@
           tbody.appendChild(tr);
           total += row.total_price || 0;
         }
-      });
+      }
 
       // Update grand total box
       document.getElementById("grandTotalBox").style.display = "block";
