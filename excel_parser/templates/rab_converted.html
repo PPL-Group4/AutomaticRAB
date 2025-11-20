@@ -157,7 +157,6 @@
       let currentTable = null;
       let tbody = null;
       let bujakCounter = 0;
-      let headerCreated = false;
 
       rows.forEach(row => {
         // Skip calculation rows that should not appear in the table
@@ -194,7 +193,6 @@
           container.appendChild(table);
           currentTable = table;
           tbody = table.querySelector("tbody");
-          headerCreated = true;
         }
 
         if (row.is_section && row.section_type === "CATEGORY") {
