@@ -2395,9 +2395,9 @@
     }
   }
   function computeDeviationInfo(actual, reference) {
-  const ref = parseFloat(reference);
-  const act = parseFloat(actual);
-  if (!isFinite(ref) || ref <= 0 || !isFinite(act)) return null;
+  const ref = Number.parseFloat(reference);
+  const act = Number.parseFloat(actual);
+  if (!Number.isFinite(ref) || ref <= 0 || !Number.isFinite(act)) return null;
 
   const pct = ((act - ref) / ref) * 100; 
   const absPct = Math.abs(pct);

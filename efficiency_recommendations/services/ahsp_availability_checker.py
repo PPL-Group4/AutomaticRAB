@@ -34,53 +34,53 @@ def check_items_in_ahsp(items: List[Dict]) -> List[Dict]:
                 }
             ]
     """
-    print(f"\n{'='*60}")
-    print(f"CHECKING ITEMS IN AHSP DATABASE")
-    print(f"{'='*60}")
+    print("\n" + "="*60)
+    print("CHECKING ITEMS IN AHSP DATABASE")
+    print("="*60)
 
     if not items:
         print("No items to check. Returning empty list.")
         return []
 
-    print(f"\nChecking {len(items)} item(s) against AHSP database...")
+    print("\nChecking {} item(s) against AHSP database...".format(len(items)))
 
     result = []
 
     for idx, item in enumerate(items, 1):
-        print(f"\n[{idx}/{len(items)}] Checking item: {item['name']}")
+        print("\n[{}/{}] Checking item: {}".format(idx, len(items), item['name']))
 
         # Create a copy of the item to avoid mutating the original
         item_result = item.copy()
 
         try:
             # Try to find the item in AHSP database
-            print(f"   Calling MatchingService.perform_best_match...")
+            print("   Calling MatchingService.perform_best_match...")
             match = MatchingService.perform_best_match(item['name'])
 
-            print(f"   Match result type: {type(match)}")
-            print(f"   Match result: {match}")
+            print("   Match result type: {}".format(type(match)))
+            print("   Match result: {}".format(match))
 
             # Check if match was found
             # Match can be None, empty list [], or a dict/list with results
             if match is None or (isinstance(match, list) and len(match) == 0):
                 item_result['in_ahsp'] = False
-                print(f"   Result: NOT FOUND in AHSP")
+                print("   Result: NOT FOUND in AHSP")
             else:
                 item_result['in_ahsp'] = True
-                print(f"   Result: FOUND in AHSP")
+                print("   Result: FOUND in AHSP")
 
         except Exception as e:
             # If matching service fails, mark as not found
-            logger.error(f"Error checking AHSP for item '{item['name']}': {str(e)}")
-            print(f"   ERROR: {str(e)}")
-            print(f"   Result: NOT FOUND (due to error)")
+            logger.error("Error checking AHSP for item '{}': {}".format(item['name'], str(e)))
+            print("   ERROR: {}".format(str(e)))
+            print("   Result: NOT FOUND (due to error)")
             item_result['in_ahsp'] = False
 
         result.append(item_result)
 
-    print(f"\n{'='*60}")
-    print(f"AHSP CHECK COMPLETE")
-    print(f"Found in AHSP: {sum(1 for r in result if r['in_ahsp'])}/{len(result)}")
-    print(f"{'='*60}\n")
+    print("\n" + "="*60)
+    print("AHSP CHECK COMPLETE")
+    print("Found in AHSP: {}/{}".format(sum(1 for r in result if r['in_ahsp']), len(result)))
+    print("="*60 + "\n")
 
     return result
