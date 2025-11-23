@@ -11,7 +11,10 @@ from efficiency_recommendations.services.warning_indicator_builder import build_
 from efficiency_recommendations.services.price_deviation_detector import (
     detect_price_deviations
 )
-from automatic_job_matching.service.matching_service import MatchingService
+from efficiency_recommendations.services.matching_cache_service import (
+    MatchingCacheService,
+    extract_ahsp_data_from_match
+)
 from decimal import Decimal
 
 
@@ -43,6 +46,9 @@ def get_job_notifications(request, job_id):
     except TestJob.DoesNotExist:
         raise Http404("Job not found")
 
+    # Create cache instance for this request
+    cache = MatchingCacheService()
+
     # Get all items for the job
     items_queryset = job.items.all()
 
@@ -58,8 +64,8 @@ def get_job_notifications(request, job_id):
         for item in items_queryset
     ]
 
-    # Check AHSP availability (adds 'in_ahsp' field to each item)
-    items_with_status = check_items_in_ahsp(items)
+    # Check AHSP availability (adds 'in_ahsp' field to each item) - using cache
+    items_with_status = check_items_in_ahsp(items, cache=cache)
 
     # Generate notifications for items not in AHSP
     notifications = generate_notifications(items_with_status)
@@ -89,37 +95,25 @@ def get_job_notifications(request, job_id):
     return JsonResponse(response_data)
 
 
-def _get_reference_price_from_match(match_result):
-    """Extract reference price from match result."""
-    if not match_result:
-        return None
-
-    if isinstance(match_result, dict):
-        return match_result.get('unit_price')
-
-    if isinstance(match_result, list) and len(match_result) > 0:
-        first_match = match_result[0]
-        if isinstance(first_match, dict):
-            return first_match.get('unit_price')
-
-    return None
-
-
-def _get_item_with_reference_price(item):
+def _get_item_with_reference_price(item, cache: MatchingCacheService):
     """Get item data with AHSP reference price if available."""
     # Skip items with no unit price
     if not item.unit_price or item.unit_price <= 0:
         return None
 
     try:
-        match_result = MatchingService.perform_best_match(item.name)
-        reference_price = _get_reference_price_from_match(match_result)
+        # Use cache instead of direct matching
+        match_result = cache.get_or_match(item.name)
 
-        if reference_price and Decimal(str(reference_price)) > 0:
+        # Extract AHSP data using the helper
+        ahsp_data = extract_ahsp_data_from_match(match_result, item.name)
+        reference_price = ahsp_data.get('reference_price')
+
+        if reference_price and reference_price > 0:
             return {
                 'name': item.name,
                 'actual_price': item.unit_price,
-                'reference_price': Decimal(str(reference_price))
+                'reference_price': reference_price
             }
     except Exception:
         # Skip items that cause errors
@@ -155,10 +149,13 @@ def get_price_deviations(request, job_id):
     except TestJob.DoesNotExist:
         raise Http404("Job not found")
 
-    # Get items with AHSP reference prices
+    # Create cache instance for this request
+    cache = MatchingCacheService()
+
+    # Get items with AHSP reference prices (using cache)
     items_with_prices = []
     for item in job.items.all():
-        item_data = _get_item_with_reference_price(item)
+        item_data = _get_item_with_reference_price(item, cache)
         if item_data:
             items_with_prices.append(item_data)
 

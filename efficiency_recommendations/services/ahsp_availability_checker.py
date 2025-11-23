@@ -1,11 +1,11 @@
-from typing import List, Dict
+from typing import List, Dict, Optional
 import logging
-from automatic_job_matching.service.matching_service import MatchingService
+from .matching_cache_service import MatchingCacheService
 
 logger = logging.getLogger(__name__)
 
 
-def check_items_in_ahsp(items: List[Dict]) -> List[Dict]:
+def check_items_in_ahsp(items: List[Dict], cache: Optional[MatchingCacheService] = None) -> List[Dict]:
     """
     Check if items exist in AHSP database.
 
@@ -44,6 +44,10 @@ def check_items_in_ahsp(items: List[Dict]) -> List[Dict]:
 
     print("\nChecking {} item(s) against AHSP database...".format(len(items)))
 
+    # Use provided cache or create new one
+    if cache is None:
+        cache = MatchingCacheService()
+
     result = []
 
     for idx, item in enumerate(items, 1):
@@ -53,9 +57,9 @@ def check_items_in_ahsp(items: List[Dict]) -> List[Dict]:
         item_result = item.copy()
 
         try:
-            # Try to find the item in AHSP database
-            print("   Calling MatchingService.perform_best_match...")
-            match = MatchingService.perform_best_match(item['name'])
+            # Try to find the item in AHSP database (using cache)
+            print("   Calling MatchingService via cache...")
+            match = cache.get_or_match(item['name'])
 
             print("   Match result type: {}".format(type(match)))
             print("   Match result: {}".format(match))
