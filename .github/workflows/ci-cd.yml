@@ -98,7 +98,7 @@ jobs:
       - name: Update README with branch name
         if: github.event_name == 'push'
         run: |
-          sed -i "s/\$BRANCH/${{ github.ref_name }}/g" README.md
+          sed -i "s|\$BRANCH|${{ github.ref_name }}|g" README.md
 
       - name: Upload coverage badge and README
         if: github.event_name == 'push'
