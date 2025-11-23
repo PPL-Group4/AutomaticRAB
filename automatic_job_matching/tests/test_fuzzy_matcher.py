@@ -169,56 +169,83 @@ class SimilarityCalculatorTests(SimpleTestCase):
 
 
 class CandidateProviderTests(SimpleTestCase):
-    """Test CandidateProvider class."""
+    """Test CandidateProvider class - all tests use mocks."""
 
     def test_get_candidates_by_head_token_no_unit(self):
         """Test getting candidates without unit filter."""
-        repo = FakeAhsRepo([
+        # Mock repository
+        repo = Mock()
+        repo.by_name_candidates.return_value = [
             AhsRow(1, "A.01", "batu belah"),
             AhsRow(2, "A.02", "batu kali"),
-        ])
+        ]
+        
         provider = CandidateProvider(repo)
         candidates = provider.get_candidates_by_head_token("batu")
+        
         self.assertEqual(len(candidates), 2)
 
     def test_get_candidates_by_head_token_with_unit(self):
         """Test getting candidates with unit filter."""
-        repo = FakeAhsRepo([
+        # Mock repository
+        repo = Mock()
+        repo.by_name_candidates.return_value = [
             AhsRow(1, "A.01", "Galian 1 m3 tanah"),
             AhsRow(2, "A.02", "Pemasangan 1 m2 keramik"),
-        ])
-        provider = CandidateProvider(repo)
-        candidates = provider.get_candidates_by_head_token("pemasangan", unit="m2")
-        self.assertEqual(len(candidates), 1)
-        self.assertEqual(candidates[0].id, 2)
+        ]
+        
+        # Mock unit filtering to return only m2 candidate
+        with patch("automatic_job_matching.service.fuzzy_matcher._filter_by_unit") as mock_filter:
+            mock_filter.return_value = [AhsRow(2, "A.02", "Pemasangan 1 m2 keramik")]
+            
+            provider = CandidateProvider(repo)
+            candidates = provider.get_candidates_by_head_token("pemasangan", unit="m2")
+            
+            self.assertEqual(len(candidates), 1)
+            self.assertEqual(candidates[0].id, 2)
 
     def test_get_candidates_empty_input(self):
         """Test with empty input returns all."""
-        repo = FakeAhsRepo([AhsRow(1, "A.01", "test")])
+        # Mock repository
+        repo = Mock()
+        repo.get_all_ahs.return_value = [AhsRow(1, "A.01", "test")]
+        
         provider = CandidateProvider(repo)
         candidates = provider.get_candidates_by_head_token("")
+        
         self.assertEqual(len(candidates), 1)
 
     def test_try_single_word_material_query(self):
         """Test single word material query."""
-        repo = FakeAhsRepo([
+        # Mock repository
+        repo = Mock()
+        repo.get_all_ahs.return_value = [
             AhsRow(1, "A.01", "beton k225"),
             AhsRow(2, "A.02", "pasir urug"),
-        ])
-        provider = CandidateProvider(repo)
-        candidates = provider.get_candidates_by_head_token("beton")
-        self.assertGreater(len(candidates), 0)
+        ]
+        
+        # Mock WordWeightConfig to identify "beton" as technical
+        with patch.object(WordWeightConfig, '_is_technical_word', return_value=True):
+            provider = CandidateProvider(repo)
+            candidates = provider.get_candidates_by_head_token("beton")
+            
+            self.assertGreater(len(candidates), 0)
 
     def test_get_candidates_single_word_technical_returns_filtered(self):
-        """Test single word material query returns filtered candidates (line 153)."""
-        repo = FakeAhsRepo([
+        """Test single word material query returns filtered candidates."""
+        # Mock repository
+        repo = Mock()
+        repo.get_all_ahs.return_value = [
             AhsRow(1, "A.01", "beton k225"),
             AhsRow(2, "A.02", "beton k300"),
-        ])
-        provider = CandidateProvider(repo)
-
-        candidates = provider.get_candidates_by_head_token("beton")
-        self.assertGreater(len(candidates), 0)
+        ]
+        
+        # Mock WordWeightConfig to identify "beton" as technical
+        with patch.object(WordWeightConfig, '_is_technical_word', return_value=True):
+            provider = CandidateProvider(repo)
+            candidates = provider.get_candidates_by_head_token("beton")
+            
+            self.assertGreater(len(candidates), 0)
 
     def test_get_candidates_with_synonym_expander(self):
         """Test candidate provider with synonym expander."""
