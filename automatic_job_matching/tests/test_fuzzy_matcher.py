@@ -187,12 +187,11 @@ class CandidateProviderTests(SimpleTestCase):
 
     def test_get_candidates_by_head_token_with_unit(self):
         """Test getting candidates with unit filter."""
-        # Mock repository
-        repo = Mock()
-        repo.by_name_candidates.return_value = [
+        # Use FakeAhsRepo instead of Mock for proper iteration
+        repo = FakeAhsRepo([
             AhsRow(1, "A.01", "Galian 1 m3 tanah"),
             AhsRow(2, "A.02", "Pemasangan 1 m2 keramik"),
-        ]
+        ])
         
         # Mock unit filtering to return only m2 candidate
         with patch("automatic_job_matching.service.fuzzy_matcher._filter_by_unit") as mock_filter:
