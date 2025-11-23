@@ -1,7 +1,8 @@
 from __future__ import annotations
 from dataclasses import dataclass
 from typing import List, Protocol, Optional, Set
-import difflib
+from functools import lru_cache
+from rapidfuzz import fuzz
 import logging
 import re
 
@@ -33,6 +34,7 @@ class AhsRepository(Protocol):
     def by_name_candidates(self, head_token: str) -> List[AhsRow]: ...
     def get_all_ahs(self) -> List[AhsRow]: ...
 
+@lru_cache(maxsize=5000)
 def _norm_name(s: str) -> str:
     return normalize_text(s or "")
 
@@ -155,8 +157,8 @@ class SimilarityCalculator:
         self.word_weight_config = word_weight_config
 
     def calculate_sequence_similarity(self, query: str, candidate: str) -> float:
-        """Calculate sequence similarity using SequenceMatcher."""
-        return difflib.SequenceMatcher(None, query, candidate).ratio()
+        """Calculate sequence similarity using rapidfuzz."""
+        return fuzz.ratio(query, candidate) / 100.0
 
     def calculate_partial_similarity(self, query: str, candidate: str) -> float:
         """Calculate partial similarity with word importance weighting."""
@@ -187,7 +189,6 @@ class SimilarityCalculator:
             matched_weight += word_weight * best_match
 
         return matched_weight / total_weight
-
 
 class CandidateProvider:
     def __init__(self, repository: AhsRepository, synonym_expander: SynonymExpander = None):
@@ -248,16 +249,6 @@ class CandidateProvider:
         # Fallback to head token + synonym expansion
         return self._get_candidates_with_synonym_expansion(head)
 
-    # ... [Keep ALL existing helper methods unchanged:
-    #      _try_single_word_material_query, _try_multi_word_query,
-    #      _filter_candidates_all_words, _count_matched_words,
-    #      _check_word_match, _check_synonym_match, _check_fuzzy_match,
-    #      _check_compound_material_match, _try_multi_word_fallback,
-    #      _filter_candidates_any_material, _candidate_matches_any_material,
-    #      _try_material_filter_mode, _get_candidates_with_synonym_expansion,
-    #      _get_synonyms_to_search, _deduplicate_candidates,
-    #      _detect_compound_materials_in_input, _candidate_contains_compound] ...
-
     def _try_single_word_material_query(
         self,
         words: List[str],
@@ -284,11 +275,24 @@ class CandidateProvider:
         action_words: List[str],
         detected_compounds: dict
     ) -> Optional[List[AhsRow]]:
-        """Try multi-word query matching."""
+        """Try multi-word query matching with optimized candidate pool."""
         if len(significant_words) >= 2:
             logger.info("Multi-word query with %d significant words", len(significant_words))
-            all_candidates = self._repository.get_all_ahs()
 
+            # Optimize: Try head token first to get smaller candidate pool
+            head_candidates = self._repository.by_name_candidates(significant_words[0])
+
+            if head_candidates and len(head_candidates) < 1000:
+                # Use smaller pool if available
+                candidates = self._filter_candidates_all_words(
+                    significant_words, material_words, action_words, head_candidates, detected_compounds
+                )
+                if candidates:
+                    logger.info("Multi-word query (head token) returned %d candidates", len(candidates))
+                    return candidates
+
+            # Fall back to all candidates if head token yields nothing or too many
+            all_candidates = self._repository.get_all_ahs()
             candidates = self._filter_candidates_all_words(
                 significant_words, material_words, action_words, all_candidates, detected_compounds
             )
@@ -373,14 +377,25 @@ class CandidateProvider:
         return False
 
     def _check_fuzzy_match(self, word: str, candidate_name: str) -> bool:
-        """Check fuzzy match for longer words."""
-        if len(word) >= 6:
-            for candidate_word in candidate_name.split():
-                if len(candidate_word) >= 6:
-                    ratio = difflib.SequenceMatcher(None, word, candidate_word).ratio()
-                    if ratio >= 0.8:
-                        logger.debug("Fuzzy match: '%s' ≈ '%s' (%.2f)", word, candidate_word, ratio)
-                        return True
+        """Check fuzzy match for longer words with early termination."""
+        if len(word) < 6:
+            return False
+
+        # Quick rejection: get first character for prefix check
+        word_first_char = word[0]
+
+        for candidate_word in candidate_name.split():
+            if len(candidate_word) < 6:
+                continue
+
+            # Early termination: skip if first character doesn't match
+            if candidate_word[0] != word_first_char:
+                continue
+
+            ratio = fuzz.ratio(word, candidate_word) / 100.0
+            if ratio >= 0.8:
+                logger.debug("Fuzzy match: '%s' ≈ '%s' (%.2f)", word, candidate_word, ratio)
+                return True
         return False
 
     def _check_compound_material_match(

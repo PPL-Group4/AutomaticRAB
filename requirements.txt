@@ -35,3 +35,4 @@ pytest-django
 selenium>=4.25.0
 matplotlib
 sentry-sdk
+rapidfuzz>=3.0.0
