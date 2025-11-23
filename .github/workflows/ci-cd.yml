@@ -11,14 +11,31 @@ jobs:
       fail-fast: false
       matrix:
         python-version: ["3.12"]
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root_password
+          MYSQL_DATABASE: test_autorab_db
+          MYSQL_USER: test_user
+          MYSQL_PASSWORD: test_password
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping --silent"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
     env:
       DJANGO_SETTINGS_MODULE: AutomaticRAB.settings
-      SECRET_KEY: ${{ secrets.SECRET_KEY || 'insecure-test-key' }}
-      MYSQL_NAME: ${{ secrets.MYSQL_NAME }}
-      MYSQL_USER: ${{ secrets.MYSQL_USER }}
-      MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
-      MYSQL_HOST: ${{ secrets.MYSQL_HOST }}
-      MYSQL_PORT: ${{ secrets.MYSQL_PORT }}
+      SECRET_KEY: ${{ secrets.SECRET_KEY || 'insecure-test-key-for-ci-only' }}
+      MYSQL_NAME: test_autorab_db
+      MYSQL_USER: test_user
+      MYSQL_PASSWORD: test_password
+      MYSQL_HOST: 127.0.0.1
+      MYSQL_PORT: 3306
 
     steps:
       - name: Checkout repository
@@ -40,6 +57,21 @@ jobs:
           python -m pip install --upgrade pip
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
           pip install coverage
+
+      - name: Wait for MySQL to be ready
+        run: |
+          for i in {1..30}; do
+            if mysqladmin ping -h 127.0.0.1 -u test_user -ptest_password --silent; then
+              echo "MySQL is ready!"
+              break
+            fi
+            echo "Waiting for MySQL... ($i/30)"
+            sleep 2
+          done
+
+      - name: Run migrations
+        run: |
+          python manage.py migrate --noinput
 
       - name: Run tests with coverage
         run: |
