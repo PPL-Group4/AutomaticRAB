@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="section-box">
+  <h5 class="section-title">AHS Breakdown Viewer</h5>
+
+  <div class="alert alert-warning" style="background:#fef2e0; border-color:#f5861a; color:#333;">
+    Masukkan kode AHSP untuk melihat rincian harga tenaga kerja, bahan, dan peralatan.
+  </div>
+
+  <div class="d-flex gap-2 mb-3">
+    <input id="ahs-code-input" type="text" class="form-control" placeholder="Contoh: 3.6.4.1">
+    <button class="btn btn-primary" style="background:#00365a;" onclick="addBreakdown()">Tambah Breakdown</button>
+  </div>
+
+  <div id="breakdown-container"></div>
+</div>
+
+<style>
+  .breakdown-card {
+    background: white;
+    border: 1px solid #ddd;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 25px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  }
+
+  .table th {
+    background: #00365a;
+    color: white;
+    text-align: center;
+  }
+
+  .group-header {
+    background:#f0f6fb;
+    font-weight: bold;
+    padding: 6px 12px;
+    margin-top: 15px;
+    border-left:4px solid #00365a;
+  }
+</style>
+
+<script>
+function formatNumber(num) {
+    if (num === null || num === undefined) return "-";
+    return num.toLocaleString('id-ID', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+}
+
+function formatQuantity(q) {
+    return q.toLocaleString('id-ID', {minimumFractionDigits: 3, maximumFractionDigits: 3});
+}
+
+async function addBreakdown() {
+    const code = document.getElementById("ahs-code-input").value.trim();
+    if (!code) return alert("Masukkan kode!");
+
+    const url = `/api/ahs-breakdown/${code}/`;
+
+    try {
+        const response = await fetch(url);
+        const data = await response.json();
+
+        if (data.error) {
+            alert(`Error: ${data.error}`);
+            return;
+        }
+
+        renderBreakdown(code, data.breakdown);
+    } catch (error) {
+        console.error(error);
+        alert("Failed to fetch breakdown.");
+    }
+}
+
+function renderBreakdown(code, breakdown) {
+    const container = document.getElementById("breakdown-container");
+
+    const card = document.createElement("div");
+    card.className = "breakdown-card";
+
+    card.innerHTML = `
+      <h4>${code} — ${breakdown.name}</h4>
+      <p><strong>Harga Satuan Pekerjaan:</strong> Rp ${formatNumber(breakdown.unit_price)}</p>
+
+      <div class="group-header">A. TENAGA KERJA</div>
+      ${makeTable(breakdown.components.labor)}
+
+      <div class="group-header">B. BAHAN</div>
+      ${makeTable(breakdown.components.materials)}
+
+      <div class="group-header">C. PERALATAN</div>
+      ${makeTable(breakdown.components.equipment)}
+
+      <h5 class="mt-4">Total</h5>
+      <ul>
+        <li>Tenaga Kerja: Rp ${formatNumber(breakdown.totals.labor)}</li>
+        <li>Bahan: Rp ${formatNumber(breakdown.totals.materials)}</li>
+        <li>Peralatan: Rp ${formatNumber(breakdown.totals.equipment)}</li>
+        <li><strong>Harga Satuan Pekerjaan: Rp ${formatNumber(breakdown.unit_price)}</strong></li>
+      </ul>
+    `;
+
+    container.appendChild(card);
+}
+
+function makeTable(items) {
+    if (!items || !items.length) {
+        return "<p class='text-muted'>Tidak ada data.</p>";
+    }
+
+    let html = `
+      <table class="table table-bordered mt-2">
+        <thead>
+          <tr>
+            <th style="width:60px;">No</th>
+            <th>Uraian</th>
+            <th style="width:90px;">Sat.</th>
+            <th style="width:110px;">Koefisien</th>
+            <th style="width:150px;">Harga Satuan (Rp)</th>
+            <th style="width:160px;">Jumlah Harga (Rp)</th>
+          </tr>
+        </thead>
+        <tbody>
+    `;
+
+    items.forEach((row, i) => {
+        html += `
+          <tr>
+            <td class="text-center">${i+1}</td>
+            <td>${row.name}</td>
+            <td class="text-center">${row.unit ?? ""}</td>
+            <td class="text-center">${formatQuantity(row.quantity)}</td>
+            <td class="text-end">${formatNumber(row.unit_price)}</td>
+            <td class="text-end">${formatNumber(row.total_cost)}</td>
+          </tr>
+        `;
+    });
+
+    html += `</tbody></table>`;
+    return html;
+}
+</script>
+
+{% endblock %}

@@ -84,3 +84,6 @@ def ahs_breakdown_view(request, code: str):
         "code": code,
         "breakdown": breakdown,
     }, status=200)
+
+def ahs_breakdown_page(request):
+    return render(request, "ahs_breakdown.html")
