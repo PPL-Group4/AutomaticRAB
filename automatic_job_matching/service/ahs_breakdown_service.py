@@ -167,7 +167,11 @@ def get_ahs_breakdown(ahs_code: str) -> Optional[Dict[str, object]]:
         "materials": Decimal("0"),
     }
 
-    details = {"materials": []}
+    details = {
+        "labor": [],
+        "equipment": [],
+        "materials": [],
+    }
 
     for row in component_rows:
         comp_type = row["component_type"]
