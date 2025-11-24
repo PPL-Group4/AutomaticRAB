@@ -43,32 +43,56 @@ class MatchingService:
         return "not found"
 
     @staticmethod
+    def _extract_bulk_fields(item):
+        if not isinstance(item, dict):
+            return None, None
+
+        return item.get("description"), item.get("unit")
+
+    @staticmethod
+    def _build_bulk_response(description, unit, status, match, error=None):
+        response = {
+            "description": description,
+            "unit": unit,
+            "status": status,
+            "match": match,
+        }
+
+        if error is not None:
+            response["error"] = error
+
+        return response
+
+    @staticmethod
     def perform_bulk_best_match(requests):
-        logger.info("perform_bulk_best_match called with %d items", len(requests or []))
+        items = list(requests or [])
+        logger.info("perform_bulk_best_match called with %d items", len(items))
+
+        if not items:
+            return []
+
         responses = []
 
-        for idx, item in enumerate(requests or []):
-            description = item.get("description") if isinstance(item, dict) else None
-            unit = item.get("unit") if isinstance(item, dict) else None
+        for idx, item in enumerate(items):
+            description, unit = MatchingService._extract_bulk_fields(item)
 
             try:
                 match = MatchingService.perform_best_match(description, unit=unit) if description else None
                 status = MatchingService.determine_status(match)
-                responses.append({
-                    "description": description,
-                    "unit": unit,
-                    "status": status,
-                    "match": match,
-                })
+                responses.append(
+                    MatchingService._build_bulk_response(description, unit, status, match)
+                )
             except Exception as exc:
                 logger.error("Error in perform_bulk_best_match (index=%d): %s", idx, exc, exc_info=True)
-                responses.append({
-                    "description": description,
-                    "unit": unit,
-                    "status": "error",
-                    "match": None,
-                    "error": str(exc),
-                })
+                responses.append(
+                    MatchingService._build_bulk_response(
+                        description,
+                        unit,
+                        "error",
+                        None,
+                        error=str(exc),
+                    )
+                )
 
         return responses
 
