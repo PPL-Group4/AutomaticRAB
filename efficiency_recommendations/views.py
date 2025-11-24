@@ -13,8 +13,9 @@ from efficiency_recommendations.services.price_deviation_detector import (
 )
 from automatic_job_matching.service.matching_service import MatchingService
 from decimal import Decimal
+from silk.profiling.profiler import silk_profile
 
-
+@silk_profile()
 @require_GET
 def get_job_notifications(request, job_id):
     """
@@ -139,7 +140,7 @@ def _serialize_deviation(deviation):
 
     return serialized
 
-
+@silk_profile()
 @require_GET
 def get_price_deviations(request, job_id):
     """
