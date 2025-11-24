@@ -50,6 +50,9 @@ DEBUG = os.getenv("DEBUG", "False") == "True"
 
 ALLOWED_HOSTS = _split_env_list(os.getenv("ALLOWED_HOSTS", "localhost, 127.0.0.1"), "localhost")
 
+if "host.docker.internal" not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append("host.docker.internal")
+
 CSRF_TRUSTED_ORIGINS = _split_env_list(os.getenv("CSRF_TRUSTED_ORIGINS", ""))
 
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
@@ -74,6 +77,7 @@ X_FRAME_OPTIONS = os.getenv("X_FRAME_OPTIONS", "DENY")
 # Application definition
 
 INSTALLED_APPS = [
+    'django_prometheus',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -104,6 +108,7 @@ REST_FRAMEWORK = {
 }
 
 MIDDLEWARE = [
+    'django_prometheus.middleware.PrometheusBeforeMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'AutomaticRAB.middleware.SecurityHeadersMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
@@ -113,6 +118,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'django_prometheus.middleware.PrometheusAfterMiddleware',
 ]
 
 ROOT_URLCONF = 'AutomaticRAB.urls'
@@ -140,7 +146,7 @@ WSGI_APPLICATION = 'AutomaticRAB.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.mysql',
+        'ENGINE': 'django_prometheus.db.backends.mysql',
         'NAME': os.getenv('MYSQL_NAME'),
         'USER': os.getenv('MYSQL_USER'),
         'PASSWORD': os.getenv('MYSQL_PASSWORD'),
@@ -151,7 +157,7 @@ DATABASES = {
         },
     },
     'scraper': {
-        'ENGINE': 'django.db.backends.mysql',
+        'ENGINE': 'django_prometheus.db.backends.mysql',
         'NAME': 'scrapperdb',
         'USER': os.getenv('MYSQL_USER'), 
         'PASSWORD': os.getenv('MYSQL_PASSWORD'),
@@ -166,7 +172,7 @@ DATABASES = {
 if RUNNING_TESTS:
     if FORCE_SQLITE_FOR_TESTS and not FORCE_MYSQL_FOR_TESTS:
         DATABASES['default'] = {
-            'ENGINE': 'django.db.backends.sqlite3',
+            'ENGINE': 'django_prometheus.db.backends.sqlite3',
             'NAME': BASE_DIR / 'test_db.sqlite3',
         }
     else:
