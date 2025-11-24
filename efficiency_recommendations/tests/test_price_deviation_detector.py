@@ -1,5 +1,6 @@
 import unittest
 from decimal import Decimal
+from unittest.mock import patch, MagicMock
 from efficiency_recommendations.services.price_deviation_detector import (
     PriceDeviationDetector,
     DeviationLevel
@@ -7,7 +8,19 @@ from efficiency_recommendations.services.price_deviation_detector import (
 
 
 class TestPriceDeviationDetector(unittest.TestCase):
-    """Test suite for PriceDeviationDetector service"""
+    """
+    Test suite for PriceDeviationDetector service.
+    
+    Uses mocking to:
+    - Test internal methods independently
+    - Isolate the calculation logic from formatting logic
+    - Verify method interactions
+    
+    WHY USE MOCKS HERE?
+    - To test complex methods in isolation
+    - To verify that helper methods are called correctly
+    - To control the output of private methods for testing public methods
+    """
 
     def setUp(self):
         """Set up test fixtures before each test"""
@@ -501,3 +514,152 @@ class TestPriceDeviationDetector(unittest.TestCase):
         result = self.detector.detect_deviations(items)
         assert len(result) == 1
         assert result[0]['item_name'] == 'Valid'
+
+    # MOCK-BASED TESTS FOR SCORE 2
+    
+    @patch.object(PriceDeviationDetector, '_generate_message')
+    def test_message_generation_called_for_deviations(self, mock_generate_message):
+        """
+        Test that _generate_message is called for items with deviations.
+        
+        Why mock _generate_message?
+        - We want to test that the detect_deviations method correctly
+          identifies items and calls the message generator
+        - We isolate the detection logic from the message formatting logic
+        """
+        # Arrange
+        mock_generate_message.return_value = "Mocked message"
+        
+        items = [{
+            'name': 'Semen',
+            'actual_price': Decimal('125000'),
+            'reference_price': Decimal('100000')
+        }]
+
+        # Act
+        result = self.detector.detect_deviations(items)
+
+        # Assert
+        # Should call _generate_message once for the one deviation
+        assert mock_generate_message.call_count == 1
+        assert len(result) == 1
+        assert result[0]['message'] == "Mocked message"
+
+    @patch.object(PriceDeviationDetector, '_get_deviation_level')
+    def test_deviation_level_assigned_correctly(self, mock_get_level):
+        """
+        Test that deviation level is correctly assigned.
+        
+        Why mock _get_deviation_level?
+        - We want to verify it's called with the correct deviation value
+        - We can control the returned level to test the flow
+        """
+        # Arrange
+        mock_get_level.return_value = DeviationLevel.CRITICAL
+        
+        items = [{
+            'name': 'Item X',
+            'actual_price': Decimal('200000'),
+            'reference_price': Decimal('100000')
+        }]
+
+        # Act
+        result = self.detector.detect_deviations(items)
+
+        # Assert
+        # Verify the method was called
+        assert mock_get_level.call_count == 1
+        # Verify the returned level is used
+        assert result[0]['deviation_level'] == DeviationLevel.CRITICAL
+
+    @patch.object(PriceDeviationDetector, '_check_single_item')
+    def test_detect_deviations_processes_all_items(self, mock_check_item):
+        """
+        Test that detect_deviations processes each item.
+        
+        Why mock _check_single_item?
+        - We want to verify the main method calls the checker for each item
+        - We isolate the iteration logic from the checking logic
+        """
+        # Arrange
+        mock_check_item.side_effect = [
+            {'item_name': 'Item 1', 'deviation_percentage': Decimal('15.0')},
+            None,  # Second item has no deviation
+            {'item_name': 'Item 3', 'deviation_percentage': Decimal('25.0')}
+        ]
+        
+        items = [
+            {'name': 'Item 1', 'actual_price': Decimal('115000'), 'reference_price': Decimal('100000')},
+            {'name': 'Item 2', 'actual_price': Decimal('105000'), 'reference_price': Decimal('100000')},
+            {'name': 'Item 3', 'actual_price': Decimal('125000'), 'reference_price': Decimal('100000')}
+        ]
+
+        # Act
+        result = self.detector.detect_deviations(items)
+
+        # Assert
+        # Should call _check_single_item for each item
+        assert mock_check_item.call_count == 3
+        # Should only return items with deviations (not None)
+        assert len(result) == 2
+        assert result[0]['item_name'] == 'Item 3'  # Sorted by deviation
+        assert result[1]['item_name'] == 'Item 1'
+
+    @patch.object(PriceDeviationDetector, '_calculate_deviation_percentage')
+    def test_calculation_method_called(self, mock_calculate):
+        """
+        Test that deviation calculation method is invoked.
+        
+        Why mock _calculate_deviation_percentage?
+        - We verify the calculation is performed
+        - We can inject specific deviation values to test thresholds
+        """
+        # Arrange
+        mock_calculate.return_value = Decimal('15.5')
+        
+        items = [{
+            'name': 'Test Item',
+            'actual_price': Decimal('115500'),
+            'reference_price': Decimal('100000')
+        }]
+
+        # Act
+        result = self.detector.detect_deviations(items)
+
+        # Assert
+        # Verify calculation was called with correct prices
+        mock_calculate.assert_called_once_with(
+            Decimal('115500'),
+            Decimal('100000')
+        )
+        # Verify the calculated deviation is used
+        assert result[0]['deviation_percentage'] == Decimal('15.5')
+
+    @patch.object(PriceDeviationDetector, '_format_price')
+    def test_price_formatting_called(self, mock_format_price):
+        """
+        Test that price formatting is used in message generation.
+        
+        Why mock _format_price?
+        - We verify prices are formatted before including in messages
+        - We can control the format to test message construction
+        """
+        # Arrange
+        mock_format_price.side_effect = lambda x: f"{int(x):,}"
+        
+        items = [{
+            'name': 'Keramik',
+            'actual_price': Decimal('150000'),
+            'reference_price': Decimal('100000')
+        }]
+
+        # Act
+        result = self.detector.detect_deviations(items)
+
+        # Assert
+        # Should call format_price twice (actual and reference)
+        assert mock_format_price.call_count == 2
+        # Verify prices were passed to formatter
+        calls = [call[0][0] for call in mock_format_price.call_args_list]
+        assert Decimal('150000') in calls
+        assert Decimal('100000') in calls
