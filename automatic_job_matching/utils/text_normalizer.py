@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 import unicodedata
 from typing import Iterable, Optional, Set
+from functools import lru_cache
 
 # Constants for pattern matching
 MAX_CODE_PREFIX_LENGTH = 4
@@ -122,6 +123,22 @@ def normalize_text(
     remove_stopwords: bool = False,
     stopwords: Optional[Iterable[str]] = None,
 ) -> str:
+    """
+    Normalize text with optional stopword removal.
+    Uses internal caching for better performance.
+    """
+    # Convert stopwords to hashable tuple for caching
+    stopwords_tuple = tuple(sorted(stopwords)) if stopwords else None
+    return _normalize_text_cached(text, remove_stopwords, stopwords_tuple)
+
+
+@lru_cache(maxsize=2048)
+def _normalize_text_cached(
+    text: str,
+    remove_stopwords: bool,
+    stopwords_tuple: Optional[tuple[str, ...]] = None,
+) -> str:
+    """Internal cached implementation of normalize_text."""
     if not text:
         return ""
 
@@ -138,8 +155,8 @@ def normalize_text(
     if not normalized_text:
         return normalized_text
 
-    if remove_stopwords:
-        stopword_set = set(stopwords or [])
+    if remove_stopwords and stopwords_tuple:
+        stopword_set = set(stopwords_tuple)
         normalized_text = _remove_stopwords_from_text(normalized_text, stopword_set)
 
     normalized_text = _restore_protected_codes(normalized_text, code_map)
