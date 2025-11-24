@@ -710,17 +710,26 @@ class MatchingProcessorTests(SimpleTestCase):
 
     def test_find_multiple_matches_skips_empty_candidate_names(self):
         """Test multiple matches skips candidates with empty names."""
-        repo = FakeAhsRepo([
+        stub_repo = Mock()
+        candidates = [
             AhsRow(1, "A.01", ""),
             AhsRow(2, "A.02", "test"),
-        ])
-        calculator = SimilarityCalculator(WordWeightConfig())
-        provider = CandidateProvider(repo)
-        processor = MatchingProcessor(calculator, provider, 0.5)
+        ]
+        stub_repo.get_all_ahs.return_value = candidates
+        stub_repo.by_name_candidates.return_value = candidates
+
+        mock_calculator = Mock()
+        mock_calculator.calculate_sequence_similarity.return_value = 0.8
+        mock_calculator.calculate_partial_similarity.return_value = 0.9
+
+        provider = CandidateProvider(stub_repo)
+        processor = MatchingProcessor(mock_calculator, provider, 0.5)
 
         results = processor.find_multiple_matches("test", limit=5)
         self.assertGreater(len(results), 0)
         self.assertEqual(results[0]["id"], 2)
+        stub_repo.by_name_candidates.assert_called()
+        mock_calculator.calculate_sequence_similarity.assert_called()
 
     def test_find_multiple_matches_skips_empty_and_appends_valid(self):
         """Test multiple matches skips empty names and appends valid ones (lines 658, 679-680, 697-698)."""

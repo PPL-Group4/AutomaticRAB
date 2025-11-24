@@ -33,64 +33,40 @@ class PdfRowParser:
         self.header_gap_px = header_gap_px
         self.x_merge_gap = x_merge_gap
 
-    def parse(
-            self,
-            fragments: List[TextFragment],
-            vlines_by_page: Optional[Dict[int, List[float]]] = None
-    ) -> Tuple[List[ParsedRow], Dict[str, Tuple[float, float]]]:
-        parsed_rows: List[ParsedRow] = []
-        last_boundaries: Dict[str, Tuple[float, float]] = {}
-        last_header_y: Optional[float] = None  # ✅ initialize
+    def parse(self, fragments, vlines_by_page=None):
+        parsed_rows = []
+        last_boundaries = {}
+        last_header_y = None
 
-        # 1. Group fragments by page
-        frags_by_page = defaultdict(list)
-        for f in fragments:
-            frags_by_page[f.page].append(f)
+        frags_by_page = self._group_fragments_by_page(fragments)
 
-        # 2. Process each page
         for page in sorted(frags_by_page.keys()):
             page_frags = frags_by_page[page]
+            vlines = (vlines_by_page or {}).get(page) or []
 
-            # Try to detect headers
-            mapping, missing, _originals = self.mapper.map_headers(page_frags)
-            core_headers = {"uraian", "satuan", "volume"}
+            boundaries, header_y = self._detect_headers_and_boundaries(
+                page_frags, last_boundaries, last_header_y, vlines
+            )
 
-            if mapping and core_headers.issubset(mapping.keys()):
-                header_y = self.mapper.find_header_y(page_frags)
-                vlines = (vlines_by_page or {}).get(page) or []
-                if vlines:
-                    boundaries = self._compute_x_boundaries_with_lines(mapping, vlines)
-                else:
-                    boundaries = self._compute_x_boundaries(mapping)
-
-                last_boundaries = boundaries
-                last_header_y = header_y
-            elif last_boundaries and last_header_y is not None:
-                # Reuse last valid header
-                boundaries = last_boundaries
-                if page_frags:
-                    min_y = min(f.y for f in page_frags)
-                    header_y = min_y - self.header_gap_px - 1.0
-                else:
-                    header_y = last_header_y
-                last_header_y = header_y
-            else:
+            if boundaries is None:
                 continue
 
+            # update state
+            last_boundaries = boundaries
+            last_header_y = header_y
 
-
-            # 3. Take only fragments below the header row
+            # 3. body fragments
             body_frags = [f for f in page_frags if f.y > header_y + self.header_gap_px]
 
-            # 4. Group by row (y-axis)
+            # 4. rows grouped by y
             grouped_rows = self._group_by_y(body_frags)
 
-            # 5. Assign fragments to columns & merge
+            # 5. assign & merge
             for y, row_frags in grouped_rows:
-                cells = self._assign_to_columns(row_frags, boundaries, mapping)
+                cells = self._assign_to_columns(row_frags, boundaries)
                 values = {k: self._merge_cell_text(v) for k, v in cells.items()}
 
-                # ✅ Section-row heuristic
+                # heuristic
                 if not any(ch.isdigit() for ch in values.get("volume", "")) \
                         and values.get("satuan", "").lower() not in _UNIT_TOKENS:
                     values["satuan"] = ""
@@ -99,6 +75,7 @@ class PdfRowParser:
                 parsed_rows.append(ParsedRow(page=page, y=y, values=values))
 
         return parsed_rows, last_boundaries
+
 
 
     def _compute_x_boundaries_with_lines(
@@ -241,6 +218,33 @@ class PdfRowParser:
             if frag.text and frag.text.strip():
                 pieces.append(frag.text.strip())
         return " ".join(pieces).strip()
+    
+    def _group_fragments_by_page(self, fragments):
+        frags_by_page = defaultdict(list)
+        for f in fragments:
+            frags_by_page[f.page].append(f)
+        return frags_by_page
+
+
+    def _detect_headers_and_boundaries(self, page_frags, last_boundaries, last_header_y, vlines):
+        mapping, missing, _originals = self.mapper.map_headers(page_frags)
+        core_headers = {"uraian", "satuan", "volume"}
+
+        if mapping and core_headers.issubset(mapping.keys()):
+            header_y = self.mapper.find_header_y(page_frags)
+            boundaries = (self._compute_x_boundaries_with_lines(mapping, vlines)
+                        if vlines else self._compute_x_boundaries(mapping))
+            return boundaries, header_y
+
+        if last_boundaries and last_header_y is not None:
+            # reuse last valid header
+            boundaries = last_boundaries
+            header_y = (min(f.y for f in page_frags) - self.header_gap_px - 1.0 
+                        if page_frags else last_header_y)
+            return boundaries, header_y
+
+        return None, None
+
 
 
 
