@@ -16,6 +16,63 @@ class MatchingService:
     _shared_repo = CombinedAhsRepository()
     
     @staticmethod
+    def determine_status(result):
+        if isinstance(result, dict) and result:
+            if "alternatives" in result:
+                return "unit mismatch"
+
+            status = result.get("status")
+            if status == "unit_mismatch":
+                return "unit mismatch"
+            if status in {"found", "similar"}:
+                return status
+
+            confidence = result.get("confidence", 1.0)
+            return "found" if confidence == 1.0 else "similar"
+
+        if isinstance(result, list):
+            if not result:
+                return "not found"
+            if len(result) == 1:
+                return "similar"
+            return f"found {len(result)} similar"
+
+        if result:
+            return "found"
+
+        return "not found"
+
+    @staticmethod
+    def perform_bulk_best_match(requests):
+        logger.info("perform_bulk_best_match called with %d items", len(requests or []))
+        responses = []
+
+        for idx, item in enumerate(requests or []):
+            description = item.get("description") if isinstance(item, dict) else None
+            unit = item.get("unit") if isinstance(item, dict) else None
+
+            try:
+                match = MatchingService.perform_best_match(description, unit=unit) if description else None
+                status = MatchingService.determine_status(match)
+                responses.append({
+                    "description": description,
+                    "unit": unit,
+                    "status": status,
+                    "match": match,
+                })
+            except Exception as exc:
+                logger.error("Error in perform_bulk_best_match (index=%d): %s", idx, exc, exc_info=True)
+                responses.append({
+                    "description": description,
+                    "unit": unit,
+                    "status": "error",
+                    "match": None,
+                    "error": str(exc),
+                })
+
+        return responses
+
+    @staticmethod
     def perform_exact_match(description):
         logger.info("perform_exact_match called (len=%d)", len(description))
 
