@@ -115,9 +115,6 @@ def preview_rows(request):
             
             results["excel_standard"] = excel_rows
             results["job_id"] = job.id
-            excel_rows = preview_file(excel_standard)
-            _apply_preview_overrides(excel_rows, session_overrides)
-            results["excel_standard"] = excel_rows
 
         if excel_apendo:
             validate_excel_file(excel_apendo)
@@ -143,7 +140,9 @@ def preview_rows(request):
 
 def upload_view(request):
     """
-    Render upload page for Excel & PDF with format validation.
+    ❗Saat ini tidak dipakai di urls.py
+    Dibiarkan saja kalau nanti mau dipakai ulang
+    untuk simple upload-only page.
     """
     if request.method == 'POST':
         try:
@@ -192,6 +191,7 @@ def rab_converted(request):
     This will hit the preview_rows endpoint via AJAX/fetch.
     """
     return render(request, RAB_CONVERTED_TEMPLATE)
+
 
 def _apply_preview_overrides(rows, overrides):
     if not overrides:
