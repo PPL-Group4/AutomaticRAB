@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 from pathlib import Path
+import logging
 import os
 import sys
 from django.core.exceptions import ImproperlyConfigured
@@ -286,11 +287,50 @@ os.makedirs(FILE_UPLOAD_TEMP_DIR, exist_ok=True)
 
 import sentry_sdk
 from sentry_sdk.integrations.django import DjangoIntegration
+from sentry_sdk.integrations.logging import LoggingIntegration
 
-sentry_sdk.init(
-    dsn="https://ee22a1ffdc3029795e24cbf5e3e241ff@o4510344475574272.ingest.us.sentry.io/4510344491368448",
-    integrations=[DjangoIntegration()],
-    traces_sample_rate=1.0,
-    send_default_pii=True,
-    environment="development",
+
+def _env_flag(name: str, default: bool = False) -> bool:
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+    return raw.strip().lower() in {"1", "true", "yes", "on"}
+
+
+SENTRY_DSN = os.getenv(
+    "SENTRY_DSN",
+    "https://9f3bc5e234ea076cf3c43a4388542357@o4510418038685696.ingest.us.sentry.io/4510418045239296",
 )
+
+if SENTRY_DSN:
+    sentry_logging = LoggingIntegration(
+        level=getattr(
+            logging,
+            os.getenv("SENTRY_BREADCRUMB_LEVEL", "INFO").upper(),
+            logging.INFO,
+        ),
+        event_level=getattr(
+            logging,
+            os.getenv("SENTRY_EVENT_LEVEL", "INFO").upper(),
+            logging.INFO,
+        ),
+    )
+
+    sentry_sdk.init(
+        dsn=SENTRY_DSN,
+        enable_logs=True,
+    integrations=[
+        LoggingIntegration(
+            level=logging.INFO,       # what becomes a breadcrumb/log entry
+            event_level=logging.WARNING,  # only warnings+ become issues
+        ),
+        DjangoIntegration(),
+         ],        
+        traces_sample_rate=float(os.getenv("SENTRY_TRACES_SAMPLE_RATE", "0.0")),
+        profiles_sample_rate=float(os.getenv("SENTRY_PROFILES_SAMPLE_RATE", "0.0")),
+        send_default_pii=_env_flag("SENTRY_SEND_DEFAULT_PII"),
+        environment=os.getenv(
+            "SENTRY_ENVIRONMENT",
+            os.getenv("ENVIRONMENT", "development"),
+        ),
+    )

@@ -18,6 +18,7 @@ from automatic_job_matching.security import (
 
 logger = logging.getLogger(__name__)
 security_logger = logging.getLogger("security.audit")
+review_logger = logging.getLogger("job_matching.review")
 
 @api_view(['POST'])
 @cache_control(no_store=True, no_cache=True, must_revalidate=True)
@@ -53,8 +54,26 @@ def match_best_view(request):
 
     if status == "not found":
         log_unmatched_entry(description, unit)
+        review_logger.warning(
+            "job_not_found description=%r unit=%r",
+            description,
+            unit,
+        )
+    elif status in {"unit mismatch", "similar"} or (status.startswith("found") and status != "found"):
+        review_logger.info(
+            "job_needs_review status=%s description=%r unit=%r",
+            status,
+            description,
+            unit,
+        )
 
     if isinstance(result, dict) and "alternatives" in result:
+        review_logger.info(
+            "job_needs_review status=alternatives description=%r unit=%r alternatives=%d",
+            description,
+            unit,
+            len(result.get("alternatives", []) or []),
+        )
         return JsonResponse(result, status=200)
 
     return JsonResponse({"status": status, "match": result}, status=200)
@@ -121,8 +140,26 @@ def match_bulk_view(request):
         for original_index, bulk_result in zip(valid_indices, bulk_results):
             results[original_index] = {"index": original_index, **bulk_result}
 
-            if bulk_result.get("status") == "not found":
-                log_unmatched_entry(bulk_result.get("description"), bulk_result.get("unit"))
+            status = bulk_result.get("status")
+            description = bulk_result.get("description")
+            unit = bulk_result.get("unit")
+
+            if status == "not found":
+                log_unmatched_entry(description, unit)
+                review_logger.warning(
+                    "job_not_found description=%r unit=%r (bulk_index=%d)",
+                    description,
+                    unit,
+                    original_index,
+                )
+            elif status in {"unit mismatch", "similar"} or (isinstance(status, str) and status.startswith("found") and status != "found"):
+                review_logger.info(
+                    "job_needs_review status=%s description=%r unit=%r (bulk_index=%d)",
+                    status,
+                    description,
+                    unit,
+                    original_index,
+                )
 
     for idx, entry in enumerate(results):
         if entry is None:
