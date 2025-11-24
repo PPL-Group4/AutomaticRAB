@@ -28,6 +28,7 @@ def trigger_error(request):
     division_by_zero = 1 / 0
 
 urlpatterns = [
+    path('', include('django_prometheus.urls')),
     path('admin/', admin.site.urls),
     path("api/", include("automatic_job_matching.urls")),
     path("excel_parser/", include("excel_parser.urls")),

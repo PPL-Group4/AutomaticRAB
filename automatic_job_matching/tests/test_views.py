@@ -1,7 +1,10 @@
 import json
+from django.http import JsonResponse
 from django.test import SimpleTestCase, Client
 from unittest.mock import patch
 from django.urls import reverse
+
+from automatic_job_matching.security import SecurityValidationError
 
 class MatchBestViewTests(SimpleTestCase):
     def setUp(self):
@@ -62,6 +65,22 @@ class MatchBestViewTests(SimpleTestCase):
         response = self.client.post(url, "not-json", content_type="application/json")
         self.assertEqual(response.status_code, 400)
         self.assertIn("error", response.json())
+
+    def test_best_view_invalid_content_type(self):
+        url = reverse("match-best")
+        response = self.client.post(url, json.dumps({"description": "x"}), content_type="text/plain")
+        self.assertEqual(response.status_code, 415)
+        self.assertIn("error", response.json())
+        self.mock_best.assert_not_called()
+
+    @patch("automatic_job_matching.views.ensure_payload_size", side_effect=SecurityValidationError("too big"))
+    def test_best_view_payload_too_large(self, _mock_size):
+        url = reverse("match-best")
+        payload = {"description": "x"}
+        response = self.client.post(url, json.dumps(payload), content_type="application/json")
+        self.assertEqual(response.status_code, 413)
+        self.assertIn("error", response.json())
+        self.mock_best.assert_not_called()
 
     def test_best_view_missing_description_defaults(self):
         self.mock_best.return_value = None
@@ -190,6 +209,33 @@ class MatchBestViewTests(SimpleTestCase):
         self.assertEqual(response.status_code, 200)
         self.mock_best.assert_called_once_with("test", unit="M3")
 
+    def test_best_view_returns_alternatives_payload(self):
+        alt_payload = {
+            "message": "No matches with the same unit found.",
+            "alternatives": [{"id": 42, "code": "X.1", "name": "Alt"}],
+        }
+        self.mock_best.return_value = alt_payload
+        url = reverse("match-best")
+        payload = {"description": "test", "unit": "m"}
+        response = self.client.post(url, json.dumps(payload), content_type="application/json")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), alt_payload)
+
+
+class JobMatchingPageTests(SimpleTestCase):
+    def setUp(self):
+        self.client = Client()
+
+    @patch("automatic_job_matching.views.render")
+    def test_job_matching_page_renders_template(self, mock_render):
+        mock_render.return_value = JsonResponse({"ok": True})
+        response = self.client.get(reverse("job-matching"))
+        self.assertEqual(response.status_code, 200)
+        self.assertIs(response, mock_render.return_value)
+        mock_render.assert_called_once()
+        args, _kwargs = mock_render.call_args
+        self.assertEqual(args[1], "job_matching.html")
+
 
 class AhsBreakdownViewTests(SimpleTestCase):
     def setUp(self):
@@ -216,3 +262,100 @@ class AhsBreakdownViewTests(SimpleTestCase):
 
         self.assertEqual(response.status_code, 404)
         self.assertIn("error", response.json())
+
+
+class BulkMatchViewTests(SimpleTestCase):
+    def setUp(self):
+        self.client = Client()
+        self.url = reverse("match-bulk")
+        self._bulk_patch = patch("automatic_job_matching.views.MatchingService.perform_bulk_best_match")
+        self.mock_bulk = self._bulk_patch.start()
+        self._tag_patch = patch("automatic_job_matching.views.tag_match_event")
+        self._log_patch = patch("automatic_job_matching.views.log_unmatched_entry")
+        self.mock_tag = self._tag_patch.start()
+        self.mock_log = self._log_patch.start()
+
+    def tearDown(self):
+        self._bulk_patch.stop()
+        self._tag_patch.stop()
+        self._log_patch.stop()
+
+    def test_bulk_match_returns_results(self):
+        self.mock_bulk.return_value = [
+            {"description": "item a", "unit": "m2", "status": "found", "match": {"id": 1}},
+            {"description": "item b", "unit": None, "status": "not found", "match": None},
+        ]
+
+        payload = [
+            {"description": "item a", "unit": "m2"},
+            {"description": "item b"},
+        ]
+
+        response = self.client.post(self.url, json.dumps(payload), content_type="application/json")
+        self.assertEqual(response.status_code, 200)
+
+        data = response.json()
+        self.assertEqual(len(data["results"]), 2)
+        self.assertEqual(data["results"][1]["status"], "not found")
+        self.mock_bulk.assert_called_once_with([
+            {"description": "item a", "unit": "m2"},
+            {"description": "item b", "unit": None},
+        ])
+        self.mock_log.assert_called_once_with("item b", None)
+
+    def test_bulk_match_handles_invalid_items(self):
+        self.mock_bulk.return_value = [
+            {"description": "valid", "unit": "m", "status": "found", "match": {"id": 5}},
+        ]
+
+        payload = [
+            {"description": "valid", "unit": "m"},
+            {"unit": "m2"},
+            "oops",
+        ]
+
+        response = self.client.post(self.url, json.dumps(payload), content_type="application/json")
+        self.assertEqual(response.status_code, 200)
+
+        data = response.json()
+        self.assertEqual(len(data["results"]), 3)
+        self.assertEqual(data["results"][0]["status"], "found")
+        self.assertEqual(data["results"][1]["status"], "error")
+        self.assertEqual(data["results"][2]["status"], "error")
+        self.mock_bulk.assert_called_once_with([
+            {"description": "valid", "unit": "m"},
+        ])
+
+    def test_bulk_match_requires_array_payload(self):
+        response = self.client.post(self.url, json.dumps({"description": "x"}), content_type="application/json")
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("error", response.json())
+        self.mock_bulk.assert_not_called()
+
+    def test_bulk_match_invalid_json(self):
+        response = self.client.post(self.url, "not-json", content_type="application/json")
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("error", response.json())
+        self.mock_bulk.assert_not_called()
+
+    def test_bulk_match_rejects_wrong_content_type(self):
+        response = self.client.post(self.url, json.dumps([]), content_type="text/plain")
+        self.assertEqual(response.status_code, 415)
+        self.assertIn("error", response.json())
+        self.mock_bulk.assert_not_called()
+
+    @patch("automatic_job_matching.views.ensure_payload_size", side_effect=SecurityValidationError("too big"))
+    def test_bulk_match_payload_too_large(self, _mock_size):
+        response = self.client.post(self.url, json.dumps([]), content_type="application/json")
+        self.assertEqual(response.status_code, 413)
+        self.assertIn("error", response.json())
+        self.mock_bulk.assert_not_called()
+
+    def test_bulk_match_handles_missing_bulk_results(self):
+        self.mock_bulk.return_value = []
+        payload = [{"description": "desc", "unit": "m"}]
+
+        response = self.client.post(self.url, json.dumps(payload), content_type="application/json")
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["results"][0]["status"], "error")
