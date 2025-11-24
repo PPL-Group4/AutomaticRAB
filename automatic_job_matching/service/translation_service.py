@@ -3,6 +3,10 @@ from threading import Lock
 
 from deep_translator import GoogleTranslator
 from langdetect import detect, LangDetectException
+from AutomaticRAB.security.input_sanitizer import validate_input_size, validate_content
+from AutomaticRAB.security.ssrf import block_ssrf
+from AutomaticRAB.security.timeout import run_with_timeout
+from requests.exceptions import Timeout
 
 _TRANSLATE_CALL_LOCK = Lock()
 
@@ -26,15 +30,27 @@ class TranslationService:
         if not text:
             return ""
 
-        normalized = text.strip()
-        if not normalized:
-            return ""
-
-        lang = _detect_language(normalized)
-        if lang == "id":
-            return normalized
+        validate_input_size(text)
+        validate_content(text)
+        block_ssrf(text)
 
         try:
-            return _translate(normalized)
+            lang = detect(text)
+        except LangDetectException:
+            lang = "unknown"
+
+        if lang == "id":
+            return text
+
+        try:
+            return run_with_timeout(
+                3, 
+                self.translator.translate,
+                text
+            )
+        except TimeoutError:
+            return "[Translation unavailable: timeout]"
         except Exception:
-            return normalized
+            return "[Translation failed]"
+     
+    

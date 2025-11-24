@@ -35,3 +35,4 @@ pytest-django
 selenium>=4.25.0
 matplotlib
 sentry-sdk
+django-prometheus>=2.3.1
