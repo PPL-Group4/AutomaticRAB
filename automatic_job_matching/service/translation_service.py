@@ -4,18 +4,7 @@ from threading import Lock
 from deep_translator import GoogleTranslator
 from langdetect import detect, LangDetectException
 
-_TRANSLATOR = None
-_TRANSLATOR_INIT_LOCK = Lock()
 _TRANSLATE_CALL_LOCK = Lock()
-
-
-def _get_translator() -> GoogleTranslator:
-    global _TRANSLATOR
-    if _TRANSLATOR is None:
-        with _TRANSLATOR_INIT_LOCK:
-            if _TRANSLATOR is None:
-                _TRANSLATOR = GoogleTranslator(source="en", target="id")
-    return _TRANSLATOR
 
 
 @lru_cache(maxsize=4096)
@@ -26,10 +15,10 @@ def _detect_language(sample: str) -> str:
         return "unknown"
 
 
-@lru_cache(maxsize=2048)
-def _translate_cached(sample: str) -> str:
+def _translate(sample: str) -> str:
     with _TRANSLATE_CALL_LOCK:
-        return _get_translator().translate(sample)
+        translator = GoogleTranslator(source="en", target="id")
+        return translator.translate(sample)
 
 
 class TranslationService:
@@ -46,6 +35,6 @@ class TranslationService:
             return normalized
 
         try:
-            return _translate_cached(normalized)
+            return _translate(normalized)
         except Exception:
             return normalized
