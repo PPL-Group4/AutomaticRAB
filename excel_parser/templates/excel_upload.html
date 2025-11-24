@@ -110,7 +110,7 @@
     <div class="upload-container">
         <h2>Upload Excel</h2>
 
-    <form method="post" enctype="multipart/form-data" action="{% url 'upload' %}">
+    <form method="post" enctype="multipart/form-data" action="{% url 'excel_parser:upload' %}">
             {% csrf_token %}
 
             <div class="upload-box">
