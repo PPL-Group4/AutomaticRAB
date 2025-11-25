@@ -28,7 +28,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.getenv('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.getenv('DEBUG', 'False').lower() in ('true', '1', 'yes')
 
 ALLOWED_HOSTS = ["localhost", "127.0.0.1","controversial-annmarie-izzydharma-9d67c1b0.koyeb.app"]
 
@@ -63,8 +63,7 @@ MIDDLEWARE = [
     'silk.middleware.SilkyMiddleware',
 ]
 
-SILKY_AUTHENTICATION = False  # Biar nggak perlu login dulu
-# Opsional, kalau mau python profiler:
+SILKY_AUTHENTICATION = False  
 SILKY_PYTHON_PROFILER = True
 SILKY_PYTHON_PROFILER_BINARY = True
 SILKY_PYTHON_PROFILER_PERCENT = 100
@@ -95,13 +94,14 @@ WSGI_APPLICATION = 'AutomaticRAB.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-DB_ENGINE = os.getenv("DB_ENGINE", "django.db.backends.sqlite3")
+SQLITE3_ENGINE = "django.db.backends.sqlite3"
+DB_ENGINE = os.getenv("DB_ENGINE", SQLITE3_ENGINE)
 DB_NAME = os.getenv("DB_NAME", "db.sqlite3")
 
-if DB_ENGINE == "django.db.backends.sqlite3":
+if DB_ENGINE == SQLITE3_ENGINE:
     DATABASES = {
         "default": {
-            "ENGINE": "django.db.backends.sqlite3",
+            "ENGINE": SQLITE3_ENGINE,
             "NAME": BASE_DIR / DB_NAME,
         }
     }
