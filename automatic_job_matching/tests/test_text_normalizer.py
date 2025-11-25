@@ -29,7 +29,7 @@ class TextNormalizationTestCase(SimpleTestCase):
 
 	def test_optional_stopwords(self):
 		text = "Pekerjaan struktur dan arsitektur untuk pembangunan gedung"
-		stopwords = {"dan", "untuk", "pembangunan"}
+		stopwords = ("dan", "untuk", "pembangunan")
 		self.assertEqual(
 			self.normalize_text(text, remove_stopwords=True, stopwords=stopwords),
 			"pekerjaan struktur arsitektur gedung",
@@ -81,7 +81,7 @@ class TextNormalizationTestCase(SimpleTestCase):
 	def test_stopwords_exact_match_only(self):
 		text = "pembangunan bangun membangun"
 		self.assertEqual(
-			self.normalize_text(text, remove_stopwords=True, stopwords={"bangun"}),
+			self.normalize_text(text, remove_stopwords=True, stopwords=("bangun",)),
 			"pembangunan membangun",
 		)
 
@@ -242,7 +242,7 @@ class TextNormalizationTestCase(SimpleTestCase):
 		result = normalize_text(
 			"A.4.4 Pemasangan 1m² keramik dengan beton untuk dinding",
 			remove_stopwords=True,
-			stopwords={"untuk", "dengan"}
+			stopwords=("untuk", "dengan")
 		)
 		
 		self.assertIn("A.4.4", result)
@@ -269,3 +269,11 @@ class TextNormalizationTestCase(SimpleTestCase):
 				self.assertNotIn(".", result.replace(" ", ""))
 			else:
 				self.assertIn(expected, result)
+
+	def test_normalize_empty_after_stripping(self):
+		"""Test normalization when text becomes empty after processing - covers line 111."""
+		from automatic_job_matching.utils.text_normalizer import normalize_text
+		
+		# Text that becomes empty after normalization (should trigger line 111)
+		result = normalize_text("!!! ??? --- ~~~")
+		self.assertEqual(result, "")
