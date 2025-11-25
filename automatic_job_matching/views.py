@@ -60,10 +60,6 @@ def match_best_view(request):
         status = f"found {len(result)} similar"
     else:
         status = "not found"
-        log_unmatched_entry(description, unit)
-
-    if isinstance(result, dict) and "alternatives" in result:
-        return JsonResponse(result, status=200)
 
     return JsonResponse({"status": status, "match": result}, status=200)
 

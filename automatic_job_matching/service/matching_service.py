@@ -100,15 +100,7 @@ class MatchingService:
                 if primary:
                     return primary
 
-                # Fallback: try again ignoring unit
-                alt_matches = MatchingService.perform_multiple_match(description, limit, min_similarity, unit=None)
-                if alt_matches:
-                    for m in alt_matches:
-                        m["unit_mismatch"] = True
-                    return {
-                        "message": "No matches with the same unit found. Showing similar options with different units.",
-                        "alternatives": alt_matches,
-                    }
+
 
                 return None
 
@@ -128,27 +120,14 @@ class MatchingService:
             if not result:
                 result = MatchingService.perform_multiple_match(description, limit, min_similarity_multiple, unit=unit)
 
-            # === Fallback: no matches at all, try ignoring unit ===
+            # === Fallback: no matches at all ===
             if not result:
-                alt_matches = MatchingService.perform_multiple_match(description, limit, min_similarity_multiple, unit=None)
-                if alt_matches:
-                    for m in alt_matches:
-                        m["unit_mismatch"] = True
-                    return {
-                        "message": "No matches with the same unit found. Showing similar options with different units.",
-                        "alternatives": alt_matches,
-                    }
-                
+                logger.info("No matches found for description=%s with unit=%s", description, unit)
+                return None
+
             if isinstance(result, dict):
                 result_unit = result.get("unit")
-                if unit and result_unit and result_unit != unit:
-                    result["unit_mismatch"] = True
-                else:
-                    result["unit_mismatch"] = False
-
-                if result.get("unit_mismatch"):
-                    result["status"] = "unit_mismatch"
-                elif result.get("confidence", 1.0) == 1.0:
+                if result.get("confidence", 1.0) == 1.0:
                     result["status"] = "found"
                 else:
                     result["status"] = "similar"
