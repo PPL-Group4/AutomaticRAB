@@ -38,6 +38,9 @@ urlpatterns = [
     path("efficiency_recommendations/", include("efficiency_recommendations.urls")),
     path("api/recompute_total_cost/", recompute_total_cost),
     path('sentry-debug/', trigger_error),
+    path("efficiency_recommendations/", include("efficiency_recommendations.urls", namespace="efficiency_recommendations"), ),
+    path("silk/", include("silk.urls", namespace="silk")),
+
 ]
 
 if settings.DEBUG or os.getenv("DOCKER_ENV") == "True":

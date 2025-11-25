@@ -1,134 +1,145 @@
-{% extends "base.html" %}
 {% load static %}
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>RAB Preview</title>
 
-{% block content %}
-<style>
-    .warning-chip {
-    display: inline-flex;
-    align-items: center;
-    gap: .4rem;
-    font-size: .8rem;
-    padding: .25rem .5rem;
-    border-radius: 999px;
-    border: 1px solid transparent;
-    background: #fff7ed;          
-    color: #b45309;               
-  }
+    <!-- Bootstrap CSS (dulu biasanya dari base.html) -->
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    >
 
-  .warning-chip.critical {
-    background: #fef2f2;          
-    color: #b91c1c;               
-  }
-  .warning-chip .dot {
-    width: .5rem; height: .5rem; border-radius: 999px; background:#f59e0b;
-  }
-  .warning-chip.critical .dot { background:#ef4444; }
-  .price-origin-wrapper {
-    width: 100%;
-  }
+    <style>
+        .warning-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: .4rem;
+            font-size: .8rem;
+            padding: .25rem .5rem;
+            border-radius: 999px;
+            border: 1px solid transparent;
+            background: #fff7ed;          
+            color: #b45309;               
+        }
 
-  .price-origin-wrapper .price-input {
-    width: 100%;
-  }
+        .warning-chip.critical {
+            background: #fef2f2;          
+            color: #b91c1c;               
+        }
+        .warning-chip .dot {
+            width: .5rem; height: .5rem; border-radius: 999px; background:#f59e0b;
+        }
+        .warning-chip.critical .dot { background:#ef4444; }
 
-  .price-origin-badge {
-    font-size: 0.7rem;
-    letter-spacing: 0.02em;
-  }
+        .price-origin-wrapper {
+            width: 100%;
+        }
 
-  .price-input-auto {
-    background-color: #e7f1ff;
-    border-color: rgba(13, 110, 253, 0.35);
-  }
+        .price-origin-wrapper .price-input {
+            width: 100%;
+        }
 
-  .price-input-manual {
-    background-color: #fff5e6;
-    border-color: rgba(255, 193, 7, 0.45);
-  }
+        .price-origin-badge {
+            font-size: 0.7rem;
+            letter-spacing: 0.02em;
+        }
 
-  table th:nth-child(8),
-  table td:nth-child(8) {
-    width: 100px;          /* adjust to fit your layout */
-    max-width: 100px;
-    min-width: 100px;
-    text-align: justify;     /* keeps prices neatly aligned */
-  }
-</style>
-<div class="section-box position-relative">
-  <h5 class="section-title">RAB Preview</h5>
+        .price-input-auto {
+            background-color: #e7f1ff;
+            border-color: rgba(13, 110, 253, 0.35);
+        }
 
-  <div class="row g-3 mb-3">
-    <div class="col-lg-6">
-      <form id="excelUploadForm" enctype="multipart/form-data" class="h-100 p-3 border rounded bg-light-subtle">
-        <label for="excelFileInput" class="form-label fw-semibold">Upload Excel</label>
-        <div class="input-group">
-          <input type="file" name="file" id="excelFileInput" accept=".xls,.xlsx" class="form-control">
-          <button type="submit" class="btn btn-primary" style="background-color:#00365a;">Upload & Preview Excel</button>
-        </div>
-        <small class="text-muted">Format didukung: .xls, .xlsx</small>
-      </form>
-    </div>
-    <div class="col-lg-6">
-      <form id="pdfUploadForm" enctype="multipart/form-data" class="h-100 p-3 border rounded bg-light-subtle">
-        <label for="pdfFileInput" class="form-label fw-semibold">Upload PDF</label>
-        <div class="input-group">
-          <input type="file" name="pdf_file" id="pdfFileInput" accept=".pdf" class="form-control">
-          <button type="submit" class="btn btn-primary" style="background-color:#00365a;">Upload & Preview PDF</button>
-        </div>
-        <small class="text-muted">Format didukung: .pdf</small>
-      </form>
-    </div>
-  </div>
+        .price-input-manual {
+            background-color: #fff5e6;
+            border-color: rgba(255, 193, 7, 0.45);
+        }
 
-  <div id="errorContainer"></div>
-  <div id="loadingSpinner" class="text-center py-4" style="display:none;">
-    <div class="spinner-border text-primary" role="status">
-      <span class="visually-hidden">Loading...</span>
-    </div>
-    <p class="mt-2">Memproses file, mohon tunggu...</p>
-  </div>
+        table th:nth-child(8),
+        table td:nth-child(8) {
+            width: 100px;
+            max-width: 100px;
+            min-width: 100px;
+            text-align: justify;
+        }
+    </style>
+</head>
+<body>
+<div class="container py-4">
+  <div class="section-box position-relative">
+    <h5 class="section-title">RAB Preview</h5>
 
-  <div id="rabTables" class="mt-3"></div>
-
-  <div class="grand-total-box card mt-4 p-3 shadow-sm" id="grandTotalBox" style="display:none; max-width:400px;">
-    <div class="d-flex justify-content-between"><span class="fw-bold">Total</span> <span id="grandTotal">Rp. 0</span></div>
-    <div class="d-flex justify-content-between"><span class="fw-bold">PPN (10%)</span> <span id="ppn">Rp. 0</span></div>
-    <div class="d-flex justify-content-between"><span class="fw-bold">Total (Termasuk PPN)</span> <span id="totalWithPpn">Rp. 0</span></div>
-    <div class="d-flex justify-content-between"><span class="fw-bold">Terbilang</span> <span id="terbilang">NOL RUPIAH</span></div>
-  </div>
-
-  <!-- Cost Weight Analysis Chart -->
-  <div class="card mt-4 p-4 shadow-sm" id="costWeightChartBox" style="display:none;">
-    <h5 class="mb-3">📊 Cost Weight Analysis</h5>
-    <div class="row">
-      <div class="col-lg-7">
-        <canvas id="costWeightPieChart" style="max-height: 400px;"></canvas>
+    <div class="row g-3 mb-3">
+      <div class="col-lg-6">
+        <form id="excelUploadForm" enctype="multipart/form-data" class="h-100 p-3 border rounded bg-light-subtle">
+          <label for="excelFileInput" class="form-label fw-semibold">Upload Excel</label>
+          <div class="input-group">
+            <input type="file" name="file" id="excelFileInput" accept=".xls,.xlsx" class="form-control">
+            <button type="submit" class="btn btn-primary" style="background-color:#00365a;">Upload & Preview Excel</button>
+          </div>
+          <small class="text-muted">Format didukung: .xls, .xlsx</small>
+        </form>
       </div>
-      <div class="col-lg-5">
-        <div id="costWeightLegend" style="max-height: 400px; overflow-y: auto;"></div>
+      <div class="col-lg-6">
+        <form id="pdfUploadForm" enctype="multipart/form-data" class="h-100 p-3 border rounded bg-light-subtle">
+          <label for="pdfFileInput" class="form-label fw-semibold">Upload PDF</label>
+          <div class="input-group">
+            <input type="file" name="pdf_file" id="pdfFileInput" accept=".pdf" class="form-control">
+            <button type="submit" class="btn btn-primary" style="background-color:#00365a;">Upload & Preview PDF</button>
+          </div>
+          <small class="text-muted">Format didukung: .pdf</small>
+        </form>
       </div>
     </div>
+
+    <div id="errorContainer"></div>
+    <div id="loadingSpinner" class="text-center py-4" style="display:none;">
+      <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Loading...</span>
+      </div>
+      <p class="mt-2">Memproses file, mohon tunggu...</p>
+    </div>
+
+    <div id="rabTables" class="mt-3"></div>
+
+    <div class="grand-total-box card mt-4 p-3 shadow-sm" id="grandTotalBox" style="display:none; max-width:400px;">
+      <div class="d-flex justify-content-between"><span class="fw-bold">Total</span> <span id="grandTotal">Rp. 0</span></div>
+      <div class="d-flex justify-content-between"><span class="fw-bold">PPN (10%)</span> <span id="ppn">Rp. 0</span></div>
+      <div class="d-flex justify-content-between"><span class="fw-bold">Total (Termasuk PPN)</span> <span id="totalWithPpn">Rp. 0</span></div>
+      <div class="d-flex justify-content-between"><span class="fw-bold">Terbilang</span> <span id="terbilang">NOL RUPIAH</span></div>
+    </div>
+
+    <!-- Cost Weight Analysis Chart -->
+    <div class="card mt-4 p-4 shadow-sm" id="costWeightChartBox" style="display:none;">
+      <h5 class="mb-3">📊 Cost Weight Analysis</h5>
+      <div class="row">
+        <div class="col-lg-7">
+          <canvas id="costWeightPieChart" style="max-height: 400px;"></canvas>
+        </div>
+        <div class="col-lg-5">
+          <div id="costWeightLegend" style="max-height: 400px; overflow-y: auto;"></div>
+        </div>
+      </div>
+    </div>
+
+    {# {% include "efficiency_recommendations/recommendations_panel.html" %} #}
+
+    <a href="#" class="btn btn-outline-primary mt-3">+ Tambah Kategori Pekerjaan / Pilih Referensi RAB</a>
   </div>
-
-  {% include "efficiency_recommendations/recommendations_panel.html" %}
-
-  <a href="#" class="btn btn-outline-primary mt-3">+ Tambah Kategori Pekerjaan / Pilih Referensi RAB</a>
 </div>
-{% endblock %}
 
-{% block extra_js %}
+<!-- JS yang dulu ada di block extra_js -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script>
-  {{ block.super }}
-
   // Debug: Check if Chart.js is loaded
   console.log("Chart.js loaded:", typeof Chart !== 'undefined');
   console.log("Cost Weight Chart Box element:", document.getElementById("costWeightChartBox"));
 
   const MATCH_ENDPOINT = "{% url 'match-best' %}";
   const RECOMPUTE_ENDPOINT = "/api/recompute_total_cost/";
-  const EXCEL_UPLOAD_ENDPOINT = "{% url 'preview_rows' %}";
+  const EXCEL_UPLOAD_ENDPOINT = "{% url 'excel_parser:preview_rows' %}";
   const PDF_UPLOAD_ENDPOINT = "{% url 'pdf_parser:rab_converted_pdf' %}";
   const suggestionCache = new Map();
   const dropdownRequestState = new WeakMap();
@@ -1327,9 +1338,9 @@
       event.preventDefault();
     });
 
-  warnIfUnsafeCode(input.value);
+    warnIfUnsafeCode(input.value);
 
-  group.appendChild(input);
+    group.appendChild(input);
     group.appendChild(button);
     cell.appendChild(group);
     cell.appendChild(dropdown);
@@ -1681,53 +1692,54 @@
       }
     }
   }
+
   function computeDeviationInfo(actual, reference) {
-  const ref = Number.parseFloat(reference);
-  const act = Number.parseFloat(actual);
-  if (!Number.isFinite(ref) || ref <= 0 || !Number.isFinite(act)) return null;
+    const ref = Number.parseFloat(reference);
+    const act = Number.parseFloat(actual);
+    if (!Number.isFinite(ref) || ref <= 0 || !Number.isFinite(act)) return null;
 
-  const pct = ((act - ref) / ref) * 100; 
-  const absPct = Math.abs(pct);
+    const pct = ((act - ref) / ref) * 100; 
+    const absPct = Math.abs(pct);
 
-  let level = null;
-  if (absPct > 50) level = "CRITICAL";
-  else if (absPct > 20) level = "WARN";
-  else if (absPct > 10) level = "MODERATE";
-  else level = "NONE";
+    let level = null;
+    if (absPct > 50) level = "CRITICAL";
+    else if (absPct > 20) level = "WARN";
+    else if (absPct > 10) level = "MODERATE";
+    else level = "NONE";
 
-  return { pct, absPct, level, direction: pct >= 0 ? "higher" : "lower" };
-}
+    return { pct, absPct, level, direction: pct >= 0 ? "higher" : "lower" };
+  }
 
-function renderWarningChip(host, info) {
-  host.innerHTML = "";
-  if (!info || info.level === "NONE") return;
+  function renderWarningChip(host, info) {
+    host.innerHTML = "";
+    if (!info || info.level === "NONE") return;
 
-  const chip = document.createElement("span");
-  chip.className = "warning-chip" + (info.level === "CRITICAL" ? " critical" : "");
-  const dot = document.createElement("span");
-  dot.className = "dot";
-  const text = document.createElement("span");
+    const chip = document.createElement("span");
+    chip.className = "warning-chip" + (info.level === "CRITICAL" ? " critical" : "");
+    const dot = document.createElement("span");
+    dot.className = "dot";
+    const text = document.createElement("span");
 
-  const dirText = info.pct >= 0 ? "lebih tinggi" : "lebih rendah";
-  text.textContent = `Harga ${info.absPct.toFixed(1)}% ${dirText} dari database`;
+    const dirText = info.pct >= 0 ? "lebih tinggi" : "lebih rendah";
+    text.textContent = `Harga ${info.absPct.toFixed(1)}% ${dirText} dari database`;
 
-  chip.appendChild(dot);
-  chip.appendChild(text);
-  host.appendChild(chip);
-}
+    chip.appendChild(dot);
+    chip.appendChild(text);
+    host.appendChild(chip);
+  }
 
-function updatePriceWarningForRow(tr) {
-  if (!tr) return;
-  const priceInput = tr.querySelector(".price-input");
-  const host = tr.querySelector(".price-warning-host");
-  if (!priceInput || !host) return;
+  function updatePriceWarningForRow(tr) {
+    if (!tr) return;
+    const priceInput = tr.querySelector(".price-input");
+    const host = tr.querySelector(".price-warning-host");
+    if (!priceInput || !host) return;
 
-  const reference = priceInput.dataset.referencePrice;
-  if (!reference) { host.innerHTML = ""; return; }
+    const reference = priceInput.dataset.referencePrice;
+    if (!reference) { host.innerHTML = ""; return; }
 
-  const info = computeDeviationInfo(priceInput.value, reference);
-  renderWarningChip(host, info);
-}
+    const info = computeDeviationInfo(priceInput.value, reference);
+    renderWarningChip(host, info);
+  }
 </script>
 
 <!-- Include Efficiency Recommendations JavaScript -->
@@ -1766,4 +1778,5 @@ function updatePriceWarningForRow(tr) {
     }
   });
 </script>
-{% endblock %}
+</body>
+</html>

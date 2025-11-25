@@ -1,8 +1,23 @@
 from typing import List, Dict
 import logging
+from functools import lru_cache
 from automatic_job_matching.service.matching_service import MatchingService
 
 logger = logging.getLogger(__name__)
+
+# Cache for matching results to avoid redundant lookups
+@lru_cache(maxsize=1024)
+def _check_item_in_ahsp_cached(item_name: str) -> bool:
+    """Cached version of AHSP check for a single item name."""
+    try:
+        match = MatchingService.perform_best_match(item_name)
+        # Check if match was found
+        if match is None or (isinstance(match, list) and len(match) == 0):
+            return False
+        return True
+    except Exception as e:
+        logger.error(f"Error checking AHSP for item '{item_name}': {e}")
+        return False
 
 
 def check_items_in_ahsp(items: List[Dict]) -> List[Dict]:
@@ -34,53 +49,13 @@ def check_items_in_ahsp(items: List[Dict]) -> List[Dict]:
                 }
             ]
     """
-    print("\n" + "="*60)
-    print("CHECKING ITEMS IN AHSP DATABASE")
-    print("="*60)
-
     if not items:
-        print("No items to check. Returning empty list.")
         return []
 
-    print("\nChecking {} item(s) against AHSP database...".format(len(items)))
-
     result = []
-
-    for idx, item in enumerate(items, 1):
-        print("\n[{}/{}] Checking item: {}".format(idx, len(items), item['name']))
-
-        # Create a copy of the item to avoid mutating the original
+    for item in items:
         item_result = item.copy()
-
-        try:
-            # Try to find the item in AHSP database
-            print("   Calling MatchingService.perform_best_match...")
-            match = MatchingService.perform_best_match(item['name'])
-
-            print("   Match result type: {}".format(type(match)))
-            print("   Match result: {}".format(match))
-
-            # Check if match was found
-            # Match can be None, empty list [], or a dict/list with results
-            if match is None or (isinstance(match, list) and len(match) == 0):
-                item_result['in_ahsp'] = False
-                print("   Result: NOT FOUND in AHSP")
-            else:
-                item_result['in_ahsp'] = True
-                print("   Result: FOUND in AHSP")
-
-        except Exception as e:
-            # If matching service fails, mark as not found
-            logger.error("Error checking AHSP for item '{}': {}".format(item['name'], str(e)))
-            print("   ERROR: {}".format(str(e)))
-            print("   Result: NOT FOUND (due to error)")
-            item_result['in_ahsp'] = False
-
+        item_result['in_ahsp'] = _check_item_in_ahsp_cached(item['name'])
         result.append(item_result)
-
-    print("\n" + "="*60)
-    print("AHSP CHECK COMPLETE")
-    print("Found in AHSP: {}/{}".format(sum(1 for r in result if r['in_ahsp']), len(result)))
-    print("="*60 + "\n")
 
     return result

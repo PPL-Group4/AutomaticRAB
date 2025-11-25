@@ -1,4 +1,5 @@
 import re
+from functools import lru_cache
 
 class AbbreviationService:
     MAP = {
@@ -10,6 +11,7 @@ class AbbreviationService:
     }
 
     @classmethod
+    @lru_cache(maxsize=1024)
     def expand(cls, text: str) -> str:
         if not text:
             return text
