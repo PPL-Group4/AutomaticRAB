@@ -13,6 +13,21 @@ jobs:
       fail-fast: false
       matrix:
         python-version: ["3.12"]
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: ${{ secrets.CI_MYSQL_ROOT_PASSWORD || 'ci_root_pass_2024' }}
+          MYSQL_DATABASE: test_autorab_db
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping --silent"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
     env:
       DJANGO_SETTINGS_MODULE: AutomaticRAB.settings
       SECRET_KEY: ${{ secrets.SECRET_KEY || 'insecure-test-key' }}
@@ -23,6 +38,14 @@ jobs:
       MYSQL_PORT: ${{ secrets.MYSQL_PORT }}
       CELERY_BROKER_URL: memory://localhost/
       CELERY_RESULT_BACKEND: cache+memory://
+      SECRET_KEY: ${{ secrets.SECRET_KEY || 'insecure-test-key-for-ci-only' }}
+      CI_MYSQL_ROOT_PASSWORD: ${{ secrets.CI_MYSQL_ROOT_PASSWORD || 'ci_root_pass_2024' }}
+      CI_MYSQL_USER_PASSWORD: ${{ secrets.CI_MYSQL_USER_PASSWORD || 'ci_user_pass_2024' }}
+      MYSQL_NAME: test_autorab_db
+      MYSQL_USER: test_user
+      MYSQL_PASSWORD: ${{ secrets.CI_MYSQL_USER_PASSWORD || 'ci_user_pass_2024' }}
+      MYSQL_HOST: 127.0.0.1
+      MYSQL_PORT: 3306
 
     steps:
       - name: Checkout repository
@@ -45,6 +68,29 @@ jobs:
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
           pip install coverage
 
+      - name: Wait for MySQL to be ready
+        run: |
+          for i in {1..30}; do
+            if mysqladmin ping -h 127.0.0.1 -u root -p"${CI_MYSQL_ROOT_PASSWORD}" --silent; then
+              echo "MySQL is ready!"
+              break
+            fi
+            echo "Waiting for MySQL... ($i/30)"
+            sleep 2
+          done
+
+      - name: Create test user with proper permissions
+        run: |
+          mysql -h 127.0.0.1 -u root -p"${CI_MYSQL_ROOT_PASSWORD}" -e "
+            CREATE USER IF NOT EXISTS 'test_user'@'%' IDENTIFIED BY '${CI_MYSQL_USER_PASSWORD}';
+            GRANT ALL PRIVILEGES ON *.* TO 'test_user'@'%' WITH GRANT OPTION;
+            FLUSH PRIVILEGES;
+          "
+
+      - name: Run migrations
+        run: |
+          python manage.py migrate --noinput
+
       - name: Run tests with coverage
         run: |
           # Use --noinput to prevent Django from prompting to delete existing DB in non-interactive CI
@@ -58,13 +104,14 @@ jobs:
           python -c "import json; data=json.load(open('coverage.json')); print(f\"Total coverage: {data['totals']['percent_covered']:.1f}%\")"
 
       - name: Generate coverage badge
+        if: github.event_name == 'push'
         run: |
           # Install genbadge which works better with coverage.py
           pip install genbadge[coverage]
           genbadge coverage -i coverage.xml -o coverage.svg
           ls -la coverage.svg  # Verify file was created
 
-      - name: Update README with branch-specific badge
+      - name: Update README with branch name
         if: github.event_name == 'push'
         run: |
           sed -i "s|\$BRANCH|${{ github.ref_name }}|g" README.md
@@ -111,6 +158,9 @@ jobs:
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
+
+      - name: Build docker-compose services
+        run: docker compose -f docker-compose.yml build
 
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
