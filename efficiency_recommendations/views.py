@@ -67,6 +67,13 @@ def get_job_notifications(request, job_id):
     # Check AHSP availability (adds 'in_ahsp' field to each item) - using cache
     items_with_status = check_items_in_ahsp(items, cache=cache)
 
+    # Log cache effectiveness
+    cache_stats = cache.get_stats()
+    print(f"\n[CACHE STATS - Notifications] Hits: {cache_stats['hits']}, Misses: {cache_stats['misses']}")
+    if cache_stats['misses'] > 0:
+        hit_ratio = cache_stats['hits'] / (cache_stats['hits'] + cache_stats['misses'])
+        print(f"[CACHE STATS] Hit ratio: {hit_ratio:.2%}")
+
     # Generate notifications for items not in AHSP
     notifications = generate_notifications(items_with_status)
 
@@ -158,6 +165,13 @@ def get_price_deviations(request, job_id):
         item_data = _get_item_with_reference_price(item, cache)
         if item_data:
             items_with_prices.append(item_data)
+
+    # Log cache effectiveness
+    cache_stats = cache.get_stats()
+    print(f"\n[CACHE STATS - Price Deviations] Hits: {cache_stats['hits']}, Misses: {cache_stats['misses']}")
+    if cache_stats['misses'] > 0:
+        hit_ratio = cache_stats['hits'] / (cache_stats['hits'] + cache_stats['misses'])
+        print(f"[CACHE STATS] Hit ratio: {hit_ratio:.2%}")
 
     # Detect deviations (threshold: 10%)
     deviations = detect_price_deviations(
