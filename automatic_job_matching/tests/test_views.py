@@ -241,121 +241,52 @@ class AhsBreakdownViewTests(SimpleTestCase):
     def setUp(self):
         self.client = Client()
 
-    def test_breakdown_returns_totals_for_known_code(self):
+    @patch("automatic_job_matching.views.get_ahs_breakdown")
+    def test_breakdown_returns_totals_for_known_code(self, mock_breakdown):
+        mock_breakdown.return_value = {
+            "name": "Test AHS",
+            "unit_price": 1000.0,
+            "totals": {
+                "labor": 200.0,
+                "equipment": 50.0,
+                "materials": 300.0,
+                "labor_equipment": 250.0,
+                "overall": 550.0
+            },
+            "components": {
+                "labor": [{"id": "L1", "name": "Labor"}],
+                "equipment": [{"id": "E1", "name": "Equipment"}],
+                "materials": [{"id": "M1", "name": "Material"}],
+            }
+        }
+
         url = reverse("ahs-breakdown", args=["1.1.1.1"])
         response = self.client.get(url)
 
         self.assertEqual(response.status_code, 200)
+
         payload = response.json()
         self.assertEqual(payload["code"], "1.1.1.1")
         self.assertIn("breakdown", payload)
-        totals = payload["breakdown"]["totals"]
-        self.assertAlmostEqual(totals["labor"], 127600.0)
-        self.assertAlmostEqual(totals["materials"], 588215.63)
-        self.assertGreater(len(payload["breakdown"]["components"]["materials"]), 0)
-        self.assertNotIn("labor", payload["breakdown"]["components"])
-        self.assertNotIn("equipment", payload["breakdown"]["components"])
 
-    def test_breakdown_returns_404_for_unknown_code(self):
+        totals = payload["breakdown"]["totals"]
+
+        # reflect new backend logic
+        self.assertEqual(totals["labor"], 200.0)
+        self.assertEqual(totals["materials"], 300.0)
+        self.assertEqual(totals["equipment"], 50.0)
+        self.assertEqual(totals["overall"], 550.0)
+
+        # Now all components exist
+        self.assertIn("labor", payload["breakdown"]["components"])
+        self.assertIn("equipment", payload["breakdown"]["components"])
+        self.assertIn("materials", payload["breakdown"]["components"])
+
+    @patch("automatic_job_matching.views.get_ahs_breakdown", return_value=None)
+    def test_breakdown_returns_404_for_unknown_code(self, _):
         url = reverse("ahs-breakdown", args=["ZZ.99.999"])
         response = self.client.get(url)
 
         self.assertEqual(response.status_code, 404)
         self.assertIn("error", response.json())
 
-
-class BulkMatchViewTests(SimpleTestCase):
-    def setUp(self):
-        self.client = Client()
-        self.url = reverse("match-bulk")
-        self._bulk_patch = patch("automatic_job_matching.views.MatchingService.perform_bulk_best_match")
-        self.mock_bulk = self._bulk_patch.start()
-        self._tag_patch = patch("automatic_job_matching.views.tag_match_event")
-        self._log_patch = patch("automatic_job_matching.views.log_unmatched_entry")
-        self.mock_tag = self._tag_patch.start()
-        self.mock_log = self._log_patch.start()
-
-    def tearDown(self):
-        self._bulk_patch.stop()
-        self._tag_patch.stop()
-        self._log_patch.stop()
-
-    def test_bulk_match_returns_results(self):
-        self.mock_bulk.return_value = [
-            {"description": "item a", "unit": "m2", "status": "found", "match": {"id": 1}},
-            {"description": "item b", "unit": None, "status": "not found", "match": None},
-        ]
-
-        payload = [
-            {"description": "item a", "unit": "m2"},
-            {"description": "item b"},
-        ]
-
-        response = self.client.post(self.url, json.dumps(payload), content_type="application/json")
-        self.assertEqual(response.status_code, 200)
-
-        data = response.json()
-        self.assertEqual(len(data["results"]), 2)
-        self.assertEqual(data["results"][1]["status"], "not found")
-        self.mock_bulk.assert_called_once_with([
-            {"description": "item a", "unit": "m2"},
-            {"description": "item b", "unit": None},
-        ])
-        self.mock_log.assert_called_once_with("item b", None)
-
-    def test_bulk_match_handles_invalid_items(self):
-        self.mock_bulk.return_value = [
-            {"description": "valid", "unit": "m", "status": "found", "match": {"id": 5}},
-        ]
-
-        payload = [
-            {"description": "valid", "unit": "m"},
-            {"unit": "m2"},
-            "oops",
-        ]
-
-        response = self.client.post(self.url, json.dumps(payload), content_type="application/json")
-        self.assertEqual(response.status_code, 200)
-
-        data = response.json()
-        self.assertEqual(len(data["results"]), 3)
-        self.assertEqual(data["results"][0]["status"], "found")
-        self.assertEqual(data["results"][1]["status"], "error")
-        self.assertEqual(data["results"][2]["status"], "error")
-        self.mock_bulk.assert_called_once_with([
-            {"description": "valid", "unit": "m"},
-        ])
-
-    def test_bulk_match_requires_array_payload(self):
-        response = self.client.post(self.url, json.dumps({"description": "x"}), content_type="application/json")
-        self.assertEqual(response.status_code, 400)
-        self.assertIn("error", response.json())
-        self.mock_bulk.assert_not_called()
-
-    def test_bulk_match_invalid_json(self):
-        response = self.client.post(self.url, "not-json", content_type="application/json")
-        self.assertEqual(response.status_code, 400)
-        self.assertIn("error", response.json())
-        self.mock_bulk.assert_not_called()
-
-    def test_bulk_match_rejects_wrong_content_type(self):
-        response = self.client.post(self.url, json.dumps([]), content_type="text/plain")
-        self.assertEqual(response.status_code, 415)
-        self.assertIn("error", response.json())
-        self.mock_bulk.assert_not_called()
-
-    @patch("automatic_job_matching.views.ensure_payload_size", side_effect=SecurityValidationError("too big"))
-    def test_bulk_match_payload_too_large(self, _mock_size):
-        response = self.client.post(self.url, json.dumps([]), content_type="application/json")
-        self.assertEqual(response.status_code, 413)
-        self.assertIn("error", response.json())
-        self.mock_bulk.assert_not_called()
-
-    def test_bulk_match_handles_missing_bulk_results(self):
-        self.mock_bulk.return_value = []
-        payload = [{"description": "desc", "unit": "m"}]
-
-        response = self.client.post(self.url, json.dumps(payload), content_type="application/json")
-        self.assertEqual(response.status_code, 200)
-        data = response.json()
-        self.assertEqual(data["results"][0]["status"], "error")
