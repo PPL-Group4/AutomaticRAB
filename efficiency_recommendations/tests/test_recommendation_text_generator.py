@@ -37,9 +37,6 @@ class RecommendationTextGeneratorTest(unittest.TestCase):
         
         highest_item = {
             'name': 'Foundation Work',
-            'cost': Decimal('200000000.00'),
-            'weight_pct': Decimal('42.00'),
-            'quantity': Decimal('50'),
             'cost': Decimal('100000.00'),
             'weight_pct': Decimal('33.333333'),
             'quantity': Decimal('10'),
