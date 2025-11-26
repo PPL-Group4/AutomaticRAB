@@ -8,11 +8,22 @@
     Masukkan kode AHSP untuk melihat rincian harga tenaga kerja, bahan, dan peralatan.
   </div>
 
-  <div class="d-flex gap-2 mb-3">
-    <input id="ahs-code-input" type="text" class="form-control" placeholder="Contoh: 3.6.4.1">
-    <button class="btn btn-primary" style="background:#00365a;" onclick="addBreakdown()">Tambah Breakdown</button>
+  <div id="input-list">
+    <div class="d-flex gap-2 mb-2 input-row">
+      <input type="text" class="form-control ahs-input" placeholder="Contoh: 3.6.4.1">
+      <button class="btn btn-outline-danger" onclick="removeRow(this)">
+        <i class="bi bi-trash"></i>
+      </button>
+    </div>
   </div>
-
+  
+  <div class="d-flex gap-2 mt-2 mb-3">
+    <button class="btn btn-secondary" onclick="addRow()">Tambah Kode</button>
+    <button class="btn" style="background:#00365a; color:white;" onclick="submitAll()">Lihat Breakdown</button>
+  </div>
+  
+  <div id="breakdown-container"></div>
+  
   <div id="breakdown-container"></div>
 </div>
 
@@ -62,9 +73,21 @@ async function addBreakdown() {
         const data = await response.json();
 
         if (data.error) {
-            alert(`Error: ${data.error}`);
-            return;
-        }
+          const container = document.getElementById("breakdown-container");
+
+          const card = document.createElement("div");
+          card.className = "breakdown-card";
+          card.innerHTML = `
+              <h4>${code}</h4>
+              <p class="text-danger">
+                  <strong>Maaf, kami tidak menemui rincian harga kode AHSP ini.</strong>
+              </p>
+          `;
+
+          container.appendChild(card);
+          return;
+      }
+
 
         renderBreakdown(code, data.breakdown);
     } catch (error) {
@@ -140,6 +163,92 @@ function makeTable(items) {
     html += `</tbody></table>`;
     return html;
 }
+
+function addRow() {
+    const list = document.getElementById("input-list");
+
+    const row = document.createElement("div");
+    row.className = "d-flex gap-2 mb-2 input-row";
+
+    row.innerHTML = `
+        <input type="text" class="form-control ahs-input" placeholder="Contoh: 3.6.4.1">
+        <button class="btn btn-outline-danger" onclick="removeRow(this)">
+          <i class="bi bi-trash"></i>
+        </button>
+    `;
+
+    list.appendChild(row);
+}
+
+function removeRow(button) {
+    const row = button.parentElement;
+    const list = document.getElementById("input-list");
+
+    // Don't let user delete the last row
+    if (list.children.length > 1) {
+        row.remove();
+    }
+}
+
+async function submitAll() {
+    const inputs = document.querySelectorAll(".ahs-input");
+    const codes = [...inputs].map(i => i.value.trim()).filter(v => v !== "");
+
+    if (codes.length === 0) {
+        alert("Masukkan minimal satu kode AHS!");
+        return;
+    }
+
+    const container = document.getElementById("breakdown-container");
+    container.innerHTML = ""; // clear old results
+
+    for (const code of codes) {
+        await fetchOneCode(code);
+    }
+}
+
+async function fetchOneCode(code) {
+    const url = `/api/ahs-breakdown/${code}/`;
+
+    try {
+        const response = await fetch(url);
+        const data = await response.json();
+
+        if (data.error) {
+            renderNotFound(code);
+            return;
+        }
+
+        renderBreakdown(code, data.breakdown);
+
+    } catch (error) {
+        console.error(error);
+        renderError(code);
+    }
+}
+
+function renderNotFound(code) {
+    const container = document.getElementById("breakdown-container");
+    const card = document.createElement("div");
+    card.className = "breakdown-card";
+    card.innerHTML = `
+      <h4>${code}</h4>
+      <p class="text-danger"><strong>Maaf, kami tidak menemui rincian harga kode AHSP ini.</strong></p>
+    `;
+    container.appendChild(card);
+}
+
+function renderError(code) {
+    const container = document.getElementById("breakdown-container");
+    const card = document.createElement("div");
+    card.className = "breakdown-card";
+    card.innerHTML = `
+      <h4>${code}</h4>
+      <p class="text-danger"><strong>Terjadi kesalahan saat mengambil data.</strong></p>
+    `;
+    container.appendChild(card);
+}
+
 </script>
 
 {% endblock %}

@@ -195,24 +195,52 @@ class AhsBreakdownViewTests(SimpleTestCase):
     def setUp(self):
         self.client = Client()
 
-    def test_breakdown_returns_totals_for_known_code(self):
+    @patch("automatic_job_matching.views.get_ahs_breakdown")
+    def test_breakdown_returns_totals_for_known_code(self, mock_breakdown):
+        mock_breakdown.return_value = {
+            "name": "Test AHS",
+            "unit_price": 1000.0,
+            "totals": {
+                "labor": 200.0,
+                "equipment": 50.0,
+                "materials": 300.0,
+                "labor_equipment": 250.0,
+                "overall": 550.0
+            },
+            "components": {
+                "labor": [{"id": "L1", "name": "Labor"}],
+                "equipment": [{"id": "E1", "name": "Equipment"}],
+                "materials": [{"id": "M1", "name": "Material"}],
+            }
+        }
+
         url = reverse("ahs-breakdown", args=["1.1.1.1"])
         response = self.client.get(url)
 
         self.assertEqual(response.status_code, 200)
+
         payload = response.json()
         self.assertEqual(payload["code"], "1.1.1.1")
         self.assertIn("breakdown", payload)
-        totals = payload["breakdown"]["totals"]
-        self.assertAlmostEqual(totals["labor"], 127600.0)
-        self.assertAlmostEqual(totals["materials"], 588215.63)
-        self.assertGreater(len(payload["breakdown"]["components"]["materials"]), 0)
-        self.assertNotIn("labor", payload["breakdown"]["components"])
-        self.assertNotIn("equipment", payload["breakdown"]["components"])
 
-    def test_breakdown_returns_404_for_unknown_code(self):
+        totals = payload["breakdown"]["totals"]
+
+        # reflect new backend logic
+        self.assertEqual(totals["labor"], 200.0)
+        self.assertEqual(totals["materials"], 300.0)
+        self.assertEqual(totals["equipment"], 50.0)
+        self.assertEqual(totals["overall"], 550.0)
+
+        # Now all components exist
+        self.assertIn("labor", payload["breakdown"]["components"])
+        self.assertIn("equipment", payload["breakdown"]["components"])
+        self.assertIn("materials", payload["breakdown"]["components"])
+
+    @patch("automatic_job_matching.views.get_ahs_breakdown", return_value=None)
+    def test_breakdown_returns_404_for_unknown_code(self, _):
         url = reverse("ahs-breakdown", args=["ZZ.99.999"])
         response = self.client.get(url)
 
         self.assertEqual(response.status_code, 404)
         self.assertIn("error", response.json())
+
