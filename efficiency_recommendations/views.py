@@ -126,6 +126,60 @@ def _build_warning_indicator(total_items: int, warning_count: int):
         }
     }
 
+def _extract_reference_price(match_result):
+    """Extract reference price from match result."""
+    if not match_result:
+        return None
+    
+    if isinstance(match_result, dict):
+        return match_result.get('unit_price')
+    
+    if isinstance(match_result, list) and len(match_result) > 0:
+        first_match = match_result[0]
+        if isinstance(first_match, dict):
+            return first_match.get('unit_price')
+    
+    return None
+
+
+def _get_items_with_prices(job):
+    """Get items with their AHSP reference prices."""
+    items_with_prices = []
+
+    for item in job.items.all():
+        if not item.unit_price or item.unit_price <= 0:
+            continue
+
+        try:
+            match_result = MatchingService.perform_best_match(item.name)
+            reference_price = _extract_reference_price(match_result)
+
+            if reference_price and Decimal(str(reference_price)) > 0:
+                items_with_prices.append({
+                    'name': item.name,
+                    'actual_price': item.unit_price,
+                    'reference_price': Decimal(str(reference_price))
+                })
+        except Exception:
+            continue
+
+    return items_with_prices
+
+
+def _serialize_deviation(deviation):
+    """Serialize a single deviation dict for JSON response."""
+    serialized = deviation.copy()
+    
+    if 'deviation_percentage' in serialized:
+        serialized['deviation_percentage'] = float(serialized['deviation_percentage'])
+    if 'actual_price' in serialized:
+        serialized['actual_price'] = float(serialized['actual_price'])
+    if 'reference_price' in serialized:
+        serialized['reference_price'] = float(serialized['reference_price'])
+    
+    return serialized
+
+
 @require_GET
 def get_price_deviations(request, job_id):
     """
@@ -141,67 +195,9 @@ def get_price_deviations(request, job_id):
     except TestJob.DoesNotExist:
         raise Http404("Job not found")
 
-    # Get items with AHSP reference prices
-    items_with_prices = []
-
-    for item in job.items.all():
-        # Skip items with no unit price
-        if not item.unit_price or item.unit_price <= 0:
-            continue
-
-        try:
-            # Try to find AHSP reference price using MatchingService
-            match_result = MatchingService.perform_best_match(item.name)
-
-            # Extract reference price from match result
-            reference_price = None
-
-            if match_result:
-                # Handle different response formats
-                if isinstance(match_result, dict):
-                    reference_price = match_result.get('unit_price')
-                elif isinstance(match_result, list) and len(match_result) > 0:
-                    # Get first match
-                    first_match = match_result[0]
-                    if isinstance(first_match, dict):
-                        reference_price = first_match.get('unit_price')
-
-            # Only add if we found a reference price
-            if reference_price and Decimal(str(reference_price)) > 0:
-                items_with_prices.append({
-                    'name': item.name,
-                    'actual_price': item.unit_price,
-                    'reference_price': Decimal(str(reference_price))
-                })
-
-        except Exception as e:
-            # Skip items that cause errors
-            continue
-
-    # Detect deviations (threshold: 10%)
-    deviations = detect_price_deviations(
-        items_with_prices,
-        threshold_percentage=10.0
-    )
-
-    # Serialize Decimal values for JSON response
-    serialized_deviations = []
-    for dev in deviations:
-        serialized_dev = dev.copy()
-        # Convert Decimal to float for JSON serialization
-        if 'deviation_percentage' in serialized_dev:
-            serialized_dev['deviation_percentage'] = float(
-                serialized_dev['deviation_percentage']
-            )
-        if 'actual_price' in serialized_dev:
-            serialized_dev['actual_price'] = float(
-                serialized_dev['actual_price']
-            )
-        if 'reference_price' in serialized_dev:
-            serialized_dev['reference_price'] = float(
-                serialized_dev['reference_price']
-            )
-        serialized_deviations.append(serialized_dev)
+    items_with_prices = _get_items_with_prices(job)
+    deviations = detect_price_deviations(items_with_prices, threshold_percentage=10.0)
+    serialized_deviations = [_serialize_deviation(dev) for dev in deviations]
 
     return JsonResponse({
         'job_id': job_id,

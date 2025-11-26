@@ -112,7 +112,7 @@
         button {
             width: 100%;
             padding: 15px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #5568d3 0%, #6b4298 100%);
             color: white;
             border: none;
             border-radius: 8px;
@@ -139,7 +139,7 @@
         
         .error-message {
             background: #fee;
-            color: #c33;
+            color: #a00;
             padding: 12px;
             border-radius: 8px;
             margin-bottom: 20px;
@@ -149,17 +149,17 @@
         
         .success-message {
             background: #efe;
-            color: #3c3;
+            color: #2a7b2a;
             padding: 12px;
             border-radius: 8px;
             margin-bottom: 20px;
-            border-left: 4px solid #3c3;
+            border-left: 4px solid #2a7b2a;
             display: none;
         }
         
         .loader {
             border: 3px solid #f3f3f3;
-            border-top: 3px solid #667eea;
+            border-top: 3px solid #5568d3;
             border-radius: 50%;
             width: 20px;
             height: 20px;
@@ -180,7 +180,7 @@
             border-radius: 8px;
             margin-top: 20px;
             font-size: 13px;
-            color: #1976d2;
+            color: #0d47a1;
         }
         
         .info-box strong {
@@ -274,7 +274,7 @@
                     
                     // Redirect to analysis page
                     setTimeout(() => {
-                        window.location.href = data.redirect_url;
+                        globalThis.location.href = data.redirect_url;
                     }, 1000);
                 } else {
                     throw new Error(data.error || 'Upload failed');

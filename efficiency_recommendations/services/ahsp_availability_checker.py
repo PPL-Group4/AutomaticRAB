@@ -34,9 +34,9 @@ def check_items_in_ahsp(items: List[Dict]) -> List[Dict]:
                 }
             ]
     """
-    print(f"\n{'='*60}")
-    print(f"CHECKING ITEMS IN AHSP DATABASE")
-    print(f"{'='*60}")
+    print("\n" + "="*60)
+    print("CHECKING ITEMS IN AHSP DATABASE")
+    print("="*60)
 
     if not items:
         print("No items to check. Returning empty list.")
@@ -54,7 +54,7 @@ def check_items_in_ahsp(items: List[Dict]) -> List[Dict]:
 
         try:
             # Try to find the item in AHSP database
-            print(f"   Calling MatchingService.perform_best_match...")
+            print("   Calling MatchingService.perform_best_match...")
             match = MatchingService.perform_best_match(item['name'])
 
             print(f"   Match result type: {type(match)}")
@@ -64,23 +64,23 @@ def check_items_in_ahsp(items: List[Dict]) -> List[Dict]:
             # Match can be None, empty list [], or a dict/list with results
             if match is None or (isinstance(match, list) and len(match) == 0):
                 item_result['in_ahsp'] = False
-                print(f"   Result: NOT FOUND in AHSP")
+                print("   Result: NOT FOUND in AHSP")
             else:
                 item_result['in_ahsp'] = True
-                print(f"   Result: FOUND in AHSP")
+                print("   Result: FOUND in AHSP")
 
         except Exception as e:
             # If matching service fails, mark as not found
             logger.error(f"Error checking AHSP for item '{item['name']}': {str(e)}")
             print(f"   ERROR: {str(e)}")
-            print(f"   Result: NOT FOUND (due to error)")
+            print("   Result: NOT FOUND (due to error)")
             item_result['in_ahsp'] = False
 
         result.append(item_result)
 
-    print(f"\n{'='*60}")
-    print(f"AHSP CHECK COMPLETE")
+    print("\n" + "="*60)
+    print("AHSP CHECK COMPLETE")
     print(f"Found in AHSP: {sum(1 for r in result if r['in_ahsp'])}/{len(result)}")
-    print(f"{'='*60}\n")
+    print("="*60 + "\n")
 
     return result

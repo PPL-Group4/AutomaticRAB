@@ -2,9 +2,103 @@
 Excel Parser untuk RAB - Parse Excel dan create job items dengan cost weight
 """
 import pandas as pd
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from typing import Optional, List, Dict, Any
 from django.core.files.uploadedfile import UploadedFile
+
+
+def _find_column_match(df_columns: List[str], possible_names: List[str]) -> Optional[str]:
+    """Find first matching column from list of possible names."""
+    for col in df_columns:
+        if any(name in col for name in possible_names):
+            return col
+    return None
+
+
+def _safe_decimal_conversion(value: Any, default: Decimal) -> Decimal:
+    """Safely convert value to Decimal, return default on error."""
+    try:
+        return Decimal(str(value))
+    except (ValueError, InvalidOperation, TypeError):
+        return default
+
+
+def _get_column_mappings(df_columns: List[str]) -> Dict[str, Optional[str]]:
+    """Find all relevant column mappings."""
+    name_cols = ['item', 'description', 'pekerjaan', 'uraian', 'nama']
+    qty_cols = ['quantity', 'qty', 'volume', 'kuantitas', 'jumlah']
+    price_cols = ['unit price', 'unit_price', 'harga satuan', 'harga', 'price']
+    total_cols = ['total', 'total price', 'total_price', 'jumlah harga']
+    
+    return {
+        'name': _find_column_match(df_columns, name_cols),
+        'quantity': _find_column_match(df_columns, qty_cols),
+        'price': _find_column_match(df_columns, price_cols),
+        'total': _find_column_match(df_columns, total_cols)
+    }
+
+
+def _extract_item_name(row: pd.Series, name_col: Optional[str], idx: int) -> Optional[str]:
+    """Extract and validate item name from row."""
+    if name_col and pd.notna(row.get(name_col)):
+        item_name = str(row[name_col]).strip()
+    else:
+        item_name = f"Item {idx + 1}"
+    
+    if not item_name or item_name == "" or item_name.lower() == "nan":
+        return None
+    return item_name
+
+
+def _extract_quantity(row: pd.Series, qty_col: Optional[str]) -> Decimal:
+    """Extract quantity from row."""
+    if qty_col and pd.notna(row.get(qty_col)):
+        return _safe_decimal_conversion(row[qty_col], Decimal("1"))
+    return Decimal("1")
+
+
+def _extract_unit_price(row: pd.Series, price_col: Optional[str]) -> Decimal:
+    """Extract unit price from row."""
+    if price_col and pd.notna(row.get(price_col)):
+        return _safe_decimal_conversion(row[price_col], Decimal("0"))
+    return Decimal("0")
+
+
+def _calculate_cost(row: pd.Series, quantity: Decimal, unit_price: Decimal, total_col: Optional[str]) -> Decimal:
+    """Calculate or extract total cost."""
+    cost = quantity * unit_price
+    if total_col and pd.notna(row.get(total_col)):
+        return _safe_decimal_conversion(row[total_col], cost)
+    return cost
+
+
+def _parse_row_to_item(row: pd.Series, idx: int, columns: Dict[str, Optional[str]]) -> Optional[Dict[str, Any]]:
+    """Parse a single row into an item dictionary."""
+    item_name = _extract_item_name(row, columns['name'], idx)
+    if not item_name:
+        return None
+    
+    quantity = _extract_quantity(row, columns['quantity'])
+    unit_price = _extract_unit_price(row, columns['price'])
+    cost = _calculate_cost(row, quantity, unit_price, columns['total'])
+    
+    return {
+        'name': item_name,
+        'quantity': quantity,
+        'unit_price': unit_price,
+        'cost': cost
+    }
+
+
+def _normalize_job_name(file_obj: UploadedFile, job_name: Optional[str]) -> str:
+    """Get or normalize job name from file."""
+    if job_name:
+        return job_name
+    
+    job_name = getattr(file_obj, 'name', 'Unnamed Job')
+    if job_name.endswith('.xlsx') or job_name.endswith('.xls'):
+        job_name = job_name.rsplit('.', 1)[0]
+    return job_name
 
 
 def parse_rab_excel(file_obj: UploadedFile, job_name: Optional[str] = None) -> Dict[str, Any]:
@@ -16,98 +110,24 @@ def parse_rab_excel(file_obj: UploadedFile, job_name: Optional[str] = None) -> D
     - items: List[Dict] with keys: name, quantity, unit_price, cost
     - total_cost: Decimal
     """
-    # Read Excel file
     df = pd.read_excel(file_obj)
-    
-    # Clean column names
     df.columns = df.columns.str.strip().str.lower()
     
+    columns = _get_column_mappings(df.columns)
     items = []
     
-    # Try to find relevant columns (flexible matching)
-    name_cols = ['item', 'description', 'pekerjaan', 'uraian', 'nama']
-    qty_cols = ['quantity', 'qty', 'volume', 'kuantitas', 'jumlah']
-    price_cols = ['unit price', 'unit_price', 'harga satuan', 'harga', 'price']
-    total_cols = ['total', 'total price', 'total_price', 'jumlah harga']
-    
-    name_col = None
-    qty_col = None
-    price_col = None
-    total_col = None
-    
-    # Find matching columns
-    for col in df.columns:
-        if not name_col and any(nc in col for nc in name_cols):
-            name_col = col
-        if not qty_col and any(qc in col for qc in qty_cols):
-            qty_col = col
-        if not price_col and any(pc in col for pc in price_cols):
-            price_col = col
-        if not total_col and any(tc in col for tc in total_cols):
-            total_col = col
-    
-    # Parse each row
     for idx, row in df.iterrows():
         try:
-            # Get item name
-            if name_col and pd.notna(row.get(name_col)):
-                item_name = str(row[name_col]).strip()
-            else:
-                item_name = f"Item {idx + 1}"
-            
-            # Skip empty rows
-            if not item_name or item_name == "" or item_name.lower() == "nan":
-                continue
-            
-            # Get quantity
-            if qty_col and pd.notna(row.get(qty_col)):
-                try:
-                    quantity = Decimal(str(row[qty_col]))
-                except:
-                    quantity = Decimal("1")
-            else:
-                quantity = Decimal("1")
-            
-            # Get unit price
-            if price_col and pd.notna(row.get(price_col)):
-                try:
-                    unit_price = Decimal(str(row[price_col]))
-                except:
-                    unit_price = Decimal("0")
-            else:
-                unit_price = Decimal("0")
-            
-            # Calculate or get total cost
-            if total_col and pd.notna(row.get(total_col)):
-                try:
-                    cost = Decimal(str(row[total_col]))
-                except:
-                    cost = quantity * unit_price
-            else:
-                cost = quantity * unit_price
-            
-            items.append({
-                'name': item_name,
-                'quantity': quantity,
-                'unit_price': unit_price,
-                'cost': cost
-            })
-            
-        except Exception as e:
-            # Skip problematic rows
+            item = _parse_row_to_item(row, idx, columns)
+            if item:
+                items.append(item)
+        except Exception:
             continue
     
-    # Calculate total
     total_cost = sum(item['cost'] for item in items)
     
-    # Get job name
-    if not job_name:
-        job_name = getattr(file_obj, 'name', 'Unnamed Job')
-        if job_name.endswith('.xlsx') or job_name.endswith('.xls'):
-            job_name = job_name.rsplit('.', 1)[0]
-    
     return {
-        'job_name': job_name,
+        'job_name': _normalize_job_name(file_obj, job_name),
         'items': items,
         'total_cost': total_cost
     }

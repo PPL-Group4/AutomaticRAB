@@ -81,7 +81,7 @@ def infer_unit_from_description(description: str) -> str | None:
     
     # Check for linear meter (m' or m1 or just "m" followed by space or punctuation)
     # The pattern "1 m'" is common for linear measurements
-    if re.search(r"(m'|m1\b|\b1\s*m\s+(?!2|3|²|³))", desc_lower):
+    if re.search(r"[m'][m1]\b|\b1\s*m\s+(?![23²³])", desc_lower):
         return 'm'
     
     # Check for lump sum

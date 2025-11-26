@@ -8,10 +8,10 @@ def handle_zero_division(
     item_costs: Mapping[str, NumberLike],
     *,
     decimal_places: int = 2
-) -> Dict[str, Decimal]:
+) -> Dict[str, Decimal] | None:
     """
     Safely handles cases where the total cost is zero to prevent division errors.
-    Returns 0.00 for each item if total cost = 0.
+    Returns 0.00 for each item if total cost = 0, None if total > 0.
     """
     base = Decimal(1).scaleb(-decimal_places)
 

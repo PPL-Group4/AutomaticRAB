@@ -181,10 +181,10 @@ class AhspAvailabilityIntegrationTest(TestCase):
         # Call WITHOUT mocking - uses real MatchingService
         result = check_items_in_ahsp(items)
 
-        print(f"\n=== INTEGRATION TEST RESULT ===")
+        print("\n=== INTEGRATION TEST RESULT ===")
         print(f"Item: {result[0]['name']}")
         print(f"Found in AHSP: {result[0]['in_ahsp']}")
-        print(f"================================\n")
+        print("================================\n")
 
         # We expect this common item to be found, but won't fail if it's not
         # (database might not be loaded in test environment)
@@ -206,10 +206,10 @@ class AhspAvailabilityIntegrationTest(TestCase):
         # Call WITHOUT mocking - uses real MatchingService
         result = check_items_in_ahsp(items)
 
-        print(f"\n=== INTEGRATION TEST RESULT ===")
+        print("\n=== INTEGRATION TEST RESULT ===")
         print(f"Item: {result[0]['name']}")
         print(f"Found in AHSP: {result[0]['in_ahsp']}")
-        print(f"================================\n")
+        print("================================\n")
 
         # This fake item should definitely not be found
         self.assertFalse(result[0]['in_ahsp'])

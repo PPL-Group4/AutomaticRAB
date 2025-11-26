@@ -45,7 +45,7 @@
         }
         
         .info-card {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #5568d3 0%, #6b4298 100%);
             color: white;
             padding: 20px 30px;
             border-radius: 12px;
@@ -181,23 +181,23 @@
         }
         
         .btn-primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #5568d3 0%, #6b4298 100%);
             color: white;
         }
         
         .btn-primary:hover {
             transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+            box-shadow: 0 5px 15px rgba(85, 104, 211, 0.4);
         }
         
         .btn-secondary {
             background: white;
-            color: #667eea;
-            border: 2px solid #667eea;
+            color: #5568d3;
+            border: 2px solid #5568d3;
         }
         
         .btn-secondary:hover {
-            background: #667eea;
+            background: #5568d3;
             color: white;
         }
         
@@ -312,7 +312,7 @@
             
             <div class="actions">
                 <a href="{% url 'cost_weight:upload_excel' %}" class="btn btn-primary">📤 Upload Another File</a>
-                <button onclick="window.print()" class="btn btn-secondary">🖨️ Print Report</button>
+                <button onclick="globalThis.print()" class="btn btn-secondary">🖨️ Print Report</button>
             </div>
         </div>
     </div>
