@@ -1,7 +1,10 @@
 import json
+from django.http import JsonResponse
 from django.test import SimpleTestCase, Client
 from unittest.mock import patch
 from django.urls import reverse
+
+from automatic_job_matching.security import SecurityValidationError
 
 class MatchBestViewTests(SimpleTestCase):
     def setUp(self):
@@ -62,6 +65,22 @@ class MatchBestViewTests(SimpleTestCase):
         response = self.client.post(url, "not-json", content_type="application/json")
         self.assertEqual(response.status_code, 400)
         self.assertIn("error", response.json())
+
+    def test_best_view_invalid_content_type(self):
+        url = reverse("match-best")
+        response = self.client.post(url, json.dumps({"description": "x"}), content_type="text/plain")
+        self.assertEqual(response.status_code, 415)
+        self.assertIn("error", response.json())
+        self.mock_best.assert_not_called()
+
+    @patch("automatic_job_matching.views.ensure_payload_size", side_effect=SecurityValidationError("too big"))
+    def test_best_view_payload_too_large(self, _mock_size):
+        url = reverse("match-best")
+        payload = {"description": "x"}
+        response = self.client.post(url, json.dumps(payload), content_type="application/json")
+        self.assertEqual(response.status_code, 413)
+        self.assertIn("error", response.json())
+        self.mock_best.assert_not_called()
 
     def test_best_view_missing_description_defaults(self):
         self.mock_best.return_value = None
@@ -189,6 +208,33 @@ class MatchBestViewTests(SimpleTestCase):
         response = self.client.post(url, json.dumps(payload), content_type="application/json")
         self.assertEqual(response.status_code, 200)
         self.mock_best.assert_called_once_with("test", unit="M3")
+
+    def test_best_view_returns_alternatives_payload(self):
+        alt_payload = {
+            "message": "No matches with the same unit found.",
+            "alternatives": [{"id": 42, "code": "X.1", "name": "Alt"}],
+        }
+        self.mock_best.return_value = alt_payload
+        url = reverse("match-best")
+        payload = {"description": "test", "unit": "m"}
+        response = self.client.post(url, json.dumps(payload), content_type="application/json")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), alt_payload)
+
+
+class JobMatchingPageTests(SimpleTestCase):
+    def setUp(self):
+        self.client = Client()
+
+    @patch("automatic_job_matching.views.render")
+    def test_job_matching_page_renders_template(self, mock_render):
+        mock_render.return_value = JsonResponse({"ok": True})
+        response = self.client.get(reverse("job-matching"))
+        self.assertEqual(response.status_code, 200)
+        self.assertIs(response, mock_render.return_value)
+        mock_render.assert_called_once()
+        args, _kwargs = mock_render.call_args
+        self.assertEqual(args[1], "job_matching.html")
 
 
 class AhsBreakdownViewTests(SimpleTestCase):
