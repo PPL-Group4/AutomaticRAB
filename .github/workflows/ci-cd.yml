@@ -21,6 +21,8 @@ jobs:
       MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
       MYSQL_HOST: ${{ secrets.MYSQL_HOST }}
       MYSQL_PORT: ${{ secrets.MYSQL_PORT }}
+      CELERY_BROKER_URL: memory://localhost/
+      CELERY_RESULT_BACKEND: cache+memory://
 
     steps:
       - name: Checkout repository
@@ -230,6 +232,16 @@ jobs:
               --memory=2g \
               --memory-swap=2g \
               ${DOCKER_IMAGE}
+
+            # Deploy Celery worker and Redis if docker-compose.yml exists
+            if [ -f docker-compose.yml ]; then
+              echo "🔄 Starting Celery worker and Redis containers..."
+              docker-compose pull
+              docker-compose up -d redis celery
+              echo "✅ Celery worker and Redis started"
+            else
+              echo "⚠️ docker-compose.yml not found - Celery worker not deployed (async features disabled)"
+            fi
 
             # Clean up old images (keep last 3)
             docker images ghazafadhlilbaqi/autorab-ppl:${TAG}-* --format "{{.ID}}" | tail -n +4 | xargs -r docker rmi -f 2>/dev/null || true
