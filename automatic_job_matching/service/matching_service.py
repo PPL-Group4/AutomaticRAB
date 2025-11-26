@@ -123,7 +123,7 @@ class MatchingService:
             # === Fallback: no matches at all ===
             if not result:
                 logger.info("No matches found for description=%s with unit=%s", description, unit)
-                return None
+                return []
 
             if isinstance(result, dict):
                 result_unit = result.get("unit")
