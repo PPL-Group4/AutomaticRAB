@@ -150,7 +150,7 @@ DATABASES = {
         'HOST': os.getenv('MYSQL_HOST'),
         'PORT': os.getenv('MYSQL_PORT'),
         'OPTIONS': {
-            'ssl': True
+            'ssl': False
         },
     },
     'scraper': {
@@ -161,7 +161,7 @@ DATABASES = {
         'HOST': os.getenv('MYSQL_HOST'),
         'PORT': os.getenv('MYSQL_PORT'),
         'OPTIONS': {
-            'ssl': True
+            'ssl': False
         },
     },
 }
