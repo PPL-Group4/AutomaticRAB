@@ -1,4 +1,5 @@
-from target_bid.models.rab_job_item import RabJobItem, DecimalAdapter
+from target_bid.models.rab_job_item import DecimalAdapter, RabJobItem
+
 
 class RabJobItemMapper:
     def __init__(self, decimal_adapter: type[DecimalAdapter] = DecimalAdapter):
@@ -15,7 +16,7 @@ class RabJobItemMapper:
         total_price = self._decimal.multiply(volume, unit_price)
 
         return RabJobItem(
-            rab_item_id=getattr(row, "id"),
+            rab_item_id=row.id,
             name=(getattr(row, "name", "") or ""),
             unit_name=getattr(unit, "name", None),
             unit_price=unit_price,

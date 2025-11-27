@@ -1,6 +1,6 @@
 import csv
 import logging
-from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
+from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 from functools import lru_cache
 from pathlib import Path
 from typing import Dict, List, Optional

@@ -1,5 +1,7 @@
+from unittest.mock import mock_open, patch
+
 from django.test import SimpleTestCase
-from unittest.mock import patch, mock_open
+
 from automatic_job_matching.repository.ahsp_cipta_karya_repo import AhspCiptaKaryaRepository
 from automatic_job_matching.service.exact_matcher import AhsRow
 

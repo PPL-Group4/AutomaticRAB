@@ -8,7 +8,7 @@ from rest_framework.response import Response
 from target_bid.repository.rab_item_repo import DjangoRabItemRepository
 from target_bid.services.ahs_optimizer import optimize_ahs_price
 from target_bid.services.cheaper_price_service import get_cheaper_alternatives
-from target_bid.services.rab_job_item_service import RabJobItemService, _DEFAULT_POLICY
+from target_bid.services.rab_job_item_service import _DEFAULT_POLICY, RabJobItemService
 from target_bid.utils.rab_job_item_mapper import RabJobItemMapper
 from target_bid.validators import validate_target_budget_input
 

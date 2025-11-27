@@ -1,9 +1,10 @@
 """
 Excel Parser untuk RAB - Parse Excel dan create job items dengan cost weight
 """
-import pandas as pd
 from decimal import Decimal
-from typing import Optional, List, Dict, Any
+from typing import Any, Dict, Optional
+
+import pandas as pd
 from django.core.files.uploadedfile import UploadedFile
 
 
@@ -93,7 +94,7 @@ def parse_rab_excel(file_obj: UploadedFile, job_name: Optional[str] = None) -> D
                 'cost': cost
             })
             
-        except Exception as e:
+        except Exception:
             # Skip problematic rows
             continue
     
@@ -117,7 +118,7 @@ def create_job_from_excel(file_obj: UploadedFile, job_name: Optional[str] = None
     """
     Parse Excel and create TestJob with TestItems
     """
-    from cost_weight.models import TestJob, TestItem
+    from cost_weight.models import TestItem, TestJob
     
     # Parse Excel
     parsed = parse_rab_excel(file_obj, job_name)

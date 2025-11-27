@@ -1,5 +1,6 @@
 # automatic_price_matching/urls.py
 from django.urls import path
+
 from .views import recompute_total_cost
 
 urlpatterns = [

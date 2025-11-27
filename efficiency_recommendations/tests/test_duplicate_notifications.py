@@ -1,7 +1,8 @@
 from decimal import Decimal
 from unittest import TestCase
-from efficiency_recommendations.services.notification_generator import generate_notifications
+
 from efficiency_recommendations.services.duplicate_prevention_service import DuplicatePreventionService
+from efficiency_recommendations.services.notification_generator import generate_notifications
 
 
 class DuplicateNotificationPreventionTest(TestCase):

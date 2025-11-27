@@ -1,5 +1,6 @@
 from decimal import Decimal
 from unittest import TestCase
+
 from efficiency_recommendations.services.notification_generator import generate_notifications
 
 

@@ -1,10 +1,11 @@
 # tests/test_views.py
-from django.test import TestCase, Client
-from django.urls import reverse
-from django.core.files.uploadedfile import SimpleUploadedFile
 from decimal import Decimal
 from unittest.mock import patch
-from pdf_parser.views import NO_FILE_UPLOADED_MSG
+
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.test import Client, TestCase
+from django.urls import reverse
+
 
 class PdfParserViewTests(TestCase):
     def setUp(self):

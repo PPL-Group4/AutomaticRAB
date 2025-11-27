@@ -1,7 +1,9 @@
 from decimal import Decimal
+
 from django.test import TestCase
+
 from target_bid.models.rab_job_item import RabJobItem
-from target_bid.rules.decision_rules import LockedItemRule, CustomAhsOverrideRule, AnalysisCodeRule
+from target_bid.rules.decision_rules import AnalysisCodeRule, CustomAhsOverrideRule, LockedItemRule
 
 
 class LockedItemRuleTests(TestCase):

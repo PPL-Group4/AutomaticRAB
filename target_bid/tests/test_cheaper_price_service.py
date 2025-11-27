@@ -1,5 +1,7 @@
 from unittest.mock import patch
+
 from django.test import SimpleTestCase
+
 from target_bid.services.cheaper_price_service import get_cheaper_alternatives
 
 

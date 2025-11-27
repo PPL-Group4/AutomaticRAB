@@ -1,6 +1,8 @@
-from django.test import TestCase
-from decimal import Decimal
 from datetime import date
+from decimal import Decimal
+
+from django.test import TestCase
+
 from excel_parser.services.data_converter import DataConverter
 
 

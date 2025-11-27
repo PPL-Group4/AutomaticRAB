@@ -3,13 +3,12 @@ import logging
 import sentry_sdk
 
 from automatic_job_matching.repository.combined_ahs_repo import CombinedAhsRepository
+from automatic_job_matching.service.abbreviation_service import AbbreviationService
 from automatic_job_matching.service.exact_matcher import ExactMatcher
 from automatic_job_matching.service.fuzzy_matcher import FuzzyMatcher
 from automatic_job_matching.service.scoring import FuzzyConfidenceScorer
-from automatic_job_matching.utils.text_normalizer import normalize_text
 from automatic_job_matching.service.translation_service import TranslationService
-from automatic_job_matching.service.abbreviation_service import AbbreviationService
-
+from automatic_job_matching.utils.text_normalizer import normalize_text
 
 logger = logging.getLogger(__name__)
 

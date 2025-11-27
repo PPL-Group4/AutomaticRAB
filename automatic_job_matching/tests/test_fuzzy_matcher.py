@@ -1,15 +1,17 @@
+from unittest.mock import Mock, patch
+
 from django.test import SimpleTestCase
-from unittest.mock import Mock, MagicMock, patch
+
+from automatic_job_matching.service.exact_matcher import AhsRow
 from automatic_job_matching.service.fuzzy_matcher import (
-    FuzzyMatcher,
     CandidateProvider,
-    WordWeightConfig,
-    SimilarityCalculator,
+    FuzzyMatcher,
     MatchingProcessor,
+    SimilarityCalculator,
+    WordWeightConfig,
     _filter_by_unit,
     _norm_name,
 )
-from automatic_job_matching.service.exact_matcher import AhsRow
 
 
 class FakeAhsRepo:

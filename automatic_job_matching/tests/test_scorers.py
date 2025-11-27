@@ -1,11 +1,13 @@
 from django.test import SimpleTestCase
-from automatic_job_matching.service.scoring import FuzzyConfidenceScorer, ExactConfidenceScorer, NoOpScorer
+
+from automatic_job_matching.service.scoring import ExactConfidenceScorer, FuzzyConfidenceScorer, NoOpScorer
+
 
 class ConfidenceScorerStrategyTests(SimpleTestCase):
     """Unit tests for new scoring strategy classes."""
 
     def setUp(self):
-        from automatic_job_matching.service.scoring import FuzzyConfidenceScorer, ExactConfidenceScorer, NoOpScorer
+        from automatic_job_matching.service.scoring import ExactConfidenceScorer, FuzzyConfidenceScorer
         self.fuzzy = FuzzyConfidenceScorer()
         self.exact = ExactConfidenceScorer()
         self.noop = NoOpScorer()

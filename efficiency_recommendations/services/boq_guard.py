@@ -1,5 +1,5 @@
-from typing import Dict, Tuple
 from decimal import Decimal
+from typing import Dict, Tuple
 
 EMPTY_MSG = "No BoQ items available. Recommendations and charts are not generated."
 ZERO_MSG = "Total cost is zero. Recommendations and charts are not generated."

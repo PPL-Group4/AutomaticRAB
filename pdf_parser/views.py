@@ -1,12 +1,17 @@
-from django.shortcuts import render
-from django.http import JsonResponse, HttpResponseNotAllowed
-from django.views.decorators.csrf import csrf_exempt
-import tempfile
+import cProfile
+import io
 import os
+import pstats
+import tempfile
 from decimal import Decimal
+
+from django.http import HttpResponseNotAllowed, JsonResponse
+from django.shortcuts import render
+from django.views.decorators.csrf import csrf_exempt
+
+from cost_weight.models import TestItem, TestJob
+
 from .services.pipeline import parse_pdf_to_dtos
-from cost_weight.models import TestJob, TestItem
-import cProfile, pstats, io
 
 # Template constants
 RAB_CONVERTED_TEMPLATE = "rab_converted.html"

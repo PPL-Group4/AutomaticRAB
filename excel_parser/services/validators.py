@@ -1,6 +1,8 @@
 import logging
+
 logger = logging.getLogger("excel_parser")
 from django.core.exceptions import ValidationError
+
 
 def validate_excel_file(file):
     valid_mimetypes = [

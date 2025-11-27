@@ -1,6 +1,7 @@
-import pdfplumber
 from dataclasses import dataclass
 from typing import List, Protocol
+
+import pdfplumber
 
 
 @dataclass

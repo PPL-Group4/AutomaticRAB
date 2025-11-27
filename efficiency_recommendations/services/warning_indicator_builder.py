@@ -1,5 +1,6 @@
 from typing import Dict
 
+
 def build_indicator(total_items: int, warning_count: int) -> Dict:
     """
     Build visual indicator data for the notifications banner/badge.

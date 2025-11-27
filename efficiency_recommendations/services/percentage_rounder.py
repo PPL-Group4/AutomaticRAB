@@ -1,5 +1,6 @@
-from decimal import Decimal, ROUND_DOWN
-from typing import List, Dict
+from decimal import ROUND_DOWN, Decimal
+from typing import Dict, List
+
 
 def round_weight_percentages(
     items: List[Dict],

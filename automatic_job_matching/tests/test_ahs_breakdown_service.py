@@ -1,9 +1,16 @@
 from decimal import Decimal, InvalidOperation
-from unittest.mock import patch, MagicMock
-from django.test import SimpleTestCase
 from io import StringIO
+from unittest.mock import MagicMock, patch
 
-from automatic_job_matching.service.ahs_breakdown_service import get_ahs_breakdown, _parse_decimal, _load_catalog, _format_decimal, _MONEY_QUANTUM
+from django.test import SimpleTestCase
+
+from automatic_job_matching.service.ahs_breakdown_service import (
+    _MONEY_QUANTUM,
+    _format_decimal,
+    _load_catalog,
+    _parse_decimal,
+    get_ahs_breakdown,
+)
 
 
 class AhsBreakdownServiceTests(SimpleTestCase):

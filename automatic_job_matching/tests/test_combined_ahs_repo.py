@@ -1,5 +1,7 @@
-from django.test import SimpleTestCase
 from unittest.mock import patch
+
+from django.test import SimpleTestCase
+
 from automatic_job_matching.repository.combined_ahs_repo import CombinedAhsRepository
 from automatic_job_matching.service.exact_matcher import AhsRow
 

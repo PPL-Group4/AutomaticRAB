@@ -1,5 +1,7 @@
 from django.test import SimpleTestCase
+
 from automatic_job_matching.service.exact_matcher import AhsRow, ExactMatcher, _norm_code, _norm_name
+
 
 class ExactMatcherTests(SimpleTestCase):
     def setUp(self):

@@ -2,13 +2,14 @@ from __future__ import annotations
 
 import re
 from collections import defaultdict
+from collections.abc import MutableMapping
 from decimal import Decimal, InvalidOperation
-from typing import Any, Dict, List, MutableMapping, Optional, TypedDict
+from typing import Any, Dict, List, Optional, TypedDict
 
 from django.core.exceptions import ValidationError
 
-from automatic_price_matching.total_cost import TotalCostCalculator
 from automatic_price_matching.normalization import canonicalize_job_code
+from automatic_price_matching.total_cost import TotalCostCalculator
 
 # ---------------------------------------------------------------------------
 # Regex patterns for identifying numeric formatting variants & disallowed

@@ -1,5 +1,7 @@
 from decimal import Decimal
+
 from django.test import SimpleTestCase
+
 from target_bid.utils.proportional_adjustment import ProportionalAdjustmentCalculator
 
 

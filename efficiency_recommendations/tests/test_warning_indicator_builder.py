@@ -1,5 +1,7 @@
 from unittest import TestCase
+
 from efficiency_recommendations.services.warning_indicator_builder import build_indicator
+
 
 class TestWarningIndicatorBuilder(TestCase):
     def test_none_level(self):

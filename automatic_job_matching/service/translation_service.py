@@ -1,14 +1,13 @@
+import ipaddress
 import re
+from collections.abc import Iterable
 from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
 from functools import lru_cache
 from threading import Lock
-from typing import Iterable
 from urllib.parse import urlparse
 
 from deep_translator import GoogleTranslator
-from langdetect import detect, LangDetectException
-
-import ipaddress
+from langdetect import LangDetectException, detect
 
 _TRANSLATE_CALL_LOCK = Lock()
 _BASE64_LIKE_PATTERN = re.compile(r"^[A-Za-z0-9+/=]+$")

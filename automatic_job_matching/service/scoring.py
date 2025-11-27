@@ -9,8 +9,8 @@ Applies SOLID principles:
 """
 from __future__ import annotations
 
-from abc import ABC, abstractmethod
 import difflib
+from abc import ABC, abstractmethod
 
 
 class ConfidenceScorer(ABC):

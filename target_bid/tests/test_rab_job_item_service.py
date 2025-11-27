@@ -1,9 +1,12 @@
-from unittest.mock import MagicMock
 from types import SimpleNamespace
+from unittest.mock import MagicMock
+
 from django.test import SimpleTestCase
+
+from target_bid.rules.decision_rules import LockedItemRule
 from target_bid.services.rab_job_item_service import RabJobItemService
 from target_bid.utils.rab_job_item_mapper import RabJobItemMapper
-from target_bid.rules.decision_rules import LockedItemRule  
+
 
 class RabJobItemServiceTests(SimpleTestCase):
     def test_service_maps_rows(self):

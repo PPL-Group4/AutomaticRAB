@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import re
 import unicodedata
-from typing import Iterable, Optional, Set
+from collections.abc import Iterable
+from typing import Optional, Set
 
 # Constants for pattern matching
 MAX_CODE_PREFIX_LENGTH = 4

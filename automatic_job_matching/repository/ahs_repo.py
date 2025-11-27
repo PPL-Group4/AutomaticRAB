@@ -1,11 +1,11 @@
 import logging
 from typing import List
+
 from django.db.models import Q
-from rencanakan_core.models import Ahs
+
 from automatic_job_matching.service.exact_matcher import AhsRow
 from automatic_price_matching.ahs_cache import AhsCache
-
-import logging
+from rencanakan_core.models import Ahs
 
 logger = logging.getLogger(__name__)
 

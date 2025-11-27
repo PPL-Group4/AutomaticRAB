@@ -1,6 +1,7 @@
-import re, unicodedata
-from typing import Dict, List, Tuple
 import logging
+import re
+import unicodedata
+from typing import Dict, List, Tuple
 
 logger = logging.getLogger("excel_parser")  
 

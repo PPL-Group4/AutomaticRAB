@@ -1,11 +1,13 @@
 # pdf_parser/services/pipeline.py
-from typing import List, Dict, Any
-import re, logging
+import logging
+import re
 from decimal import Decimal
+from typing import Any, Dict, List
+
+from pdf_parser.services.job_matcher import match_description
+from pdf_parser.services.normalizer import PdfRowNormalizer
 from pdf_parser.services.pdfreader import PdfReader
 from pdf_parser.services.row_parser import PdfRowParser
-from pdf_parser.services.normalizer import PdfRowNormalizer
-from pdf_parser.services.job_matcher import match_description  
 
 logger = logging.getLogger(__name__)
 

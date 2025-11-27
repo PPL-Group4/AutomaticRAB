@@ -1,10 +1,12 @@
 import json
-from django.http import JsonResponse
-from django.test import SimpleTestCase, Client
 from unittest.mock import patch
+
+from django.http import JsonResponse
+from django.test import Client, SimpleTestCase
 from django.urls import reverse
 
 from automatic_job_matching.security import SecurityValidationError
+
 
 class MatchBestViewTests(SimpleTestCase):
     def setUp(self):

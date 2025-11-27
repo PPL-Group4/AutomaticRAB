@@ -1,5 +1,6 @@
 from django.core.exceptions import ValidationError
 
+
 def validate_pdf_file(file):
     """Allow only .pdf files with correct mimetype"""
     valid_mimetypes = ["application/pdf"]

@@ -1,7 +1,10 @@
+from unittest.mock import MagicMock, patch
+
 from django.test import SimpleTestCase
-from unittest.mock import patch, MagicMock
+
 from automatic_job_matching.repository.ahs_repo import DbAhsRepository
 from automatic_job_matching.service.exact_matcher import AhsRow
+
 
 class DbAhsRepositoryTests(SimpleTestCase):
     def setUp(self):

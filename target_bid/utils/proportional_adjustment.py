@@ -1,5 +1,6 @@
 from decimal import Decimal, DivisionByZero, InvalidOperation
 
+
 class ProportionalAdjustmentCalculator:
     """Computes the proportional factor to scale RAB unit prices toward a target budget."""
 

@@ -1,7 +1,10 @@
+from unittest.mock import MagicMock, patch
+
 from django.test import SimpleTestCase
-from unittest.mock import patch, MagicMock
-from automatic_job_matching.service.word_embeddings import SynonymExpander, SemanticMatcher
+
 from automatic_job_matching.service.exact_matcher import AhsRow
+from automatic_job_matching.service.word_embeddings import SemanticMatcher, SynonymExpander
+
 
 class FakeAhsRepo:
     def __init__(self, rows):

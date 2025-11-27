@@ -1,13 +1,15 @@
 from decimal import Decimal
+from unittest.mock import patch
+
 from django.test import SimpleTestCase
 from rest_framework.test import APIRequestFactory
-from unittest.mock import patch
+
+from target_bid.models.rab_job_item import RabJobItem
 from target_bid.views import (
-    fetch_rab_job_items_view,
     cheaper_suggestions_view,
+    fetch_rab_job_items_view,
     optimize_ahs_materials_view,
 )
-from target_bid.models.rab_job_item import RabJobItem
 
 
 class FetchRabJobItemsViewTests(SimpleTestCase):

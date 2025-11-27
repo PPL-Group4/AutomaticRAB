@@ -1,4 +1,5 @@
 from decimal import Decimal
+
 from django.test import SimpleTestCase
 
 
@@ -6,8 +7,8 @@ class AhspPriceRetrievalTests(SimpleTestCase):
     def setUp(self) -> None:
         # Import inside setUp to reflect TDD style and avoid import errors before impl
         from automatic_price_matching.price_retrieval import (
-            MockAhspSource,
             AhspPriceRetriever,
+            MockAhspSource,
         )
 
         # Create a mock AHSP source with canonical codes and prices

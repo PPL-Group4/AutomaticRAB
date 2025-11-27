@@ -1,24 +1,25 @@
 from __future__ import annotations
-from dataclasses import dataclass
-from typing import List, Protocol, Optional, Set
+
 import difflib
 import logging
 import re
+from dataclasses import dataclass
+from typing import List, Optional, Protocol, Set
 
-from automatic_job_matching.utils.text_normalizer import normalize_text
-from automatic_job_matching.utils.unit_normalizer import (
-    normalize_unit,
-    infer_unit_from_description,
-    units_are_compatible,
-)
-from automatic_job_matching.service.scoring import ConfidenceScorer, FuzzyConfidenceScorer
 from automatic_job_matching.config.action_synonyms import (
+    get_compound_materials,
     get_synonyms,
     has_synonyms,
-    get_compound_materials,
     is_compound_material,
 )
+from automatic_job_matching.service.scoring import ConfidenceScorer, FuzzyConfidenceScorer
 from automatic_job_matching.service.word_embeddings import SynonymExpander
+from automatic_job_matching.utils.text_normalizer import normalize_text
+from automatic_job_matching.utils.unit_normalizer import (
+    infer_unit_from_description,
+    normalize_unit,
+    units_are_compatible,
+)
 
 logger = logging.getLogger(__name__)
 

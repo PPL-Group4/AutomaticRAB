@@ -1,6 +1,8 @@
-from typing import Dict, Any, Optional
-from .interfaces import RowClassifierInterface, CellCleanerInterface
+from typing import Any, Dict, Optional
+
 from ..models import RabEntry
+from .interfaces import CellCleanerInterface, RowClassifierInterface
+
 
 class RowClassifier(RowClassifierInterface):
     """

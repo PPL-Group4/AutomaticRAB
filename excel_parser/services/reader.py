@@ -1,16 +1,20 @@
 from __future__ import annotations
+
+import hashlib
+import logging
+import re
+import string
+from collections.abc import Iterable
 from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
-import hashlib
-import re
-from typing import List, Dict, Iterable, Tuple, Optional
-import string
+from typing import Dict, List, Optional, Tuple
 
 from django.core.files.uploadedfile import UploadedFile
+
 from excel_parser.models import Project, RabEntry
+
 from .job_matcher import match_description
 
-import logging
 logger = logging.getLogger("excel_parser")
 
 class UnsupportedFileError(Exception):

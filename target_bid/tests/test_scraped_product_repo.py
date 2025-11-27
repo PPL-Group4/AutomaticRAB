@@ -1,4 +1,5 @@
 from django.test import SimpleTestCase
+
 from target_bid.repository.scraped_product_repo import ScrapedProductRepository
 
 

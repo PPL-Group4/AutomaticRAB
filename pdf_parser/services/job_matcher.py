@@ -1,5 +1,6 @@
 import logging
 from typing import Any, Dict
+
 from automatic_job_matching.service.matching_service import MatchingService
 
 logger = logging.getLogger(__name__)

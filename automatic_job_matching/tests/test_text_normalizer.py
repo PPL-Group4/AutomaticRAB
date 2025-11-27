@@ -1,5 +1,6 @@
 from django.test import SimpleTestCase
 
+
 class TextNormalizationTestCase(SimpleTestCase):
 	def setUp(self):
 		from automatic_job_matching.utils.text_normalizer import normalize_text

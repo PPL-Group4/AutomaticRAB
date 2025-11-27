@@ -1,9 +1,11 @@
-from dataclasses import dataclass
-from typing import Dict, List, Tuple, Optional
-from collections import defaultdict
 import re
+from collections import defaultdict
+from dataclasses import dataclass
+from typing import Dict, List, Optional, Tuple
+
 from pdf_parser.services.header_mapper import PdfHeaderMapper, TextFragment
-from pdf_parser.services.normalizer import _UNIT_TOKENS   # ✅ import tokens
+from pdf_parser.services.normalizer import _UNIT_TOKENS  # ✅ import tokens
+
 
 @dataclass
 class ParsedRow:

@@ -67,7 +67,7 @@ class AhspCiptaKaryaRepository:
         rows = []
         try:
             self._validate_integrity()
-            with open(self.csv_path, mode="r", encoding="utf-8-sig") as f:
+            with open(self.csv_path, encoding="utf-8-sig") as f:
                 reader = csv.DictReader(f, delimiter=";")
 
                 for row in reader:

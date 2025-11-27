@@ -14,15 +14,16 @@ Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
-from django.contrib import admin
-from django.urls import include, path
-from django.shortcuts import redirect
-from django.conf import settings
-from django.conf.urls.static import static
 import os
 
+from django.conf import settings
+from django.conf.urls.static import static
+from django.contrib import admin
+from django.shortcuts import redirect
+from django.urls import include, path
 
 from automatic_price_matching.views import recompute_total_cost
+
 
 def trigger_error(request):
     division_by_zero = 1 / 0

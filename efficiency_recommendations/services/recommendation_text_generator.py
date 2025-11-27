@@ -1,5 +1,6 @@
 from typing import Dict, Optional
 
+
 def generate_recommendation_text(highest_item: Optional[Dict]) -> str:
     """
     Generates recommendation text for the highest cost-weight item.

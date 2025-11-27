@@ -1,14 +1,12 @@
 from __future__ import annotations
+
 from typing import Optional, Set
 
-from django.apps import apps
 from django.conf import settings
-from django.db.models.signals import post_save, post_delete
+from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
 
-from cost_weight.services.recalc_orchestrator import (
-    ITEM_MODEL, JOB_MODEL, ITEM_FK_TO_JOB, recalc_weights_for_job
-)
+from cost_weight.services.recalc_orchestrator import ITEM_FK_TO_JOB, ITEM_MODEL, JOB_MODEL, recalc_weights_for_job
 
 JOB_FIELDS_THAT_AFFECT_WEIGHTS: Set[str] = set(getattr(
     settings,

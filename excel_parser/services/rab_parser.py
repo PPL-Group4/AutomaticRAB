@@ -1,14 +1,10 @@
-from typing import Dict, Any, Optional
-from .interfaces import (
-    RabParserInterface, 
-    CellCleanerInterface, 
-    DataConverterInterface, 
-    RowClassifierInterface
-)
+from datetime import date
+from decimal import Decimal
+from typing import Any, Dict, Optional
+
 from ..models import RabEntry
-from decimal import Decimal, InvalidOperation
-from typing import Any, Optional
-from datetime import date, datetime
+from .interfaces import CellCleanerInterface, DataConverterInterface, RabParserInterface, RowClassifierInterface
+
 
 class RabParser(RabParserInterface):
     """

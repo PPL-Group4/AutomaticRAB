@@ -1,5 +1,7 @@
 from django.test import SimpleTestCase
+
 from automatic_job_matching.service.abbreviation_service import AbbreviationService
+
 
 class AbbreviationServiceTests(SimpleTestCase):
     def test_simple_replacement(self):

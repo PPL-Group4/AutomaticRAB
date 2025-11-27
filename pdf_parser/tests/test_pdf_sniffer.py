@@ -1,6 +1,8 @@
 import tempfile
+
 from django.core.exceptions import ValidationError
 from django.test import TestCase
+
 from pdf_parser.services.pdf_sniffer import PdfSniffer
 
 

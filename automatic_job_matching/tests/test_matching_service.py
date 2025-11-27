@@ -1,5 +1,7 @@
-from django.test import SimpleTestCase
 from unittest.mock import patch
+
+from django.test import SimpleTestCase
+
 from automatic_job_matching.service.matching_service import MatchingService
 
 

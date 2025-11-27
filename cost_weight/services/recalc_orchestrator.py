@@ -1,7 +1,8 @@
 from __future__ import annotations
-from contextlib import suppress
-from decimal import Decimal, ROUND_HALF_UP
-from typing import Dict, Iterable
+
+from collections.abc import Iterable
+from decimal import ROUND_HALF_UP, Decimal
+from typing import Dict
 
 from django.apps import apps
 from django.conf import settings

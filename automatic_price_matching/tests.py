@@ -1,17 +1,20 @@
-from decimal import Decimal
 import json
-from django.core.exceptions import ValidationError
-from django.test import SimpleTestCase
-from automatic_price_matching.ahs_cache import AhsCache
-from automatic_job_matching.service.exact_matcher import AhsRow
-from automatic_price_matching.price_retrieval import AhspPriceRetriever, MockAhspSource
-from automatic_price_matching.total_cost import TotalCostCalculator
+from decimal import Decimal
 from unittest.mock import patch
-from automatic_job_matching.repository.ahs_repo import DbAhsRepository
-from rencanakan_core.models import Ahs
-from django.test import TestCase, Client, override_settings
+
+from django.core.exceptions import ValidationError
+from django.test import Client, SimpleTestCase, TestCase, override_settings
 from django.urls import reverse
+
+from automatic_job_matching.repository.ahs_repo import DbAhsRepository
+from automatic_job_matching.service.exact_matcher import AhsRow
+from automatic_price_matching.ahs_cache import AhsCache
+from automatic_price_matching.price_retrieval import AhspPriceRetriever, MockAhspSource
 from automatic_price_matching.service import AutomaticPriceMatchingService
+from automatic_price_matching.total_cost import TotalCostCalculator
+from rencanakan_core.models import Ahs
+
+
 class AhspValidationTests(SimpleTestCase):
 
 

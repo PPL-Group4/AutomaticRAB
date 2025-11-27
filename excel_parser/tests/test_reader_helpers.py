@@ -1,6 +1,8 @@
 from decimal import Decimal
+
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
+
 from excel_parser.services import reader as reader_mod
 
 

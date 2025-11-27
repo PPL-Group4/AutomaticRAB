@@ -2,11 +2,12 @@ from __future__ import annotations
 
 from decimal import Decimal
 from unittest.mock import patch
+
 from django.core.exceptions import ValidationError
 from django.test import SimpleTestCase
 
+from .price_retrieval import AhspPriceRetriever, MockAhspSource
 from .service import AutomaticPriceMatchingService
-from .price_retrieval import MockAhspSource, AhspPriceRetriever
 
 
 class AutomaticPriceMatchingServiceTests(SimpleTestCase):

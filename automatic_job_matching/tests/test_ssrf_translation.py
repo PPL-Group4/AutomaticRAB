@@ -1,5 +1,7 @@
 from django.test import TestCase
+
 from automatic_job_matching.service.translation_service import TranslationService
+
 
 class SSRFProtectionTests(TestCase):
 

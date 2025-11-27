@@ -1,18 +1,14 @@
-from django.http import JsonResponse, Http404
-from django.views.decorators.http import require_GET
-from cost_weight.models import TestJob
-from efficiency_recommendations.services.ahsp_availability_checker import (
-    check_items_in_ahsp
-)
-from efficiency_recommendations.services.notification_generator import (
-    generate_notifications
-)
-from efficiency_recommendations.services.warning_indicator_builder import build_indicator
-from efficiency_recommendations.services.price_deviation_detector import (
-    detect_price_deviations
-)
-from automatic_job_matching.service.matching_service import MatchingService
 from decimal import Decimal
+
+from django.http import Http404, JsonResponse
+from django.views.decorators.http import require_GET
+
+from automatic_job_matching.service.matching_service import MatchingService
+from cost_weight.models import TestJob
+from efficiency_recommendations.services.ahsp_availability_checker import check_items_in_ahsp
+from efficiency_recommendations.services.notification_generator import generate_notifications
+from efficiency_recommendations.services.price_deviation_detector import detect_price_deviations
+from efficiency_recommendations.services.warning_indicator_builder import build_indicator
 
 
 @require_GET
@@ -174,7 +170,7 @@ def get_price_deviations(request, job_id):
                     'reference_price': Decimal(str(reference_price))
                 })
 
-        except Exception as e:
+        except Exception:
             # Skip items that cause errors
             continue
 

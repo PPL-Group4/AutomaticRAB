@@ -1,9 +1,7 @@
 import unittest
 from decimal import Decimal
-from efficiency_recommendations.services.price_deviation_detector import (
-    PriceDeviationDetector,
-    DeviationLevel
-)
+
+from efficiency_recommendations.services.price_deviation_detector import DeviationLevel, PriceDeviationDetector
 
 
 class TestPriceDeviationDetector(unittest.TestCase):

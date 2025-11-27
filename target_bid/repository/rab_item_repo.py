@@ -1,5 +1,8 @@
-from typing import Iterable, Protocol
+from collections.abc import Iterable
+from typing import Protocol
+
 from rencanakan_core.models import RabItem
+
 
 class RabItemRepository(Protocol):
     def for_rab(self, rab_id: int) -> Iterable[object]:

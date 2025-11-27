@@ -1,5 +1,6 @@
 import sentry_sdk
 
+
 def tag_match_event(description: str, unit: str):
     """
     Add contextual info for Sentry events related to matching service.

@@ -1,8 +1,7 @@
 import unittest
 from decimal import Decimal
-from efficiency_recommendations.services.highest_cost_weight_identifier import (
-    identify_highest_cost_weight_item
-)
+
+from efficiency_recommendations.services.highest_cost_weight_identifier import identify_highest_cost_weight_item
 
 
 class HighestCostWeightIdentifierTest(unittest.TestCase):

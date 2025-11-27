@@ -1,8 +1,10 @@
-from decimal import Decimal
 from datetime import date
+from decimal import Decimal
+
 from django.test import TestCase
-from excel_parser.services import create_rab_parser
+
 from excel_parser.models import Project, RabEntry
+from excel_parser.services import create_rab_parser
 
 
 class RabParserTests(TestCase):
