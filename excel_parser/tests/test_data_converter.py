@@ -5,7 +5,6 @@ from django.test import TestCase
 
 from excel_parser.services.data_converter import DataConverter
 
-
 class DataConverterTests(TestCase):
     def setUp(self):
         self.conv = DataConverter()

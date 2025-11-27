@@ -4,16 +4,23 @@ from django.core.exceptions import ValidationError
 from django.http import JsonResponse
 from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
-from openpyxl import load_workbook
+from django.core.exceptions import ValidationError
+from decimal import Decimal
+import tempfile
+import os
+
 from rest_framework.decorators import api_view, parser_classes
 from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
+from celery.result import AsyncResult
 
 from cost_weight.models import TestItem, TestJob
 
 from .services.header_mapper import find_header_row, map_headers
 from .services.reader import preview_file
 from .services.validators import validate_excel_file
+from cost_weight.models import TestJob, TestItem
+from .tasks import process_excel_file_task
 
 # Template constant
 EXCEL_UPLOAD_TEMPLATE = 'excel_upload.html'
@@ -192,6 +199,105 @@ def rab_converted(request):
     This will hit the preview_rows endpoint via AJAX/fetch.
     """
     return render(request, RAB_CONVERTED_TEMPLATE)
+
+
+@api_view(['POST'])
+@parser_classes([MultiPartParser])
+def preview_rows_async(request):
+    """
+    POST /excel_parser/preview_rows_async
+    Accepts file upload and processes it asynchronously.
+    Returns task_id for status checking.
+    """
+    try:
+        # Get the uploaded file
+        legacy_file = request.FILES.get("file")
+        excel_standard = request.FILES.get("excel_standard")
+        excel_apendo = request.FILES.get("excel_apendo")
+        
+        if not (legacy_file or excel_standard or excel_apendo):
+            return Response({"detail": "No file uploaded"}, status=400)
+        
+        # Determine which file to process and its type
+        file_to_process = None
+        file_type = None
+        
+        if legacy_file:
+            file_to_process = legacy_file
+            file_type = 'legacy'
+        elif excel_standard:
+            file_to_process = excel_standard
+            file_type = 'standard'
+        elif excel_apendo:
+            file_to_process = excel_apendo
+            file_type = 'apendo'
+        
+        # Validate the file
+        try:
+            validate_excel_file(file_to_process)
+        except ValidationError as ve:
+            return Response({"detail": str(ve)}, status=400)
+        
+        # Save file to temp location
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx') as tmp:
+            for chunk in file_to_process.chunks():
+                tmp.write(chunk)
+            tmp_path = tmp.name
+        
+        # Submit task to Celery
+        task = process_excel_file_task.delay(tmp_path, file_to_process.name, file_type)
+        
+        return Response({
+            "task_id": task.id,
+            "status": "processing",
+            "message": "File is being processed. Use task_id to check status."
+        }, status=202)
+        
+    except Exception as e:
+        return Response({"detail": str(e)}, status=500)
+
+
+@api_view(['GET'])
+def task_status(request, task_id):
+    """
+    GET /excel_parser/task_status/<task_id>
+    Check the status of an async task.
+    """
+    try:
+        task = AsyncResult(task_id)
+        
+        if task.state == 'PENDING':
+            response = {
+                'state': task.state,
+                'status': 'Task is waiting to be processed...'
+            }
+        elif task.state == 'PROCESSING':
+            response = {
+                'state': task.state,
+                'status': task.info.get('status', 'Processing...'),
+            }
+        elif task.state == 'SUCCESS':
+            response = {
+                'state': task.state,
+                'result': task.result,
+                'status': 'completed'
+            }
+        elif task.state == 'FAILURE':
+            response = {
+                'state': task.state,
+                'status': str(task.info),
+                'error': str(task.info)
+            }
+        else:
+            response = {
+                'state': task.state,
+                'status': str(task.info)
+            }
+        
+        return Response(response)
+        
+    except Exception as e:
+        return Response({"error": str(e)}, status=500)
 
 def _apply_preview_overrides(rows, overrides):
     if not overrides:
