@@ -179,3 +179,6 @@ def ahs_breakdown_view(request, code: str):
 
 def ahs_breakdown_page(request):
     return render(request, "ahs_breakdown.html")
+
+def rab_breakdown_page(request):
+    return render(request, "rab_breakdown_list.html")
