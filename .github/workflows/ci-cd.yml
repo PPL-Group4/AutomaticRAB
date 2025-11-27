@@ -79,7 +79,7 @@ jobs:
 
       - name: Create test user with proper permissions
         run: |
-          mysql -h 127.0.0.1 -u root -p"${CI_MYSQL_ROOT_PASSWORD}" -e "
+          mysql -h 127.0.0.1 -u root -p"${CI_MYSQL_ROOT_PASSWORD}" <<EOF
             CREATE DATABASE IF NOT EXISTS test_autorab_db;
             CREATE DATABASE IF NOT EXISTS scrapperdb;
             CREATE USER IF NOT EXISTS 'test_user'@'%' IDENTIFIED BY '${CI_MYSQL_USER_PASSWORD}';
@@ -89,7 +89,7 @@ jobs:
             GRANT ALL PRIVILEGES ON test_autorab_db.* TO 'test_user'@'localhost';
             GRANT ALL PRIVILEGES ON scrapperdb.* TO 'test_user'@'localhost';
             FLUSH PRIVILEGES;
-          "
+          EOF
 
       - name: Run migrations
         run: |
