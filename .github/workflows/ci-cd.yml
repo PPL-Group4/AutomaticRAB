@@ -83,6 +83,7 @@ jobs:
             CREATE DATABASE IF NOT EXISTS test_autorab_db;
             CREATE DATABASE IF NOT EXISTS scrapperdb;
             CREATE USER IF NOT EXISTS 'test_user'@'%' IDENTIFIED BY '${CI_MYSQL_USER_PASSWORD}';
+            CREATE USER IF NOT EXISTS 'test_user'@'localhost' IDENTIFIED BY '${CI_MYSQL_USER_PASSWORD}';
             GRANT ALL PRIVILEGES ON test_autorab_db.* TO 'test_user'@'%';
             GRANT ALL PRIVILEGES ON scrapperdb.* TO 'test_user'@'%';
             GRANT ALL PRIVILEGES ON test_autorab_db.* TO 'test_user'@'localhost';
