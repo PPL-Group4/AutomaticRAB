@@ -1686,44 +1686,30 @@
     }
 
     else if (selectableMatches.length > 1) {
-  const bestMatch = getBestConfidenceMatch(selectableMatches);
+      const bestMatch = getBestConfidenceMatch(selectableMatches);
 
-  // Auto-select best match
-  if (bestMatch) {
-    row.job_match_selected = bestMatch;
-    row.analysis_code = bestMatch.code || "";
-    updateRowLookup(row, [bestMatch]);
-    analysisCell.textContent = row.analysis_code;
-    statusCell.textContent = buildMatchLabel(bestMatch);
+      // Auto-select best match
+      if (bestMatch) {
+        row.job_match_selected = bestMatch;
+        row.analysis_code = bestMatch.code || "";
+        updateRowLookup(row, [bestMatch]);
 
-    // Fetch price for best match
-    const tr = analysisCell.closest("tr");
-    if (tr) {
-      setPriceForRow(bestMatch, tr);
+        analysisCell.textContent = row.analysis_code;
+        statusCell.textContent = "Dipilih (Auto)";
+        statusCell.classList.add("text-success");
+
+        const matchLabel = document.createElement("span");
+        matchLabel.className = "text-success fw-bold";
+        matchLabel.textContent = buildMatchLabel(bestMatch);
+        cell.appendChild(matchLabel);
+
+        // Fetch price for best match
+        const tr = analysisCell.closest("tr");
+        if (tr) {
+          setPriceForRow(bestMatch, tr);
+        }
+      }
     }
-  }
-
-  // Still show all options as buttons
-  selectableMatches.forEach(match => {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = match === bestMatch
-      ? "btn btn-success btn-sm me-2 mb-2 match-option"
-      : "btn btn-outline-primary btn-sm me-2 mb-2 match-option";
-    button.dataset.code = match.code || "";
-    button.dataset.label = buildMatchLabel(match);
-    button.textContent = match === bestMatch
-      ? `✓ ${buildMatchLabel(match)}`
-      : buildMatchLabel(match);
-
-    button.addEventListener("click", () => {
-      handleMatchSelection(match, row, analysisCell, statusCell, matchCell, button);
-    });
-
-    cell.appendChild(button);
-  });
-}
-
 
     else {
       // No matches, fallback to manual
@@ -1798,7 +1784,7 @@
     const input = document.createElement("input");
     input.type = "text";
     input.className = "form-control";
-    input.placeholder = "Masukkan kode AHSP secara manual";
+    input.placeholder = "Masukkan kode atau pilih sugesti";
     input.value = "";
     input.autocomplete = "off";
 
@@ -1850,8 +1836,6 @@
       };
       row.job_match_status = "manual";
       updateRowLookup(row, matched ? [matched] : []);
-
-      // updateNotice("Masukkan kode AHSP secara manual");
 
       analysisCell.textContent = value;
       statusCell.textContent = "Manual";
@@ -1999,13 +1983,15 @@
       if (!match || !match.code) {
         return;
       }
-      {#if (match.unit_mismatch) {#}
-      {#  item.style.color = "#dc3545"; // red text#}
-      {#  item.style.fontStyle = "italic";#}
       const item = document.createElement("button");
       item.type = "button";
       item.className = "dropdown-item text-wrap";
-      item.textContent = `${match.code} – ${match.name || ""}`;
+      let label = `${match.code} – ${match.name || ""}`;
+      if (typeof match.confidence === "number") {
+          const pct = Math.round(match.confidence * 100);
+          label += ` – ${pct}%`;
+      }
+      item.textContent = label;
       item.addEventListener("click", () => {
         input.value = match.code;
         dropdown.style.display = "none";
