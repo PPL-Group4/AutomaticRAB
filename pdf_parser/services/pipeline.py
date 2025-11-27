@@ -102,14 +102,14 @@ def parse_pdf_to_dtos(path: str) -> List[Dict[str, Any]]:
         "VI", "VII", "VIII", "IX", "X",
         "XI", "XII", "XIII", "XIV", "XV",
     }
-    
+
     for row in normalized:
         desc = row.get("description") or ""
         analysis_code = (
-            row.get("analysis_code")
-            or row.get("kode")
-            or row.get("analysis code")
-            or ""
+                row.get("analysis_code")
+                or row.get("kode")
+                or row.get("analysis code")
+                or ""
         )
         number = str(row.get("number") or "").strip()
 
@@ -126,7 +126,8 @@ def parse_pdf_to_dtos(path: str) -> List[Dict[str, Any]]:
             logger.debug("Detected existing analysis code: %s", code)
 
         else:
-            match_info = match_description(desc)
+            unit = row.get("unit") or row.get("sat") or ""
+            match_info = match_description(desc, unit=unit)
 
         try:
             volume = Decimal(str(row.get("volume") or "0"))

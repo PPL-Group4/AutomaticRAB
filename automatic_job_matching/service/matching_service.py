@@ -207,9 +207,25 @@ class MatchingService:
                 span.set_tag("job_matching.outcome", "invalid_input")
                 return None
 
-            translated_text = MatchingService.translator.translate_to_indonesian(description)
-            description = translated_text or description
-            description = AbbreviationService.expand(description)
+            word_count = len(normalized.split())
+
+            # === Single-word material queries ===
+            if word_count == 1:
+                min_similarity = 0.25
+                limit = 5
+                logger.info("Single-word query detected → returning up to %d matches", limit)
+
+                # Try exact first
+                exact_result = MatchingService.perform_exact_match(description)
+                if exact_result:
+                    return [exact_result]
+
+                # Try fuzzy/multiple with unit
+                primary = MatchingService.perform_multiple_match(description, limit, min_similarity, unit=unit)
+                if primary:
+                    return primary
+
+
 
             try:
                 normalized = normalize_text(description)
@@ -236,12 +252,17 @@ class MatchingService:
                         span.set_tag("job_matching.outcome", "found")
                         return [exact_result]
 
-                    # Try fuzzy/multiple with unit
-                    primary = MatchingService.perform_multiple_match(description, limit, min_similarity, unit=unit)
-                    if primary:
-                        span.set_tag("job_matching.path", "fuzzy_primary")
-                        span.set_tag("job_matching.outcome", MatchingService.determine_status(primary))
-                        return primary
+            # === Fallback: no matches at all ===
+            if not result:
+                logger.info("No matches found for description=%s with unit=%s", description, unit)
+                return []
+
+            if isinstance(result, dict):
+                result_unit = result.get("unit")
+                if result.get("confidence", 1.0) == 1.0:
+                    result["status"] = "found"
+                else:
+                    result["status"] = "similar"
 
                     # Fallback: try again ignoring unit
                     alt_matches = MatchingService.perform_multiple_match(description, limit, min_similarity, unit=None)

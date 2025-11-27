@@ -2,7 +2,10 @@ name: CI - CD
 
 on:
   push:
+    branches:
+      - '**'
   pull_request:
+  workflow_dispatch:
 
 jobs:
   test:
@@ -31,6 +34,8 @@ jobs:
     env:
       DJANGO_SETTINGS_MODULE: AutomaticRAB.settings
       SECRET_KEY: ${{ secrets.SECRET_KEY || 'insecure-test-key-for-ci-only' }}
+      CELERY_BROKER_URL: memory://localhost/
+      CELERY_RESULT_BACKEND: cache+memory://
       CI_MYSQL_ROOT_PASSWORD: ${{ secrets.CI_MYSQL_ROOT_PASSWORD || 'ci_root_pass_2024' }}
       CI_MYSQL_USER_PASSWORD: ${{ secrets.CI_MYSQL_USER_PASSWORD || 'ci_user_pass_2024' }}
       MYSQL_NAME: test_autorab_db
@@ -38,6 +43,7 @@ jobs:
       MYSQL_PASSWORD: ${{ secrets.CI_MYSQL_USER_PASSWORD || 'ci_user_pass_2024' }}
       MYSQL_HOST: 127.0.0.1
       MYSQL_PORT: 3306
+      MYSQL_TEST_NAME: test_autorab_db
 
     steps:
       - name: Checkout repository
@@ -73,11 +79,17 @@ jobs:
 
       - name: Create test user with proper permissions
         run: |
-          mysql -h 127.0.0.1 -u root -p"${CI_MYSQL_ROOT_PASSWORD}" -e "
-            CREATE USER IF NOT EXISTS 'test_user'@'%' IDENTIFIED BY '${CI_MYSQL_USER_PASSWORD}';
-            GRANT ALL PRIVILEGES ON *.* TO 'test_user'@'%' WITH GRANT OPTION;
+          mysql -h 127.0.0.1 -u root -p"${CI_MYSQL_ROOT_PASSWORD}" <<EOF
+            CREATE DATABASE IF NOT EXISTS test_autorab_db;
+            CREATE DATABASE IF NOT EXISTS scrapperdb;
+            CREATE USER IF NOT EXISTS 'test_user'@'%' IDENTIFIED WITH mysql_native_password BY '${CI_MYSQL_USER_PASSWORD}';
+            CREATE USER IF NOT EXISTS 'test_user'@'localhost' IDENTIFIED WITH mysql_native_password BY '${CI_MYSQL_USER_PASSWORD}';
+            GRANT ALL PRIVILEGES ON test_autorab_db.* TO 'test_user'@'%';
+            GRANT ALL PRIVILEGES ON scrapperdb.* TO 'test_user'@'%';
+            GRANT ALL PRIVILEGES ON test_autorab_db.* TO 'test_user'@'localhost';
+            GRANT ALL PRIVILEGES ON scrapperdb.* TO 'test_user'@'localhost';
             FLUSH PRIVILEGES;
-          "
+          EOF
 
       - name: Run migrations
         run: |
@@ -274,6 +286,16 @@ jobs:
               --memory=2g \
               --memory-swap=2g \
               ${DOCKER_IMAGE}
+
+            # Deploy Celery worker and Redis if docker-compose.yml exists
+            if [ -f docker-compose.yml ]; then
+              echo "🔄 Starting Celery worker and Redis containers..."
+              docker-compose pull
+              docker-compose up -d redis celery
+              echo "✅ Celery worker and Redis started"
+            else
+              echo "⚠️ docker-compose.yml not found - Celery worker not deployed (async features disabled)"
+            fi
 
             # Clean up old images (keep last 3)
             docker images ghazafadhlilbaqi/autorab-ppl:${TAG}-* --format "{{.ID}}" | tail -n +4 | xargs -r docker rmi -f 2>/dev/null || true

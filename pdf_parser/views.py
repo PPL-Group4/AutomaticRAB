@@ -8,6 +8,12 @@ from .services.pipeline import parse_pdf_to_dtos
 from cost_weight.models import TestJob, TestItem
 import cProfile, pstats, io
 
+from rest_framework.decorators import api_view, parser_classes
+from rest_framework.parsers import MultiPartParser
+from rest_framework.response import Response
+from celery.result import AsyncResult
+from .tasks import process_pdf_file_task
+
 # Template constants
 RAB_CONVERTED_TEMPLATE = "rab_converted.html"
 PDF_UPLOAD_TEMPLATE = "pdf_upload.html"
@@ -159,3 +165,83 @@ def preview_pdf(request):
         ]
         return JsonResponse({"rows": rows})
     return HttpResponseNotAllowed(["POST"])
+
+
+@api_view(['POST'])
+@parser_classes([MultiPartParser])
+def parse_pdf_async(request):
+    """
+    POST /pdf_parser/parse_pdf_async
+    Accepts PDF file upload and processes it asynchronously.
+    Returns task_id for status checking.
+    """
+    try:
+        pdf_file = request.FILES.get("pdf_file")
+        
+        if not pdf_file:
+            return Response({"detail": "No PDF file uploaded"}, status=400)
+        
+        # Validate file type
+        if pdf_file.content_type != "application/pdf":
+            return Response({"detail": "Only .pdf files are allowed."}, status=400)
+        
+        # Save file to temp location
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp:
+            for chunk in pdf_file.chunks():
+                tmp.write(chunk)
+            tmp_path = tmp.name
+        
+        # Submit task to Celery
+        task = process_pdf_file_task.delay(tmp_path, pdf_file.name)
+        
+        return Response({
+            "task_id": task.id,
+            "status": "processing",
+            "message": "PDF is being processed. Use task_id to check status."
+        }, status=202)
+        
+    except Exception as e:
+        return Response({"detail": str(e)}, status=500)
+
+
+@api_view(['GET'])
+def task_status(request, task_id):
+    """
+    GET /pdf_parser/task_status/<task_id>
+    Check the status of an async task.
+    """
+    try:
+        task = AsyncResult(task_id)
+        
+        if task.state == 'PENDING':
+            response = {
+                'state': task.state,
+                'status': 'Task is waiting to be processed...'
+            }
+        elif task.state == 'PROCESSING':
+            response = {
+                'state': task.state,
+                'status': task.info.get('status', 'Processing...'),
+            }
+        elif task.state == 'SUCCESS':
+            response = {
+                'state': task.state,
+                'result': task.result,
+                'status': 'completed'
+            }
+        elif task.state == 'FAILURE':
+            response = {
+                'state': task.state,
+                'status': str(task.info),
+                'error': str(task.info)
+            }
+        else:
+            response = {
+                'state': task.state,
+                'status': str(task.info)
+            }
+        
+        return Response(response)
+        
+    except Exception as e:
+        return Response({"error": str(e)}, status=500)
