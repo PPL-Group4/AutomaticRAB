@@ -18,6 +18,7 @@ from automatic_job_matching.security import (
 
 logger = logging.getLogger(__name__)
 security_logger = logging.getLogger("security.audit")
+review_logger = logging.getLogger("job_matching.review")
 
 @api_view(['POST'])
 @cache_control(no_store=True, no_cache=True, must_revalidate=True)
@@ -63,6 +64,101 @@ def match_best_view(request):
 
     return JsonResponse({"status": status, "match": result}, status=200)
 
+
+@api_view(['POST'])
+@cache_control(no_store=True, no_cache=True, must_revalidate=True)
+def match_bulk_view(request):
+    if request.content_type and "application/json" not in request.content_type:
+        security_logger.warning("Rejected bulk request with invalid content type: %s", request.content_type)
+        return JsonResponse({"error": "Unsupported content type"}, status=415)
+
+    try:
+        ensure_payload_size(request.body)
+    except SecurityValidationError as exc:
+        security_logger.warning("Bulk payload rejected due to size: %s", exc)
+        return JsonResponse({"error": "Payload too large"}, status=413)
+
+    try:
+        payload = json.loads(request.body.decode("utf-8") or "[]")
+    except json.JSONDecodeError:
+        logger.warning("Invalid JSON received in match_bulk_view")
+        return JsonResponse({"error": "Invalid JSON"}, status=400)
+
+    if not isinstance(payload, list):
+        logger.warning("Bulk match payload is not an array")
+        return JsonResponse({"error": "Payload must be a list"}, status=400)
+
+    total_items = len(payload)
+    results = [None] * total_items
+    valid_entries = []
+    valid_indices = []
+
+    for idx, item in enumerate(payload):
+        if not isinstance(item, dict):
+            results[idx] = {
+                "index": idx,
+                "status": "error",
+                "error": "Each item must be an object.",
+                "match": None,
+            }
+            continue
+
+        try:
+            description = sanitize_description(item.get("description"))
+            unit = sanitize_unit(item.get("unit"))
+        except (SecurityValidationError, ValidationError) as exc:
+            security_logger.warning("Rejected bulk item at index %d: %s", idx, exc)
+            results[idx] = {
+                "index": idx,
+                "status": "error",
+                "error": "Invalid input",
+                "match": None,
+            }
+            continue
+
+        tag_match_event(description, unit)
+        valid_entries.append({"description": description, "unit": unit})
+        valid_indices.append(idx)
+
+    if valid_entries:
+        bulk_results = MatchingService.perform_bulk_best_match(valid_entries)
+
+        for original_index, bulk_result in zip(valid_indices, bulk_results):
+            results[original_index] = {"index": original_index, **bulk_result}
+
+            status = bulk_result.get("status")
+            description = bulk_result.get("description")
+            unit = bulk_result.get("unit")
+
+            if status == "not found":
+                log_unmatched_entry(description, unit)
+                review_logger.warning(
+                    "job_not_found description=%r unit=%r (bulk_index=%d)",
+                    description,
+                    unit,
+                    original_index,
+                )
+            elif status in {"unit mismatch", "similar"} or (isinstance(status, str) and status.startswith("found") and status != "found"):
+                review_logger.info(
+                    "job_needs_review status=%s description=%r unit=%r (bulk_index=%d)",
+                    status,
+                    description,
+                    unit,
+                    original_index,
+                )
+
+    for idx, entry in enumerate(results):
+        if entry is None:
+            results[idx] = {
+                "index": idx,
+                "status": "error",
+                "error": "Internal error",
+                "match": None,
+            }
+
+    logger.info("match_bulk_view processed %d items", total_items)
+    return JsonResponse({"results": results}, status=200)
+
 def job_matching_page(request):
     return render(request, "job_matching.html")
 
@@ -80,3 +176,6 @@ def ahs_breakdown_view(request, code: str):
         "code": code,
         "breakdown": breakdown,
     }, status=200)
+
+def ahs_breakdown_page(request):
+    return render(request, "ahs_breakdown.html")
