@@ -1817,49 +1817,61 @@
     };
 
     const applyManual = async () => {
-      const value = input.value.trim();
-      if (!value) {
-        input.focus();
-        return;
-      }
+  const value = input.value.trim();
+  if (!value) {
+    input.focus();
+    return;
+  }
 
-      if (warnIfUnsafeCode(value)) {
-        input.focus();
-        return;
-      }
+  if (warnIfUnsafeCode(value)) {
+    input.focus();
+    return;
+  }
 
-      const matched = findMatchByCode(row, value);
-      row.analysis_code = value;
-      row.job_match_selected = matched ? { ...matched, match_status: "Manual" } : {
-        code: value,
-        match_status: "Manual",
-      };
-      row.job_match_status = "manual";
-      updateRowLookup(row, matched ? [matched] : []);
+  const matched = findMatchByCode(row, value);
+  row.analysis_code = value;
+  row.job_match_selected = matched ? { ...matched, match_status: "Manual" } : {
+    code: value,
+    match_status: "Manual",
+  };
+  row.job_match_status = "manual";
+  updateRowLookup(row, matched ? [matched] : []);
 
-      analysisCell.textContent = value;
-      statusCell.textContent = "Manual";
-      statusCell.classList.add("text-success");
+  analysisCell.textContent = value;
+  statusCell.textContent = "Manual";
+  statusCell.classList.add("text-success");
 
-      cell.querySelectorAll("button.match-option").forEach(btn => {
-        btn.classList.remove("btn-success");
-        btn.classList.add("btn-outline-primary");
-        if (btn.dataset.label) {
-          btn.textContent = btn.dataset.label;
-        }
-      });
+  // Update all match option buttons
+  cell.querySelectorAll("button.match-option").forEach(btn => {
+    btn.classList.remove("btn-success");
+    btn.classList.add("btn-outline-primary");
+    if (btn.dataset.label) {
+      btn.textContent = btn.dataset.label;
+    }
+  });
 
-      button.classList.remove("btn-primary");
-      button.classList.add("btn-success");
-      button.textContent = "Dipakai";
-      dropdown.style.display = "none";
+  // ✅ UPDATE: Also update the green match label if it exists
+  const existingMatchLabel = cell.querySelector(".text-success.fw-semibold, .text-success.fw-bold");
+  if (existingMatchLabel) {
+    if (matched) {
+      existingMatchLabel.textContent = buildMatchLabel(matched);
+    } else {
+      existingMatchLabel.textContent = `${value} – Manual`;
+    }
+  }
 
-      // AFTER manual apply: try to fetch unit price and set Harga Sat for this row
-      const tr = analysisCell.closest("tr");
-      if (tr) {
-        await setPriceForRow(row.job_match_selected || { code: value }, tr);
-      }
-    };
+  button.classList.remove("btn-primary");
+  button.classList.add("btn-success");
+  button.textContent = "Dipakai";
+  dropdown.style.display = "none";
+
+  // AFTER manual apply: try to fetch unit price and set Harga Sat for this row
+  const tr = analysisCell.closest("tr");
+  if (tr) {
+    await setPriceForRow(row.job_match_selected || { code: value }, tr);
+  }
+};
+
 
     button.addEventListener("click", applyManual);
     input.addEventListener("keydown", event => {
