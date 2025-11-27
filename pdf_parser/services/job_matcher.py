@@ -18,15 +18,16 @@ def _derive_status(match: Any) -> str:
             return f"found {len(match)} similar"
     return "not found"
 
-def match_description(description: str) -> Dict[str, Any]:
+def match_description(description: str, unit: str = None) -> Dict[str, Any]:
     """Run automatic job matching for a single description."""
     if not description or not description.strip():
         return {"status": "skipped", "match": None}
 
     try:
-        match = MatchingService.perform_best_match(description)
+        match = MatchingService.perform_best_match(description, unit=unit)  # ✅ Pass unit here
     except Exception as exc:
         logger.exception("Job matching failed for description")
         return {"status": "error", "match": None, "error": str(exc)}
 
     return {"status": _derive_status(match), "match": match}
+
