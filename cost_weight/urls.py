@@ -1,7 +1,12 @@
 from django.urls import path
+
 from cost_weight.views import (
-    chart_page, JobItemsChartDataView, chart_export, recalc_job_weights,
-    upload_excel_view, cost_weight_analysis_view
+    JobItemsChartDataView,
+    chart_export,
+    chart_page,
+    cost_weight_analysis_view,
+    recalc_job_weights,
+    upload_excel_view,
 )
 
 app_name = "cost_weight"

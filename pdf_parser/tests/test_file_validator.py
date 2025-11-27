@@ -1,7 +1,7 @@
-import tempfile
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
+
 from pdf_parser.services.validators import validate_pdf_file
 
 

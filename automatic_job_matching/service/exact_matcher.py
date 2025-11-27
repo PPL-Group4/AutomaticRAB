@@ -1,7 +1,8 @@
 from __future__ import annotations
-from dataclasses import dataclass
-from typing import List, Protocol, Optional
+
 import logging
+from dataclasses import dataclass
+from typing import List, Optional, Protocol
 
 from automatic_job_matching.utils.text_normalizer import normalize_text
 

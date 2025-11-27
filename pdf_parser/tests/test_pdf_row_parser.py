@@ -1,6 +1,7 @@
 from django.test import TestCase
-from pdf_parser.services.row_parser import PdfRowParser, ParsedRow
+
 from pdf_parser.services.header_mapper import TextFragment
+from pdf_parser.services.row_parser import ParsedRow, PdfRowParser
 
 
 class PdfRowParserUnitTests(TestCase):

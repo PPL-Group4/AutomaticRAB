@@ -1,9 +1,8 @@
 import ipaddress
 import re
-from typing import Iterable
+from collections.abc import Iterable
 
 from django.core.exceptions import ValidationError
-
 
 MAX_DESCRIPTION_LENGTH = 1024
 MAX_UNIT_LENGTH = 32

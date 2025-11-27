@@ -1,6 +1,8 @@
 import os
 import pathlib
+
 from django.test import TestCase
+
 from pdf_parser.services.pdfreader import PdfReader, TextFragment
 
 BASE_DIR = pathlib.Path(__file__).resolve().parent

@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
 from typing import Optional
 
+
 @dataclass(frozen=True)
 class RabJobItem:
     rab_item_id: int

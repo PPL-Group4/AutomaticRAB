@@ -1,5 +1,6 @@
 from django.db import models
 
+
 class Project(models.Model):
     id = models.BigIntegerField(primary_key=True)
     name = models.CharField(max_length=255)

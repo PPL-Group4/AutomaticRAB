@@ -1,5 +1,6 @@
 import signal
 
+
 def _timeout_handler(signum, frame):
     raise TimeoutError("Operation timed out")
 

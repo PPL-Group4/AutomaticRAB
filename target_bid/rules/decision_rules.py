@@ -1,6 +1,8 @@
-import re
-from typing import Optional, Sequence
+from collections.abc import Sequence
+from typing import Optional
+
 from target_bid.models.rab_job_item import RabJobItem
+
 
 class LockedItemRule:
     REASON_CODE = "locked"

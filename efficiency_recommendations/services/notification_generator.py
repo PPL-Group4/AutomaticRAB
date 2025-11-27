@@ -1,4 +1,5 @@
-from typing import List, Dict
+from typing import Dict, List
+
 from .duplicate_prevention_service import DuplicatePreventionService
 
 
@@ -28,7 +29,7 @@ def generate_notifications(items_with_status: List[Dict]) -> List[Dict]:
             ]
     """
     print(f"\n{'='*60}")
-    print(f"GENERATING NOTIFICATIONS")
+    print("GENERATING NOTIFICATIONS")
     print(f"{'='*60}")
 
     if not items_with_status:
@@ -54,16 +55,16 @@ def generate_notifications(items_with_status: List[Dict]) -> List[Dict]:
                 'message': f"{item_name} tidak ditemukan di database AHSP dan tidak dapat diisi otomatis"
             }
             notifications.append(notification)
-            print(f"   Action: Notification GENERATED")
+            print("   Action: Notification GENERATED")
         else:
-            print(f"   Action: No notification needed (item found in AHSP)")
+            print("   Action: No notification needed (item found in AHSP)")
 
     # Apply duplicate prevention using the dedicated service
     unique_notifications = DuplicatePreventionService.remove_duplicates(notifications)
     duplicates_removed = len(notifications) - len(unique_notifications)
     
     print(f"\n{'='*60}")
-    print(f"NOTIFICATION GENERATION COMPLETE")
+    print("NOTIFICATION GENERATION COMPLETE")
     print(f"Total notifications: {len(unique_notifications)}/{len(items_with_status)}")
     if duplicates_removed > 0:
         print(f"Duplicates removed: {duplicates_removed}")

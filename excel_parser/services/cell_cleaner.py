@@ -1,6 +1,8 @@
 import re
 from typing import Any, Optional
+
 from .interfaces import CellCleanerInterface
+
 
 class CellCleaner(CellCleanerInterface):
     """

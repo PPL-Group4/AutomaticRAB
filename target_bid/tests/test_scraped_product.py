@@ -1,10 +1,11 @@
 from django.test import SimpleTestCase
+
 from target_bid.models.scraped_product import (
-    ScrapedProduct,
+    GemilangProduct,
     JuraganMaterialProduct,
     Mitra10Product,
+    ScrapedProduct,
     TokopediaProduct,
-    GemilangProduct,
 )
 
 

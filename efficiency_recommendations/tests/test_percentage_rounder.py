@@ -1,6 +1,8 @@
 import unittest
 from decimal import Decimal
+
 from efficiency_recommendations.services.percentage_rounder import round_weight_percentages
+
 
 class PercentageRounderTest(unittest.TestCase):
 

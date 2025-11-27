@@ -1,24 +1,23 @@
 from __future__ import annotations
+
 from decimal import Decimal
 from typing import Dict
 
-from django.http import JsonResponse
-from django.views import View
 from django.apps import apps
+from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import render
-from django.http import HttpResponse, JsonResponse, Http404
-from django.views.decorators.http import require_GET
+from django.views import View
+from django.views.decorators.http import require_GET, require_POST
 
-from cost_weight.services.chart_transformer import to_chart_data
+from cost_weight.models import TestJob
 from cost_weight.services.chart_render import render_chart_bytes
-from django.views.decorators.http import require_POST
-from django.utils.decorators import method_decorator
-
-from cost_weight.services.recalc_orchestrator import (
-    ITEM_MODEL, JOB_MODEL, ITEM_COST_FIELD, ITEM_WEIGHT_FIELD, ITEM_FK_TO_JOB
-)
 from cost_weight.services.chart_transformer import to_chart_data
-from cost_weight.models import TestJob, TestItem
+from cost_weight.services.recalc_orchestrator import (
+    ITEM_FK_TO_JOB,
+    ITEM_MODEL,
+    ITEM_WEIGHT_FIELD,
+    JOB_MODEL,
+)
 
 
 @require_POST

@@ -1,5 +1,7 @@
 from decimal import Decimal
+
 from django.test import TestCase
+
 from pdf_parser.services.pipeline import merge_broken_rows
 
 

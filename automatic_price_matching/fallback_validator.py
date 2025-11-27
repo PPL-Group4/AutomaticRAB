@@ -1,5 +1,6 @@
 from decimal import Decimal
 
+
 def apply_fallback(description: str) -> dict:
     return {
         "uraian": description,

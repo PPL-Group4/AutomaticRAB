@@ -1,20 +1,21 @@
-from django.core.exceptions import ValidationError
 import json
 import logging
+
+from django.core.exceptions import ValidationError
 from django.http import JsonResponse
 from django.shortcuts import render
 from django.views.decorators.cache import cache_control
 from rest_framework.decorators import api_view
 
-from automatic_job_matching.service.ahs_breakdown_service import get_ahs_breakdown
-from automatic_job_matching.service.matching_service import MatchingService
-from automatic_job_matching.utils.monitoring import tag_match_event, log_unmatched_entry
 from automatic_job_matching.security import (
     SecurityValidationError,
     ensure_payload_size,
     sanitize_description,
     sanitize_unit,
 )
+from automatic_job_matching.service.ahs_breakdown_service import get_ahs_breakdown
+from automatic_job_matching.service.matching_service import MatchingService
+from automatic_job_matching.utils.monitoring import log_unmatched_entry, tag_match_event
 
 logger = logging.getLogger(__name__)
 security_logger = logging.getLogger("security.audit")

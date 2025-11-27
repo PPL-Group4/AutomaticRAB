@@ -1,6 +1,6 @@
-from typing import List, Dict, Optional
 from decimal import Decimal
 from enum import Enum
+from typing import Dict, List, Optional
 
 
 class DeviationLevel(str, Enum):

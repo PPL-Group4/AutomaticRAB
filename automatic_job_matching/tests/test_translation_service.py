@@ -1,8 +1,8 @@
-from django.test import SimpleTestCase
 from unittest.mock import patch
 
-from automatic_job_matching.service.translation_service import TranslationService
-from automatic_job_matching.service.translation_service import LangDetectException
+from django.test import SimpleTestCase
+
+from automatic_job_matching.service.translation_service import LangDetectException, TranslationService
 
 
 class TranslationServiceTests(SimpleTestCase):

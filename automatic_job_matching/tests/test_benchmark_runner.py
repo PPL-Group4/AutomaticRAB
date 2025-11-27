@@ -1,6 +1,8 @@
-from django.test import SimpleTestCase
-from unittest.mock import MagicMock
 import time
+from unittest.mock import MagicMock
+
+from django.test import SimpleTestCase
+
 
 class BenchmarkRunnerTests(SimpleTestCase):
     def test_benchmark_runs_and_reports_metrics(self):

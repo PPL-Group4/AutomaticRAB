@@ -1,8 +1,6 @@
 from django.urls import path
-from efficiency_recommendations.views import (
-    get_job_notifications,
-    get_price_deviations
-)
+
+from efficiency_recommendations.views import get_job_notifications, get_price_deviations
 
 app_name = "efficiency_recommendations"
 

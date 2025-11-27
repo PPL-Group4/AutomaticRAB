@@ -1,9 +1,10 @@
 from django.test import SimpleTestCase
+
 from automatic_job_matching.utils.unit_normalizer import (
-    normalize_unit,
-    infer_unit_from_description,
-    units_are_compatible,
     calculate_unit_compatibility_score,
+    infer_unit_from_description,
+    normalize_unit,
+    units_are_compatible,
 )
 
 

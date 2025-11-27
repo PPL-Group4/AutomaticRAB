@@ -1,5 +1,6 @@
 from decimal import Decimal
 from unittest import TestCase
+
 from efficiency_recommendations.services.top_cost_contributors_identifier import identify_top_cost_contributors
 
 

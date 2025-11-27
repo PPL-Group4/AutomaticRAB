@@ -1,4 +1,5 @@
 from django.urls import path
+
 from target_bid import views
 
 urlpatterns = [

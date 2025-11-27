@@ -1,8 +1,7 @@
 import unittest
 from decimal import Decimal
-from efficiency_recommendations.services.recommendation_text_generator import (
-    generate_recommendation_text
-)
+
+from efficiency_recommendations.services.recommendation_text_generator import generate_recommendation_text
 
 
 class RecommendationTextGeneratorTest(unittest.TestCase):

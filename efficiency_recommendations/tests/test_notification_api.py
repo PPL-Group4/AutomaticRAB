@@ -1,9 +1,11 @@
-from decimal import Decimal
-from django.test import TestCase, Client
-from django.urls import reverse
-from cost_weight.models import TestJob, TestItem
-from unittest.mock import patch
 import json
+from decimal import Decimal
+from unittest.mock import patch
+
+from django.test import Client, TestCase
+from django.urls import reverse
+
+from cost_weight.models import TestItem, TestJob
 
 
 class NotificationAPITest(TestCase):
@@ -236,6 +238,7 @@ class NotificationAPITest(TestCase):
         self.assertIn('weight_pct', first_item)
 
 from unittest.mock import patch
+
 
 class NotificationUIIndicatorTest(TestCase):
     def setUp(self):

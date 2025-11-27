@@ -1,11 +1,11 @@
 import logging
 from typing import List, Optional, Set
-import numpy as np
+
 from sentence_transformers import SentenceTransformer, util
 
+from automatic_job_matching.config.action_synonyms import get_synonyms, has_synonyms
 from automatic_job_matching.repository.ahs_repo import DbAhsRepository
 from automatic_job_matching.utils.text_normalizer import normalize_text
-from automatic_job_matching.config.action_synonyms import get_synonyms, has_synonyms
 
 logger = logging.getLogger(__name__)
 

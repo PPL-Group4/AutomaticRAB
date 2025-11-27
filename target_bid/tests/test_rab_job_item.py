@@ -1,6 +1,8 @@
 from decimal import Decimal
+
 from django.test import SimpleTestCase
-from target_bid.models.rab_job_item import RabJobItem, DecimalAdapter
+
+from target_bid.models.rab_job_item import DecimalAdapter, RabJobItem
 
 
 class RabJobItemHelperTests(SimpleTestCase):

@@ -1,6 +1,19 @@
+from unittest.mock import MagicMock, patch
+
 from django.test import SimpleTestCase
-from unittest.mock import patch, MagicMock
-from rencanakan_core.models import Project, Unit, ItemPrice, Ahs, AhsItem, Rab, RabItemHeader, RabItem, CustomAhs, CustomAhsItem
+
+from rencanakan_core.models import (
+    Ahs,
+    AhsItem,
+    CustomAhs,
+    CustomAhsItem,
+    ItemPrice,
+    Project,
+    Rab,
+    RabItem,
+    RabItemHeader,
+    Unit,
+)
 
 
 class RencanakanCoreModelTests(SimpleTestCase):

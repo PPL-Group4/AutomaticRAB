@@ -1,15 +1,16 @@
 from __future__ import annotations
 
+import logging
+from collections.abc import Mapping
 from dataclasses import dataclass
 from decimal import Decimal
-from typing import Dict, Mapping, Optional, Protocol
 from pathlib import Path
-import logging
-
-from .normalization import canonicalize_job_code
+from typing import Dict, Optional, Protocol
 
 # --- DB model import ---
 from rencanakan_core.models import Ahs
+
+from .normalization import canonicalize_job_code
 
 logger = logging.getLogger(__name__)
 
@@ -81,7 +82,7 @@ class CsvAhspSource:
             return
         try:
             import csv
-            with open(self.csv_path, mode="r", encoding="utf-8-sig", newline="") as fh:
+            with open(self.csv_path, encoding="utf-8-sig", newline="") as fh:
                 reader = csv.DictReader(fh, delimiter=";")
                 for row in reader:
                     normalized = { (k or "").strip().upper(): (v or "").strip() for k, v in row.items() }

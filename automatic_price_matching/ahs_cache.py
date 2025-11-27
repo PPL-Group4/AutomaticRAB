@@ -1,5 +1,6 @@
 import logging
 from typing import Dict, List
+
 from automatic_job_matching.service.exact_matcher import AhsRow
 
 logger = logging.getLogger(__name__)

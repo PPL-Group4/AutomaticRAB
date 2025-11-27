@@ -1,15 +1,9 @@
 import unittest
 from decimal import Decimal
 
-from efficiency_recommendations.services.boq_guard import (
-    check_boq_health, EMPTY_MSG, ZERO_MSG
-)
-from efficiency_recommendations.services.highest_cost_weight_identifier import (
-    identify_highest_cost_weight_item
-)
-from efficiency_recommendations.services.recommendation_text_generator import (
-    generate_recommendation_text
-)
+from efficiency_recommendations.services.boq_guard import EMPTY_MSG, ZERO_MSG, check_boq_health
+from efficiency_recommendations.services.highest_cost_weight_identifier import identify_highest_cost_weight_item
+from efficiency_recommendations.services.recommendation_text_generator import generate_recommendation_text
 
 
 class BoqGuardTest(unittest.TestCase):

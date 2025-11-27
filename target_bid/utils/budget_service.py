@@ -1,10 +1,12 @@
+from collections.abc import Iterable
 from decimal import Decimal
+
 from target_bid.validators import TargetBudgetInput
-from typing import Iterable
+
 from .converters import (
+    AbsoluteConversionStrategy,
     ConversionStrategy,
     PercentageConversionStrategy,
-    AbsoluteConversionStrategy,
 )
 
 

@@ -2,13 +2,13 @@ from __future__ import annotations
 
 import json
 import logging
-from decimal import Decimal, ROUND_HALF_UP
-from typing import Any, Dict, Optional
+from decimal import ROUND_HALF_UP, Decimal
+from typing import Any, Dict
 
 from django.core.exceptions import ValidationError
-from django.http import JsonResponse, HttpRequest
-from django.views.decorators.http import require_POST
+from django.http import HttpRequest, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_POST
 
 from .price_retrieval import AhspPriceRetriever, CombinedAhspSource
 from .validators import validate_recompute_payload

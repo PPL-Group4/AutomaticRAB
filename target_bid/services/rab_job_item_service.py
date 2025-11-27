@@ -1,13 +1,16 @@
-from typing import Iterable, List, Optional, Sequence
+from collections.abc import Iterable, Sequence
+from typing import List
+
 from target_bid.models.rab_job_item import RabJobItem
 from target_bid.repository.rab_item_repo import RabItemRepository
 from target_bid.rules.decision_rules import (
-    LockedItemRule,
-    CustomAhsOverrideRule,
     AnalysisCodeRule,
+    CustomAhsOverrideRule,
+    LockedItemRule,
     NameBlacklistRule,
 )
 from target_bid.utils.name_normaliser import NameNormaliser
+
 
 class NonAdjustableEvaluator:
     def __init__(self, rules: Sequence):

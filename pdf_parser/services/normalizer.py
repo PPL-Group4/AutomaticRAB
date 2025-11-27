@@ -1,7 +1,7 @@
 # pdf_parser/services/normalizer.py
+import re
 from decimal import Decimal, InvalidOperation
 from typing import Dict
-import re
 
 # common unit tokens in RAB documents (lowercased, punctuation-free)
 _UNIT_TOKENS = {

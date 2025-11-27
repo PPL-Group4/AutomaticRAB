@@ -1,7 +1,8 @@
 from abc import ABC, abstractmethod
-from typing import Any, Optional, Dict, List
-from decimal import Decimal
 from datetime import date
+from decimal import Decimal
+from typing import Any, Dict, Optional
+
 
 class CellCleanerInterface(ABC):
     """Interface for cleaning cell data"""

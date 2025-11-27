@@ -1,8 +1,9 @@
 from decimal import Decimal
+
 from django.core.exceptions import ValidationError
 from django.test import SimpleTestCase
-from target_bid import validators
-from target_bid.validators import TargetBudgetInput, validate_target_budget_input
+
+from target_bid.validators import validate_target_budget_input
 
 
 class TargetBudgetValidationTests(SimpleTestCase):

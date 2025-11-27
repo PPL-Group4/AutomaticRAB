@@ -1,5 +1,6 @@
 import re
 
+
 class AbbreviationService:
     MAP = {
         "plst": "plester",

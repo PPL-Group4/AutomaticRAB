@@ -1,7 +1,9 @@
 # target_bid/converters.py
 from __future__ import annotations
+
 from abc import ABC, abstractmethod
 from decimal import Decimal
+
 from target_bid.validators import TargetBudgetInput
 
 

@@ -1,5 +1,6 @@
+from collections.abc import Mapping
 from decimal import Decimal, InvalidOperation
-from typing import Mapping, Union
+from typing import Union
 
 NumberLike = Union[int, float, str, Decimal]
 

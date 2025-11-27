@@ -1,7 +1,8 @@
 from .cell_cleaner import CellCleaner
 from .data_converter import DataConverter
-from .row_classifier import RowClassifier
 from .rab_parser import RabParser
+from .row_classifier import RowClassifier
+
 
 # Factory function following Dependency Injection pattern
 def create_rab_parser() -> RabParser:

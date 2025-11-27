@@ -1,6 +1,8 @@
 from django.test import SimpleTestCase
-from automatic_job_matching.service.fuzzy_matcher import FuzzyMatcher
+
 from automatic_job_matching.service.exact_matcher import AhsRow
+from automatic_job_matching.service.fuzzy_matcher import FuzzyMatcher
+
 
 class FuzzyMatcherConfidenceTDTests(SimpleTestCase):
     """TDD: Confidence scoring tests (should fail before implementation)."""

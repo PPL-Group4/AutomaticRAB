@@ -1,4 +1,5 @@
 from django.test import TestCase
+
 from pdf_parser.services.normalizer import PdfRowNormalizer
 
 

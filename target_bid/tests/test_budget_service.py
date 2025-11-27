@@ -1,6 +1,8 @@
 from decimal import Decimal
+
 import pytest
 from django.test import SimpleTestCase
+
 from target_bid.utils.budget_service import TargetBudgetConverter, adjust_unit_prices_preserving_volume
 from target_bid.validators import TargetBudgetInput
 

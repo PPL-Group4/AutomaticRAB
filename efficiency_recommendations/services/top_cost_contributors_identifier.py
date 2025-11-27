@@ -1,4 +1,4 @@
-from typing import Dict, List
+from typing import Dict
 
 
 def identify_top_cost_contributors(job_data: Dict, top_n: int = 3) -> Dict:
@@ -34,22 +34,22 @@ def identify_top_cost_contributors(job_data: Dict, top_n: int = 3) -> Dict:
     total_cost = job_data['total_cost']
     items = job_data['items']
 
-    print(f"\nJob Information:")
+    print("\nJob Information:")
     print(f"   Job ID: {job_id}")
     print(f"   Job Name: {job_name}")
     print(f"   Total Cost: Rp {total_cost:,}")
     print(f"   Number of Items: {len(items)}")
 
-    print(f"\n All Items (before sorting):")
+    print("\n All Items (before sorting):")
     for i, item in enumerate(items, 1):
         print(f"   {i}. {item['name']}")
         print(f"      Cost: Rp {item['cost']:,} ({item['weight_pct']}%)")
 
     # Sort items by weight_pct in descending order and take top N
-    print(f"\nSorting items by weight_pct (descending)...")
+    print("\nSorting items by weight_pct (descending)...")
     sorted_items = sorted(items, key=lambda x: x['weight_pct'], reverse=True)
 
-    print(f"\nSorted Items:")
+    print("\nSorted Items:")
     for i, item in enumerate(sorted_items, 1):
         print(f"   {i}. {item['name']}")
         print(f"      Cost: Rp {item['cost']:,} ({item['weight_pct']}%)")

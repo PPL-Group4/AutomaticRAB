@@ -1,6 +1,8 @@
 from __future__ import annotations
+
 import io
-from typing import List, Dict
+from typing import Dict, List
+
 from matplotlib import pyplot as plt
 
 plt.switch_backend("Agg")

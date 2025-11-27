@@ -1,5 +1,6 @@
-from typing import Dict
 from decimal import Decimal
+from typing import Dict
+
 
 def identify_highest_cost_weight_item(job_data: Dict) -> Dict:
     items = job_data.get('items', [])

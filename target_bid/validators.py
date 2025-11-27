@@ -3,12 +3,12 @@ from __future__ import annotations
 import re
 from abc import ABC, abstractmethod
 from collections import defaultdict
+from collections.abc import Iterable
 from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
-from typing import Any, Dict, Iterable, Optional
+from typing import Any, Dict, Optional
 
 from django.core.exceptions import ValidationError
-
 
 # Thousand/decimal separator patterns reused from other validators in the project.
 _THOUSAND_DOT_DECIMAL_COMMA = re.compile(r"^\d{1,3}(\.\d{3})+,\d+$")

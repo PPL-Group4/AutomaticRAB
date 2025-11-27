@@ -6,11 +6,12 @@ from pathlib import Path
 from typing import Dict, List
 
 from django.db.models import Q
+
 from target_bid.models.scraped_product import (
+    GemilangProduct,
     JuraganMaterialProduct,
     Mitra10Product,
     TokopediaProduct,
-    GemilangProduct,
 )
 
 logger = logging.getLogger(__name__)
