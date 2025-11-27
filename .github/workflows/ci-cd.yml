@@ -2,6 +2,8 @@ name: CI - CD
 
 on:
   push:
+    branches:
+      - '**'
   pull_request:
   workflow_dispatch:
 
@@ -31,22 +33,16 @@ jobs:
 
     env:
       DJANGO_SETTINGS_MODULE: AutomaticRAB.settings
-      SECRET_KEY: ${{ secrets.SECRET_KEY || 'insecure-test-key' }}
-      MYSQL_NAME: ${{ secrets.MYSQL_NAME }}
-      MYSQL_USER: ${{ secrets.MYSQL_USER }}
-      MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
-      MYSQL_HOST: ${{ secrets.MYSQL_HOST }}
-      MYSQL_PORT: ${{ secrets.MYSQL_PORT }}
+      SECRET_KEY: ${{ secrets.SECRET_KEY || 'insecure-test-key-for-ci-only' }}
       CELERY_BROKER_URL: memory://localhost/
       CELERY_RESULT_BACKEND: cache+memory://
-      SECRET_KEY: ${{ secrets.SECRET_KEY || 'insecure-test-key-for-ci-only' }}
       CI_MYSQL_ROOT_PASSWORD: ${{ secrets.CI_MYSQL_ROOT_PASSWORD || 'ci_root_pass_2024' }}
       CI_MYSQL_USER_PASSWORD: ${{ secrets.CI_MYSQL_USER_PASSWORD || 'ci_user_pass_2024' }}
-      MYSQL_NAME: test_autorab_db
-      MYSQL_USER: test_user
-      MYSQL_PASSWORD: ${{ secrets.CI_MYSQL_USER_PASSWORD || 'ci_user_pass_2024' }}
-      MYSQL_HOST: 127.0.0.1
-      MYSQL_PORT: 3306
+      MYSQL_NAME: ${{ secrets.MYSQL_NAME || 'test_autorab_db' }}
+      MYSQL_USER: ${{ secrets.MYSQL_USER || 'test_user' }}
+      MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD || secrets.CI_MYSQL_USER_PASSWORD || 'ci_user_pass_2024' }}
+      MYSQL_HOST: ${{ secrets.MYSQL_HOST || '127.0.0.1' }}
+      MYSQL_PORT: ${{ secrets.MYSQL_PORT || 3306 }}
 
     steps:
       - name: Checkout repository
