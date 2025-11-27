@@ -38,11 +38,12 @@ jobs:
       CELERY_RESULT_BACKEND: cache+memory://
       CI_MYSQL_ROOT_PASSWORD: ${{ secrets.CI_MYSQL_ROOT_PASSWORD || 'ci_root_pass_2024' }}
       CI_MYSQL_USER_PASSWORD: ${{ secrets.CI_MYSQL_USER_PASSWORD || 'ci_user_pass_2024' }}
-      MYSQL_NAME: ${{ secrets.MYSQL_NAME || 'test_autorab_db' }}
-      MYSQL_USER: ${{ secrets.MYSQL_USER || 'test_user' }}
-      MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD || secrets.CI_MYSQL_USER_PASSWORD || 'ci_user_pass_2024' }}
-      MYSQL_HOST: ${{ secrets.MYSQL_HOST || '127.0.0.1' }}
-      MYSQL_PORT: ${{ secrets.MYSQL_PORT || 3306 }}
+      MYSQL_NAME: test_autorab_db
+      MYSQL_USER: test_user
+      MYSQL_PASSWORD: ${{ secrets.CI_MYSQL_USER_PASSWORD || 'ci_user_pass_2024' }}
+      MYSQL_HOST: 127.0.0.1
+      MYSQL_PORT: 3306
+      MYSQL_TEST_NAME: test_autorab_db
 
     steps:
       - name: Checkout repository
@@ -79,8 +80,13 @@ jobs:
       - name: Create test user with proper permissions
         run: |
           mysql -h 127.0.0.1 -u root -p"${CI_MYSQL_ROOT_PASSWORD}" -e "
+            CREATE DATABASE IF NOT EXISTS test_autorab_db;
+            CREATE DATABASE IF NOT EXISTS scrapperdb;
             CREATE USER IF NOT EXISTS 'test_user'@'%' IDENTIFIED BY '${CI_MYSQL_USER_PASSWORD}';
-            GRANT ALL PRIVILEGES ON *.* TO 'test_user'@'%' WITH GRANT OPTION;
+            GRANT ALL PRIVILEGES ON test_autorab_db.* TO 'test_user'@'%';
+            GRANT ALL PRIVILEGES ON scrapperdb.* TO 'test_user'@'%';
+            GRANT ALL PRIVILEGES ON test_autorab_db.* TO 'test_user'@'localhost';
+            GRANT ALL PRIVILEGES ON scrapperdb.* TO 'test_user'@'localhost';
             FLUSH PRIVILEGES;
           "
 
