@@ -37,7 +37,7 @@
         }
         
         .subtitle {
-            color: #666;
+            color: #4a4a4a;
             margin-bottom: 30px;
             font-size: 14px;
         }
@@ -112,8 +112,9 @@
         button {
             width: 100%;
             padding: 15px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #5568d3 0%, #6a3d9a 100%);
             color: white;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
             border: none;
             border-radius: 8px;
             font-size: 16px;
@@ -149,17 +150,17 @@
         
         .success-message {
             background: #efe;
-            color: #3c3;
+            color: #1b5e20;
             padding: 12px;
             border-radius: 8px;
             margin-bottom: 20px;
-            border-left: 4px solid #3c3;
+            border-left: 4px solid #1b5e20;
             display: none;
         }
         
         .loader {
             border: 3px solid #f3f3f3;
-            border-top: 3px solid #667eea;
+            border-top: 3px solid #5568d3;
             border-radius: 50%;
             width: 20px;
             height: 20px;
@@ -180,7 +181,7 @@
             border-radius: 8px;
             margin-top: 20px;
             font-size: 13px;
-            color: #1976d2;
+            color: #0d47a1;
         }
         
         .info-box strong {
@@ -228,12 +229,13 @@
     </div>
     
     <script>
-        const form = document.getElementById('uploadForm');
-        const fileInput = document.getElementById('excel_file');
-        const fileName = document.getElementById('fileName');
-        const submitBtn = document.getElementById('submitBtn');
-        const errorMessage = document.getElementById('errorMessage');
-        const successMessage = document.getElementById('successMessage');
+        (function() {
+            const form = document.getElementById('uploadForm');
+            const fileInput = document.getElementById('excel_file');
+            const fileName = document.getElementById('fileName');
+            const submitBtn = document.getElementById('submitBtn');
+            const errorMessage = document.getElementById('errorMessage');
+            const successMessage = document.getElementById('successMessage');
         
         // Show selected file name
         fileInput.addEventListener('change', function() {
@@ -274,7 +276,7 @@
                     
                     // Redirect to analysis page
                     setTimeout(() => {
-                        window.location.href = data.redirect_url;
+                        globalThis.location.href = data.redirect_url;
                     }, 1000);
                 } else {
                     throw new Error(data.error || 'Upload failed');
@@ -288,6 +290,7 @@
                 submitBtn.innerHTML = 'Upload & Analyze';
             }
         });
+        })();
     </script>
 </body>
 </html>
