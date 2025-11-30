@@ -1,4 +1,4 @@
-from django.test import TestCase
+from django.test import SimpleTestCase
 from unittest.mock import Mock, MagicMock, patch
 from automatic_job_matching.service.fuzzy_matcher import (
     FuzzyMatcher,
@@ -27,7 +27,7 @@ class FakeAhsRepo:
         return list(self._rows)
 
 
-class FilterByUnitTests(TestCase):
+class FilterByUnitTests(SimpleTestCase):
     """Test _filter_by_unit function."""
 
     def test_filter_by_unit_no_unit(self):
@@ -90,7 +90,7 @@ class FilterByUnitTests(TestCase):
             self.assertEqual(len(result), 1)
 
 
-class WordWeightConfigTests(TestCase):
+class WordWeightConfigTests(SimpleTestCase):
     """Test WordWeightConfig class."""
 
     def test_is_action_word(self):
@@ -109,7 +109,7 @@ class WordWeightConfigTests(TestCase):
 
 
 
-class SimilarityCalculatorTests(TestCase):
+class SimilarityCalculatorTests(SimpleTestCase):
     """Test SimilarityCalculator class."""
 
     def setUp(self):
@@ -165,7 +165,7 @@ class SimilarityCalculatorTests(TestCase):
         self.assertLess(score, 1.0)
 
 
-class CandidateProviderTests(TestCase):
+class CandidateProviderTests(SimpleTestCase):
     """Test CandidateProvider class."""
 
     def test_get_candidates_by_head_token_no_unit(self):
@@ -585,7 +585,7 @@ class CandidateProviderTests(TestCase):
             self.assertGreater(len(candidates), 0)
 
 
-class MatchingProcessorTests(TestCase):
+class MatchingProcessorTests(SimpleTestCase):
     """Test MatchingProcessor class."""
 
     def test_find_best_match_returns_highest_score(self):
@@ -710,17 +710,26 @@ class MatchingProcessorTests(TestCase):
 
     def test_find_multiple_matches_skips_empty_candidate_names(self):
         """Test multiple matches skips candidates with empty names."""
-        repo = FakeAhsRepo([
+        stub_repo = Mock()
+        candidates = [
             AhsRow(1, "A.01", ""),
             AhsRow(2, "A.02", "test"),
-        ])
-        calculator = SimilarityCalculator(WordWeightConfig())
-        provider = CandidateProvider(repo)
-        processor = MatchingProcessor(calculator, provider, 0.5)
+        ]
+        stub_repo.get_all_ahs.return_value = candidates
+        stub_repo.by_name_candidates.return_value = candidates
+
+        mock_calculator = Mock()
+        mock_calculator.calculate_sequence_similarity.return_value = 0.8
+        mock_calculator.calculate_partial_similarity.return_value = 0.9
+
+        provider = CandidateProvider(stub_repo)
+        processor = MatchingProcessor(mock_calculator, provider, 0.5)
 
         results = processor.find_multiple_matches("test", limit=5)
         self.assertGreater(len(results), 0)
         self.assertEqual(results[0]["id"], 2)
+        stub_repo.by_name_candidates.assert_called()
+        mock_calculator.calculate_sequence_similarity.assert_called()
 
     def test_find_multiple_matches_skips_empty_and_appends_valid(self):
         """Test multiple matches skips empty names and appends valid ones (lines 658, 679-680, 697-698)."""
@@ -756,7 +765,7 @@ class MatchingProcessorTests(TestCase):
         self.assertEqual(processor._min_similarity, 1.0)
 
 
-class FuzzyMatcherTests(TestCase):
+class FuzzyMatcherTests(SimpleTestCase):
     """Test FuzzyMatcher class."""
 
     def test_match_returns_result(self):
@@ -987,7 +996,7 @@ class FuzzyMatcherTests(TestCase):
         self.assertEqual(matcher.min_similarity, 1.0)
 
 
-class HelperFunctionTests(TestCase):
+class HelperFunctionTests(SimpleTestCase):
     """Test helper functions."""
 
     def test_norm_name_with_valid_string(self):

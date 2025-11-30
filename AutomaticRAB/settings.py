@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 from pathlib import Path
+import logging
 import os
 import sys
 from django.core.exceptions import ImproperlyConfigured
@@ -49,6 +50,9 @@ DEBUG = os.getenv("DEBUG", "False") == "True"
 
 ALLOWED_HOSTS = _split_env_list(os.getenv("ALLOWED_HOSTS", "localhost, 127.0.0.1"), "localhost")
 
+if "host.docker.internal" not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append("host.docker.internal")
+
 CSRF_TRUSTED_ORIGINS = _split_env_list(os.getenv("CSRF_TRUSTED_ORIGINS", ""))
 
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
@@ -73,6 +77,7 @@ X_FRAME_OPTIONS = os.getenv("X_FRAME_OPTIONS", "DENY")
 # Application definition
 
 INSTALLED_APPS = [
+    'django_prometheus',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -107,6 +112,7 @@ REST_FRAMEWORK = {
 }
 
 MIDDLEWARE = [
+    'django_prometheus.middleware.PrometheusBeforeMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'AutomaticRAB.middleware.SecurityHeadersMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
@@ -116,6 +122,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'django_prometheus.middleware.PrometheusAfterMiddleware',
 ]
 
 ROOT_URLCONF = 'AutomaticRAB.urls'
@@ -143,33 +150,33 @@ WSGI_APPLICATION = 'AutomaticRAB.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.mysql',
+        'ENGINE': 'django_prometheus.db.backends.mysql',
         'NAME': os.getenv('MYSQL_NAME'),
         'USER': os.getenv('MYSQL_USER'),
         'PASSWORD': os.getenv('MYSQL_PASSWORD'),
         'HOST': os.getenv('MYSQL_HOST'),
         'PORT': os.getenv('MYSQL_PORT'),
         'OPTIONS': {
-            'ssl': os.getenv('MYSQL_SSL_REQUIRED', 'True') == 'True',
-        } if os.getenv('MYSQL_SSL_REQUIRED', 'True') == 'True' else {},
+            'ssl': False
+        },
     },
     'scraper': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'ScraperDB',
-        'USER': os.getenv('MYSQL_USER'),
+        'ENGINE': 'django_prometheus.db.backends.mysql',
+        'NAME': 'scrapperdb',
+        'USER': os.getenv('MYSQL_USER'), 
         'PASSWORD': os.getenv('MYSQL_PASSWORD'),
         'HOST': os.getenv('MYSQL_HOST'),
         'PORT': os.getenv('MYSQL_PORT'),
         'OPTIONS': {
-            'ssl': os.getenv('MYSQL_SSL_REQUIRED', 'True') == 'True',
-        } if os.getenv('MYSQL_SSL_REQUIRED', 'True') == 'True' else {},
+            'ssl': False
+        },
     },
 }
 
 if RUNNING_TESTS:
     if FORCE_SQLITE_FOR_TESTS and not FORCE_MYSQL_FOR_TESTS:
         DATABASES['default'] = {
-            'ENGINE': 'django.db.backends.sqlite3',
+            'ENGINE': 'django_prometheus.db.backends.sqlite3',
             'NAME': BASE_DIR / 'test_db.sqlite3',
         }
     else:
@@ -288,13 +295,72 @@ DATA_UPLOAD_MAX_NUMBER_FIELDS = int(os.getenv("DATA_UPLOAD_MAX_NUMBER_FIELDS", "
 FILE_UPLOAD_TEMP_DIR = os.path.join(BASE_DIR, 'tmp')
 os.makedirs(FILE_UPLOAD_TEMP_DIR, exist_ok=True)
 
+# Celery Configuration
+# Default URLs work for both:
+# - Local development: redis://localhost:6379/0
+# - Docker: redis://redis:6379/0 (set in docker-compose.yml)
+# - CI/CD tests: memory:// (no Redis needed)
+CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL', 'redis://localhost:6379/0')
+CELERY_RESULT_BACKEND = os.getenv('CELERY_RESULT_BACKEND', 'redis://localhost:6379/0')
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = 'UTC'
+CELERY_TASK_TRACK_STARTED = True
+CELERY_TASK_TIME_LIMIT = 30 * 60  # 30 minutes max for any task
+CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
+
+# For tests, use eager mode to run tasks synchronously (no Redis needed)
+if RUNNING_TESTS:
+    CELERY_TASK_ALWAYS_EAGER = True
+    CELERY_TASK_EAGER_PROPAGATES = True
+
 import sentry_sdk
 from sentry_sdk.integrations.django import DjangoIntegration
+from sentry_sdk.integrations.logging import LoggingIntegration
 
-sentry_sdk.init(
-    dsn="https://ee22a1ffdc3029795e24cbf5e3e241ff@o4510344475574272.ingest.us.sentry.io/4510344491368448",
-    integrations=[DjangoIntegration()],
-    traces_sample_rate=1.0,
-    send_default_pii=True,
-    environment="development",
+
+def _env_flag(name: str, default: bool = False) -> bool:
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+    return raw.strip().lower() in {"1", "true", "yes", "on"}
+
+
+SENTRY_DSN = os.getenv(
+    "SENTRY_DSN",
+    "https://9f3bc5e234ea076cf3c43a4388542357@o4510418038685696.ingest.us.sentry.io/4510418045239296",
 )
+
+if SENTRY_DSN:
+    sentry_logging = LoggingIntegration(
+        level=getattr(
+            logging,
+            os.getenv("SENTRY_BREADCRUMB_LEVEL", "INFO").upper(),
+            logging.INFO,
+        ),
+        event_level=getattr(
+            logging,
+            os.getenv("SENTRY_EVENT_LEVEL", "INFO").upper(),
+            logging.INFO,
+        ),
+    )
+
+    sentry_sdk.init(
+        dsn=SENTRY_DSN,
+        enable_logs=True,
+    integrations=[
+        LoggingIntegration(
+            level=logging.INFO,       # what becomes a breadcrumb/log entry
+            event_level=logging.WARNING,  # only warnings+ become issues
+        ),
+        DjangoIntegration(),
+         ],        
+        traces_sample_rate=float(os.getenv("SENTRY_TRACES_SAMPLE_RATE", "0.0")),
+        profiles_sample_rate=float(os.getenv("SENTRY_PROFILES_SAMPLE_RATE", "0.0")),
+        send_default_pii=_env_flag("SENTRY_SEND_DEFAULT_PII"),
+        environment=os.getenv(
+            "SENTRY_ENVIRONMENT",
+            os.getenv("ENVIRONMENT", "development"),
+        ),
+    )

@@ -1,9 +1,29 @@
-from django.test import TestCase
+from django.test import SimpleTestCase
 from unittest.mock import patch
 from automatic_job_matching.service.matching_service import MatchingService
 
 
-class MatchingServiceFallbackTests(TestCase):
+def _identity_translation(self, text, *args, **kwargs):
+    return text
+
+
+class MatchingServiceTestCase(SimpleTestCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls._translator_patch = patch(
+            "automatic_job_matching.service.matching_service.TranslationService.translate_to_indonesian",
+            new=_identity_translation,
+        )
+        cls._translator_patch.start()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls._translator_patch.stop()
+        super().tearDownClass()
+
+
+class MatchingServiceFallbackTests(MatchingServiceTestCase):
     @patch("automatic_job_matching.service.matching_service.FuzzyMatcher")
     def test_fuzzy_match_fallback_to_match(self, mock_matcher_cls):
         fake_matcher = mock_matcher_cls.return_value
@@ -51,7 +71,7 @@ class MatchingServiceFallbackTests(TestCase):
         self.assertEqual(result[0]["code"], "M.01")
 
 
-class MatchingSingleVsMultiWordTests(TestCase):
+class MatchingSingleVsMultiWordTests(MatchingServiceTestCase):
     @patch("automatic_job_matching.service.matching_service.MatchingService.perform_exact_match")
     @patch("automatic_job_matching.service.matching_service.MatchingService.perform_multiple_match")
     def test_single_word_returns_multiple_matches(self, mock_multi, mock_exact):
@@ -78,7 +98,7 @@ class MatchingSingleVsMultiWordTests(TestCase):
         mock_fuzzy.assert_called_once()
 
 
-class MatchingServiceEdgeCaseTests(TestCase):
+class MatchingServiceEdgeCaseTests(MatchingServiceTestCase):
     @patch("automatic_job_matching.service.matching_service.FuzzyMatcher")
     def test_fuzzy_match_with_exception(self, mock_fuzzy_cls):
         mock_matcher = mock_fuzzy_cls.return_value
@@ -257,4 +277,175 @@ class MatchingServiceEdgeCaseTests(TestCase):
         result = MatchingService.perform_fuzzy_match("pasang beton", unit="m3")
         self.assertEqual(result["code"], "U.01")
         fake_matcher.match_with_confidence.assert_called_once_with("pasang beton", unit="m3")
+
+
+class MatchingServiceBulkOperationTests(MatchingServiceTestCase):
+    def test_perform_bulk_best_match_invokes_best_match_for_each_item(self):
+        payload = [
+            {"description": "item one", "unit": "m2"},
+            {"description": "item two", "unit": None},
+        ]
+
+        with patch.object(
+            MatchingService,
+            "perform_best_match",
+            side_effect=[
+                {"id": 1, "code": "A.01", "name": "Exact", "confidence": 1.0},
+                [
+                    {"id": 2, "code": "B.01", "name": "Fallback 1"},
+                    {"id": 3, "code": "B.02", "name": "Fallback 2"},
+                ],
+            ],
+        ) as mock_best:
+            results = MatchingService.perform_bulk_best_match(payload)
+
+        self.assertEqual(len(results), 2)
+        self.assertEqual(results[0]["status"], "found")
+        self.assertEqual(results[1]["status"], "found 2 similar")
+        self.assertEqual(results[0]["match"]["id"], 1)
+        self.assertEqual(len(results[1]["match"]), 2)
+        mock_best.assert_any_call("item one", unit="m2")
+        mock_best.assert_any_call("item two", unit=None)
+
+    def test_perform_bulk_best_match_handles_exceptions(self):
+        payload = [{"description": "boom", "unit": None}]
+
+        with patch.object(MatchingService, "perform_best_match", side_effect=Exception("db failure")):
+            results = MatchingService.perform_bulk_best_match(payload)
+
+        self.assertEqual(results[0]["status"], "error")
+        self.assertIsNone(results[0]["match"])
+        self.assertIn("error", results[0])
+
+    def test_perform_bulk_best_match_marks_not_found(self):
+        payload = [{"description": "missing", "unit": "pcs"}]
+
+        with patch.object(MatchingService, "perform_best_match", return_value=None):
+            results = MatchingService.perform_bulk_best_match(payload)
+
+        self.assertEqual(results[0]["status"], "not found")
+        self.assertIsNone(results[0]["match"])
+
+    def test_perform_bulk_best_match_with_missing_description(self):
+        payload = [{"unit": "m2"}]
+
+        results = MatchingService.perform_bulk_best_match(payload)
+
+        self.assertEqual(results[0]["status"], "not found")
+        self.assertIsNone(results[0]["match"])
+        self.assertIsNone(results[0]["description"])
+
+    def test_perform_bulk_best_match_with_none_payload(self):
+        results = MatchingService.perform_bulk_best_match(None)
+        self.assertEqual(results, [])
+
+
+class MatchingServiceDetermineStatusTests(MatchingServiceTestCase):
+    def test_determine_status_with_alternatives(self):
+        result = {
+            "message": "No matches with the same unit found.",
+            "alternatives": [{"id": 1}],
+        }
+        status = MatchingService.determine_status(result)
+        self.assertEqual(status, "unit mismatch")
+
+    def test_determine_status_with_found_status(self):
+        result = {"status": "found", "confidence": 0.5}
+        status = MatchingService.determine_status(result)
+        self.assertEqual(status, "found")
+
+    def test_determine_status_with_confidence_only(self):
+        result = {"confidence": 0.75}
+        status = MatchingService.determine_status(result)
+        self.assertEqual(status, "similar")
+
+    def test_determine_status_with_unit_mismatch_flag(self):
+        result = {"status": "unit_mismatch", "unit_mismatch": True}
+        status = MatchingService.determine_status(result)
+        self.assertEqual(status, "unit mismatch")
+
+    def test_determine_status_with_list_multiple(self):
+        result = [1, 2, 3]
+        status = MatchingService.determine_status(result)
+        self.assertEqual(status, "found 3 similar")
+
+    def test_determine_status_with_single_result_list(self):
+        result = [1]
+        status = MatchingService.determine_status(result)
+        self.assertEqual(status, "similar")
+
+    def test_determine_status_with_non_struct_value(self):
+        status = MatchingService.determine_status("raw")
+        self.assertEqual(status, "found")
+
+    def test_multi_word_fallback_returns_alternatives(self):
+        with patch.object(MatchingService, "perform_exact_match", return_value=None) as mock_exact, \
+             patch.object(MatchingService, "perform_fuzzy_match", return_value=None) as mock_fuzzy, \
+             patch.object(MatchingService, "perform_multiple_match", side_effect=[[], [{"id": 1, "code": "A", "unit": "m2"}]]) as mock_multi:
+            result = MatchingService.perform_best_match("multi word query", unit="pcs")
+
+        self.assertIsInstance(result, dict)
+        self.assertIn("alternatives", result)
+        self.assertTrue(all(item.get("unit_mismatch") for item in result["alternatives"]))
+        self.assertEqual(mock_multi.call_count, 2)
+        mock_exact.assert_called_once()
+        mock_fuzzy.assert_called_once()
+
+    def test_multi_word_result_sets_unit_mismatch_status(self):
+        with patch.object(MatchingService, "perform_exact_match", return_value={
+            "id": 9,
+            "code": "M.01",
+            "name": "Example",
+            "unit": "m3",
+            "confidence": 1.0,
+        }):
+            result = MatchingService.perform_best_match("multi word query", unit="pcs")
+
+        self.assertTrue(result["unit_mismatch"])
+        self.assertEqual(result["status"], "unit_mismatch")
+
+    def test_multi_word_result_sets_found_status(self):
+        with patch.object(MatchingService, "perform_exact_match", return_value={
+            "id": 10,
+            "code": "F.01",
+            "name": "Exact",
+            "unit": "pcs",
+            "confidence": 1.0,
+        }):
+            result = MatchingService.perform_best_match("multi word query", unit="pcs")
+
+        self.assertFalse(result["unit_mismatch"])
+        self.assertEqual(result["status"], "found")
+
+    def test_multi_word_result_sets_similar_status(self):
+        with patch.object(MatchingService, "perform_exact_match", return_value={
+            "id": 11,
+            "code": "S.01",
+            "name": "Similar",
+            "unit": "pcs",
+            "confidence": 0.8,
+        }):
+            result = MatchingService.perform_best_match("multi word query", unit="pcs")
+
+        self.assertFalse(result["unit_mismatch"])
+        self.assertEqual(result["status"], "similar")
+
+    def test_single_word_fallback_returns_alternatives(self):
+        with patch.object(MatchingService, "perform_exact_match", return_value=None) as mock_exact, \
+             patch.object(MatchingService, "perform_multiple_match", side_effect=[[], [{"id": 7, "code": "S", "unit": "kg"}]]) as mock_multi:
+            result = MatchingService.perform_best_match("batu", unit="pcs")
+
+        self.assertIsInstance(result, dict)
+        self.assertIn("alternatives", result)
+        self.assertTrue(all(alt.get("unit_mismatch") for alt in result["alternatives"]))
+        self.assertIn("message", result)
+        self.assertEqual(mock_multi.call_count, 2)
+        mock_exact.assert_called_once()
+
+    def test_single_word_fallback_returns_none(self):
+        with patch.object(MatchingService, "perform_exact_match", return_value=None), \
+             patch.object(MatchingService, "perform_multiple_match", side_effect=[[], []]):
+            result = MatchingService.perform_best_match("batu", unit="pcs")
+
+        self.assertIsNone(result)
 

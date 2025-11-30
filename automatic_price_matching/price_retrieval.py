@@ -84,7 +84,18 @@ class CsvAhspSource:
             with open(self.csv_path, mode="r", encoding="utf-8-sig", newline="") as fh:
                 reader = csv.DictReader(fh, delimiter=";")
                 for row in reader:
-                    normalized = { (k or "").strip().upper(): (v or "").strip() for k, v in row.items() }
+                    normalized: Dict[str, str] = {}
+                    for raw_key, raw_value in row.items():
+                        key = (raw_key or "").strip().upper()
+                        if not key:
+                            # DictReader stores surplus columns under a None key; ignore them.
+                            continue
+                        if isinstance(raw_value, list):
+                            value_parts = [str(part).strip() for part in raw_value if str(part).strip()]
+                            value = ";".join(value_parts)
+                        else:
+                            value = str(raw_value or "").strip()
+                        normalized[key] = value
                     raw_code = normalized.get("NO") or normalized.get(";NO") or normalized.get("NO.") or normalized.get("1")
                     raw_price = normalized.get("HARGA SATUAN") or normalized.get("HARGA SAT")
                     if not raw_code:
