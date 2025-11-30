@@ -1,9 +1,6 @@
 from django.http import JsonResponse, Http404
 from django.views.decorators.http import require_GET
 from cost_weight.models import TestJob
-from efficiency_recommendations.services.ahsp_availability_checker import (
-    check_items_in_ahsp
-)
 from efficiency_recommendations.services.notification_generator import (
     generate_notifications
 )
@@ -11,10 +8,7 @@ from efficiency_recommendations.services.warning_indicator_builder import build_
 from efficiency_recommendations.services.price_deviation_detector import (
     detect_price_deviations
 )
-from efficiency_recommendations.services.matching_cache_service import (
-    MatchingCacheService,
-    extract_ahsp_data_from_match
-)
+from automatic_job_matching.service.matching_service import MatchingService
 from decimal import Decimal
 
 
@@ -46,39 +40,30 @@ def get_job_notifications(request, job_id):
     except TestJob.DoesNotExist:
         raise Http404("Job not found")
 
-    # Create cache instance for this request
-    cache = MatchingCacheService()
-
     # Get all items for the job
     items_queryset = job.items.all()
 
     # Convert queryset to list of dicts for service layer
-    items = [
+    # Use ahsp_code to determine if item is in AHSP (NO expensive matching needed!)
+    items_with_status = [
         {
             'name': item.name,
             'cost': item.cost,
             'weight_pct': item.weight_pct,
             'quantity': item.quantity,
-            'unit_price': item.unit_price
+            'unit_price': item.unit_price,
+            'in_ahsp': bool(item.ahsp_code and item.ahsp_code.strip())  # If code exists, it's in AHSP
         }
         for item in items_queryset
     ]
 
-    # Check AHSP availability (adds 'in_ahsp' field to each item) - using cache
-    items_with_status = check_items_in_ahsp(items, cache=cache)
-
-    # Log cache effectiveness
-    cache_stats = cache.get_stats()
-    print(f"\n[CACHE STATS - Notifications] Hits: {cache_stats['hits']}, Misses: {cache_stats['misses']}")
-    if cache_stats['misses'] > 0:
-        hit_ratio = cache_stats['hits'] / (cache_stats['hits'] + cache_stats['misses'])
-        print(f"[CACHE STATS] Hit ratio: {hit_ratio:.2%}")
+    print(f"\n[FAST CHECK] Checked {len(items_with_status)} items using ahsp_code field (no matching calls!)")
 
     # Generate notifications for items not in AHSP
     notifications = generate_notifications(items_with_status)
 
     # Aggregate/indicator fields
-    total_items = len(items)
+    total_items = len(items_with_status)
     warning_count = len(notifications)
     indicator = build_indicator(total_items, warning_count)
 
@@ -102,26 +87,37 @@ def get_job_notifications(request, job_id):
     return JsonResponse(response_data)
 
 
-def _get_item_with_reference_price(item, cache: MatchingCacheService):
+def _get_item_with_reference_price(item):
     """Get item data with AHSP reference price if available."""
     # Skip items with no unit price
     if not item.unit_price or item.unit_price <= 0:
         return None
 
     try:
-        # Use cache instead of direct matching
-        match_result = cache.get_or_match(item.name)
+        # Try to find AHSP reference price using MatchingService
+        match_result = MatchingService.perform_best_match(item.name)
 
-        # Extract AHSP data using the helper
-        ahsp_data = extract_ahsp_data_from_match(match_result, item.name)
-        reference_price = ahsp_data.get('reference_price')
+        # Extract reference price from match result
+        reference_price = None
 
-        if reference_price and reference_price > 0:
+        if match_result:
+            # Handle different response formats
+            if isinstance(match_result, dict):
+                reference_price = match_result.get('unit_price')
+            elif isinstance(match_result, list) and len(match_result) > 0:
+                # Get first match
+                first_match = match_result[0]
+                if isinstance(first_match, dict):
+                    reference_price = first_match.get('unit_price')
+
+        # Only add if we found a reference price
+        if reference_price and Decimal(str(reference_price)) > 0:
             return {
                 'name': item.name,
                 'actual_price': item.unit_price,
-                'reference_price': reference_price
+                'reference_price': Decimal(str(reference_price))
             }
+
     except Exception:
         # Skip items that cause errors
         pass
@@ -156,22 +152,12 @@ def get_price_deviations(request, job_id):
     except TestJob.DoesNotExist:
         raise Http404("Job not found")
 
-    # Create cache instance for this request
-    cache = MatchingCacheService()
-
-    # Get items with AHSP reference prices (using cache)
+    # Get items with AHSP reference prices
     items_with_prices = []
     for item in job.items.all():
-        item_data = _get_item_with_reference_price(item, cache)
+        item_data = _get_item_with_reference_price(item)
         if item_data:
             items_with_prices.append(item_data)
-
-    # Log cache effectiveness
-    cache_stats = cache.get_stats()
-    print(f"\n[CACHE STATS - Price Deviations] Hits: {cache_stats['hits']}, Misses: {cache_stats['misses']}")
-    if cache_stats['misses'] > 0:
-        hit_ratio = cache_stats['hits'] / (cache_stats['hits'] + cache_stats['misses'])
-        print(f"[CACHE STATS] Hit ratio: {hit_ratio:.2%}")
 
     # Detect deviations (threshold: 10%)
     deviations = detect_price_deviations(
