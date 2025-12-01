@@ -6,7 +6,7 @@ class UnmatchedAhsEntry(models.Model):
     Stores job descriptions that couldn't be matched to any AHS code.
     Allows admins to manually assign AHS codes later.
     """
-    name = models.TextField(unique=True)  # The job description from RAB file
+    name = models.CharField(max_length=255, unique=True)  # The job description from RAB file
     ahs_code = models.CharField(max_length=50, blank=True, default='')  # To be filled by admin
     created_at = models.DateTimeField(auto_now_add=True)
     
