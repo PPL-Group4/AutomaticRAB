@@ -170,6 +170,7 @@
   const PDF_UPLOAD_ENDPOINT = "{% url 'pdf_parser:rab_converted_pdf' %}";
   const OPTIMIZE_AHS_ENDPOINT_TEMPLATE = "{% url 'optimize_ahs_materials_view' '__AHS_CODE__' %}";
   const OPTIMIZE_AHS_PLACEHOLDER = "__AHS_CODE__";
+  const BREAKDOWN_OVERRIDES_KEY = "matched_breakdown_overrides";
   const suggestionCache = new Map();
   const dropdownRequestState = new WeakMap();
   const MANUAL_SUGGESTION_LIMIT = 12;
@@ -177,6 +178,13 @@
   const SAFE_ROW_KEY_PATTERN = /^[A-Za-z0-9._:-]{1,128}$/;
   const SAFE_NUMERIC_PATTERN = /^-?\d{0,12}(?:[.,]\d{0,4})?$/;
   const UNSAFE_CODE_PATTERN = /[<>]/;
+  let cachedBreakdownOverrides = null;
+  const RAB_PREVIEW_STATE_KEY = "rab_preview_state_v1";
+  const RAB_PREVIEW_STATE_VERSION = 1;
+  let lastRenderedRows = null;
+  let lastRenderOptions = {};
+  let persistPreviewStateTimeout = null;
+  let isRestoringPreviewState = false;
 
   function escapeHtml(input) {
     if (input === null || input === undefined) {
@@ -223,6 +231,275 @@
     }
     const fixed = Number(value).toFixed(6);
     return fixed.replace(/\.0+$/, "").replace(/(\.\d*?[1-9])0+$/, "$1").replace(/\.$/, "");
+  }
+
+  function sanitizePreviewOptions(options = {}) {
+    if (!options || typeof options !== "object") {
+      return {};
+    }
+    const sanitized = {};
+    if (typeof options.sourceType === "string") {
+      sanitized.sourceType = options.sourceType;
+    }
+    const jobIdValue = options.jobId ?? options.job_id;
+    if (jobIdValue !== undefined && jobIdValue !== null && jobIdValue !== "") {
+      sanitized.jobId = jobIdValue;
+    }
+    if (typeof options.sourceLabel === "string") {
+      sanitized.sourceLabel = options.sourceLabel;
+    }
+    return sanitized;
+  }
+
+  function previewStateReplacer(key, value) {
+    if (value instanceof Map || value instanceof Set) {
+      return undefined;
+    }
+    if (typeof value === "function") {
+      return undefined;
+    }
+    return value;
+  }
+
+  function collectRowAdjustments() {
+    const adjustments = {};
+    const rows = document.querySelectorAll("#rabTables tr[data-row-key]");
+    rows.forEach(row => {
+      const key = row.dataset.rowKey;
+      if (!key) {
+        return;
+      }
+      const priceInput = row.querySelector(".price-input");
+      const volumeInput = row.querySelector(".volume-input");
+      const totalCell = row.querySelector(".total-cell");
+      const analysisCell = row.querySelector(".analysis-code-cell");
+
+      const payload = {};
+      if (volumeInput && volumeInput.value !== "") {
+        payload.volume = volumeInput.value;
+      }
+      if (priceInput && priceInput.value !== "") {
+        payload.unit_price = priceInput.value;
+      }
+      if (priceInput) {
+        if (priceInput.dataset.origin) {
+          payload.price_origin = priceInput.dataset.origin;
+        }
+        if (priceInput.dataset.referencePrice !== undefined) {
+          payload.reference_price = priceInput.dataset.referencePrice;
+        }
+        if (priceInput.dataset.manualConfirmed !== undefined) {
+          payload.manual_confirmed = priceInput.dataset.manualConfirmed;
+        }
+      }
+      if (totalCell) {
+        const numericTotal = parseCurrencyNumber(totalCell.textContent);
+        if (Number.isFinite(numericTotal)) {
+          payload.total = numericTotal;
+        }
+      }
+      if (analysisCell) {
+        const text = analysisCell.textContent ? analysisCell.textContent.trim() : "";
+        if (text) {
+          payload.analysis_code = text;
+        }
+      }
+
+      if (Object.keys(payload).length) {
+        adjustments[key] = payload;
+      }
+    });
+    return adjustments;
+  }
+
+  function buildPreviewStatePayload() {
+    if (!Array.isArray(lastRenderedRows) || !lastRenderedRows.length) {
+      return null;
+    }
+    return {
+      version: RAB_PREVIEW_STATE_VERSION,
+      rows: lastRenderedRows,
+      options: sanitizePreviewOptions(lastRenderOptions),
+      adjustments: collectRowAdjustments(),
+      savedAt: Date.now(),
+    };
+  }
+
+  function persistRabPreviewStateImmediate() {
+    if (typeof localStorage === "undefined") {
+      return;
+    }
+    const payload = buildPreviewStatePayload();
+    if (!payload) {
+      clearPersistedPreviewState();
+      return;
+    }
+    try {
+      const serialized = JSON.stringify(payload, previewStateReplacer);
+      localStorage.setItem(RAB_PREVIEW_STATE_KEY, serialized);
+    } catch (error) {
+      console.warn("Failed to persist RAB preview state", error);
+    }
+  }
+
+  function schedulePersistPreviewState(delay = 350) {
+    if (isRestoringPreviewState) {
+      return;
+    }
+    if (persistPreviewStateTimeout) {
+      clearTimeout(persistPreviewStateTimeout);
+    }
+    persistPreviewStateTimeout = setTimeout(() => {
+      persistPreviewStateImmediate();
+      persistPreviewStateTimeout = null;
+    }, delay);
+  }
+
+  function clearPersistedPreviewState() {
+    if (typeof localStorage === "undefined") {
+      return;
+    }
+    try {
+      localStorage.removeItem(RAB_PREVIEW_STATE_KEY);
+    } catch (error) {
+      console.warn("Failed to clear RAB preview state", error);
+    }
+  }
+
+  function resetPreviewStateForNewParse() {
+    if (persistPreviewStateTimeout) {
+      clearTimeout(persistPreviewStateTimeout);
+      persistPreviewStateTimeout = null;
+    }
+    lastRenderedRows = null;
+    lastRenderOptions = {};
+    clearPersistedPreviewState();
+  }
+
+  function applyStoredAdjustments(adjustments) {
+    if (!adjustments || typeof adjustments !== "object") {
+      return;
+    }
+    Object.entries(adjustments).forEach(([rowKey, data]) => {
+      if (!rowKey || !data) {
+        return;
+      }
+      const row = document.querySelector(`#rabTables tr[data-row-key="${rowKey}"]`);
+      if (!row) {
+        return;
+      }
+      const priceInput = row.querySelector(".price-input");
+      const volumeInput = row.querySelector(".volume-input");
+      const totalCell = row.querySelector(".total-cell");
+      const analysisCell = row.querySelector(".analysis-code-cell");
+
+      if (volumeInput && Object.prototype.hasOwnProperty.call(data, "volume")) {
+        volumeInput.value = data.volume;
+      }
+
+      if (priceInput && Object.prototype.hasOwnProperty.call(data, "unit_price")) {
+        priceInput.value = data.unit_price;
+      }
+
+      if (priceInput && Object.prototype.hasOwnProperty.call(data, "price_origin")) {
+        updatePriceOriginUI(priceInput, data.price_origin, { skipTooltipRefresh: true });
+      }
+
+      if (priceInput && Object.prototype.hasOwnProperty.call(data, "reference_price")) {
+        priceInput.dataset.referencePrice = data.reference_price;
+      }
+
+      if (priceInput && Object.prototype.hasOwnProperty.call(data, "manual_confirmed")) {
+        priceInput.dataset.manualConfirmed = data.manual_confirmed;
+      }
+
+      if (priceInput) {
+        priceInput.dataset.previousValue = priceInput.value;
+      }
+
+      if (analysisCell && Object.prototype.hasOwnProperty.call(data, "analysis_code")) {
+        analysisCell.textContent = data.analysis_code;
+      }
+
+      if (totalCell) {
+        let totalValue = null;
+        if (Object.prototype.hasOwnProperty.call(data, "total")) {
+          totalValue = Number(data.total);
+        }
+        if (!Number.isFinite(totalValue)) {
+          const numericVolume = volumeInput ? parseCurrencyNumber(volumeInput.value) : 0;
+          const numericPrice = priceInput ? parseCurrencyNumber(priceInput.value) : 0;
+          totalValue = numericVolume * numericPrice;
+        }
+        if (Number.isFinite(totalValue)) {
+          totalCell.textContent = "Rp. " + totalValue.toLocaleString("id-ID", {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          });
+        }
+      }
+
+      updatePriceWarningForRow(row);
+    });
+    updateGrandTotalFromRows();
+  }
+
+  function restoreRabPreviewState() {
+    if (typeof localStorage === "undefined") {
+      return false;
+    }
+    const container = document.getElementById("rabTables");
+    if (container && container.children.length) {
+      return false;
+    }
+    let payload = null;
+    try {
+      const raw = localStorage.getItem(RAB_PREVIEW_STATE_KEY);
+      if (!raw) {
+        return false;
+      }
+      payload = JSON.parse(raw);
+    } catch (error) {
+      console.warn("Failed to parse persisted RAB preview state", error);
+      clearPersistedPreviewState();
+      return false;
+    }
+
+    if (!payload || payload.version !== RAB_PREVIEW_STATE_VERSION || !Array.isArray(payload.rows) || !payload.rows.length) {
+      clearPersistedPreviewState();
+      return false;
+    }
+
+    const options = sanitizePreviewOptions(payload.options || {});
+
+    try {
+      isRestoringPreviewState = true;
+      renderTables(payload.rows, options);
+    } catch (error) {
+      console.warn("Failed to restore RAB preview state", error);
+      isRestoringPreviewState = false;
+      clearPersistedPreviewState();
+      return false;
+    }
+
+    isRestoringPreviewState = false;
+
+    if (payload.adjustments && typeof payload.adjustments === "object") {
+      applyStoredAdjustments(payload.adjustments);
+    }
+
+    schedulePersistPreviewState();
+    return true;
+  }
+
+  if (typeof window !== "undefined") {
+    window.addEventListener("beforeunload", () => {
+      if (persistPreviewStateTimeout) {
+        clearTimeout(persistPreviewStateTimeout);
+        persistPreviewStateTimeout = null;
+      }
+      persistRabPreviewStateImmediate();
+    });
   }
 
 
@@ -678,6 +955,7 @@
       if (priceInput) {
         priceInput.value = normalized;
         priceInput.dataset.referencePrice = String(normalized);
+        priceInput.dataset.baseAutoPrice = String(normalized);
         priceInput.dataset.previousValue = priceInput.value;
         priceInput.dataset.manualConfirmed = "false";
         updatePriceOriginUI(priceInput, "auto");
@@ -694,6 +972,10 @@
 
       updatePriceWarningForRow(row);
     });
+
+    if (!isRestoringPreviewState) {
+      schedulePersistPreviewState();
+    }
   }
 
   async function requestOptimizedAhs(code, payload) {
@@ -740,6 +1022,84 @@
     });
 
     return map;
+  }
+
+  function refreshBreakdownOverridesCache() {
+    if (typeof localStorage === "undefined") {
+      cachedBreakdownOverrides = {};
+      return cachedBreakdownOverrides;
+    }
+    try {
+      const raw = localStorage.getItem(BREAKDOWN_OVERRIDES_KEY);
+      if (!raw) {
+        cachedBreakdownOverrides = {};
+        return cachedBreakdownOverrides;
+      }
+      const parsed = JSON.parse(raw);
+      cachedBreakdownOverrides = parsed && typeof parsed === "object" ? parsed : {};
+    } catch (error) {
+      console.warn("Failed to parse breakdown overrides", error);
+      cachedBreakdownOverrides = {};
+    }
+    return cachedBreakdownOverrides;
+  }
+
+  function getBreakdownOverridesCache() {
+    if (cachedBreakdownOverrides === null) {
+      return refreshBreakdownOverridesCache();
+    }
+    return cachedBreakdownOverrides;
+  }
+
+  function getBreakdownOverrideForCode(rawCode) {
+    if (!rawCode) {
+      return null;
+    }
+    const canonical = canonicalizeFrontendCode(rawCode);
+    if (!canonical) {
+      return null;
+    }
+    const overrides = getBreakdownOverridesCache();
+    const override = overrides[canonical];
+    if (!override) {
+      return null;
+    }
+    const unitPrice = parseCurrencyNumber(override.unit_price);
+    if (!Number.isFinite(unitPrice) || unitPrice < 0) {
+      return null;
+    }
+    return { unit_price: unitPrice };
+  }
+
+  function applyBreakdownOverrides({ skipGrandTotalUpdate = false } = {}) {
+    const overrides = refreshBreakdownOverridesCache();
+    if (!overrides || !Object.keys(overrides).length) {
+      return;
+    }
+
+    const groups = collectRowsByAnalysisCode();
+    if (!groups.size) {
+      return;
+    }
+
+    let applied = false;
+
+    for (const [canonical, info] of groups.entries()) {
+      const override = overrides[canonical];
+      if (!override) {
+        continue;
+      }
+      const unitValue = parseCurrencyNumber(override.unit_price);
+      if (!Number.isFinite(unitValue) || unitValue < 0) {
+        continue;
+      }
+      applyOptimizedUnitPrice(info.rows, unitValue);
+      applied = true;
+    }
+
+    if (applied && !skipGrandTotalUpdate) {
+      updateGrandTotalFromRows();
+    }
   }
 
   async function applyTargetBid() {
@@ -861,6 +1221,7 @@
       showError("Terjadi kesalahan saat menerapkan target bid: " + (err.message || err));
     } finally {
       setTargetBidBusy(false);
+      schedulePersistPreviewState();
     }
   }
 
@@ -906,6 +1267,7 @@
 
         const rows = data.rows || data.excel_standard || data.excel_apendo;
         if (rows) {
+          resetPreviewStateForNewParse();
           renderTables(rows, { sourceType: "excel", jobId: data.job_id });
           fileInput.value = "";
         } else {
@@ -937,6 +1299,7 @@
         hideLoading();
 
         if (Array.isArray(data.rows) && data.rows.length) {
+          resetPreviewStateForNewParse();
           renderTables(data.rows, { sourceType: "pdf", jobId: data.job_id });
           fileInput.value = "";
         } else {
@@ -954,11 +1317,16 @@
     const container = document.getElementById("rabTables");
     container.innerHTML = "";
 
+    lastRenderedRows = Array.isArray(rows) ? rows : null;
+    lastRenderOptions = sanitizePreviewOptions(options);
+
     resetTargetBidSummary();
     setTargetBidVisibility(false);
 
     if (!Array.isArray(rows) || !rows.length) {
       document.getElementById("grandTotalBox").style.display = "none";
+      lastRenderedRows = null;
+      clearPersistedPreviewState();
       showError("Tidak ada baris yang dapat ditampilkan");
       return;
     }
@@ -973,6 +1341,11 @@
     document.getElementById("grandTotalBox").style.display = "block";
     setTargetBidVisibility(true);
     updateGrandTotalFromRows();
+    applyBreakdownOverrides();
+
+    if (!isRestoringPreviewState) {
+      schedulePersistPreviewState();
+    }
   }
 
   function renderSectionedTables(rows, container) {
@@ -1380,6 +1753,7 @@
 
     // Update grand total immediately
     updateGrandTotalFromRows();
+    schedulePersistPreviewState();
 
     // Debounce backend recomputation: wait 800ms after last keystroke
     if (backendRecomputeTimeout) {
@@ -1426,6 +1800,7 @@
           }
           // Update grand total but don't reset pie chart timer
           updateGrandTotalFromRows(false);
+          schedulePersistPreviewState();
         }
       } catch (err) {
         console.warn("Fetch error:", err);
@@ -1777,6 +2152,8 @@
     if (tr) {
       await setPriceForRow(match, tr);
     }
+
+    schedulePersistPreviewState();
   }
 
   function renderManualInput(cell, row, analysisCell, statusCell, label, options = {}) {
@@ -1875,6 +2252,8 @@
     await setPriceForRow(row.job_match_selected || { code: value }, tr);
   }
 };
+
+  schedulePersistPreviewState();
 
 
     button.addEventListener("click", applyManual);
@@ -2180,6 +2559,20 @@
     const totalCell = tr.querySelector(".total-cell");
     if (!priceInput) return;
 
+    const overridePrice = match && match.code ? getBreakdownOverrideForCode(match.code) : null;
+    if (overridePrice && Number.isFinite(overridePrice.unit_price) && overridePrice.unit_price >= 0) {
+      const normalized = overridePrice.unit_price;
+      priceInput.value = normalized;
+      priceInput.dataset.baseAutoPrice = String(normalized);
+      priceInput.dataset.referencePrice = String(normalized);
+      priceInput.dataset.previousValue = priceInput.value;
+      priceInput.dataset.manualConfirmed = "false";
+      updatePriceOriginUI(priceInput, "auto");
+      updatePriceWarningForRow(tr);
+      priceInput.dispatchEvent(new Event("input", { bubbles: true }));
+      return;
+    }
+
 
 
     // prefer any price present on match object (various keys)
@@ -2188,12 +2581,12 @@
       const num = parseFloat(String(possiblePrice).replace(/[^0-9.-]/g, ""));
       if (!Number.isNaN(num)) {
         priceInput.value = num;
-  priceInput.dataset.baseAutoPrice = String(num);
-  priceInput.dataset.referencePrice = String(num);
-  updatePriceWarningForRow(tr);
+        priceInput.dataset.baseAutoPrice = String(num);
+        priceInput.dataset.referencePrice = String(num);
         priceInput.dataset.previousValue = priceInput.value;
         priceInput.dataset.manualConfirmed = "false";
         updatePriceOriginUI(priceInput, "auto");
+        updatePriceWarningForRow(tr);
         priceInput.dispatchEvent(new Event("input", { bubbles: true }));
         return;
       }
@@ -2398,6 +2791,8 @@ function updatePriceWarningForRow(tr) {
       }
     }
   };
+
+  restoreRabPreviewState();
 
   // Also trigger refresh when price inputs change
   document.addEventListener('input', function(event) {
