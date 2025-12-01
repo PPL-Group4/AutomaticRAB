@@ -47,22 +47,16 @@
     if (!currentJobId) return;
 
     try {
-      // Fetch both notifications and price deviations in parallel
-      const [notificationsData, deviationsData] = await Promise.all([
-        fetchNotifications(currentJobId),
-        fetchPriceDeviations(currentJobId)
-      ]);
+      // Fetch price deviations only (notifications redundant with Status Pencocokan column)
+      const deviationsData = await fetchPriceDeviations(currentJobId);
 
       // Display results
-      displayNotifications(notificationsData);
       displayPriceDeviations(deviationsData);
       updateCostWeightRecommendation();
 
       // Show "no warnings" if everything is clear
-      const hasWarnings = 
-        (notificationsData && notificationsData.items_not_in_ahsp > 0) ||
-        (deviationsData && deviationsData.deviations_found > 0);
-      
+      const hasWarnings = (deviationsData && deviationsData.deviations_found > 0);
+
       document.getElementById('noWarningsSection').style.display = hasWarnings ? 'none' : 'block';
 
     } catch (error) {
