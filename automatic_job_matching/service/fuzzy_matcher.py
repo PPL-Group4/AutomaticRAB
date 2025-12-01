@@ -441,13 +441,14 @@ class CandidateProvider:
 
     def _check_synonym_match(self, word: str, candidate_name: str) -> bool:
         """Check if word or its synonyms appear in candidate."""
-        if has_synonyms(word):
-            synonyms = get_synonyms(word)
-            for syn in synonyms:
-                if syn in candidate_name:
-                    logger.debug("Synonym match: '%s' -> '%s'", word, syn)
-                    return True
-        return False
+        if not has_synonyms(word):
+            return False
+
+        synonyms = get_synonyms(word)
+        match = next((syn for syn in synonyms if syn in candidate_name), None)
+        if match:
+            logger.debug("Synonym match: '%s' -> '%s'", word, match)
+        return bool(match)
 
     def _check_fuzzy_match(self, word: str, candidate_name: str) -> bool:
         """Check fuzzy match for longer words with early termination."""
@@ -716,11 +717,9 @@ class MatchingProcessor:
     def find_matches_with_explanations(self, query: str, limit: int = 5, unit: Optional[str] = None) -> List[dict]:
         """Find matches along with similarity breakdown for each candidate."""
         logger.debug("Finding matches with explanations (limit=%d) query=%s unit=%s", limit, query, unit)
-        if limit <= 0:
-            return []
 
         normalized_query = _norm_name(query)
-        if not normalized_query:
+        if limit <= 0 or not normalized_query:
             return []
 
         candidates = self._candidate_provider.get_candidates_by_head_token(normalized_query, unit)
