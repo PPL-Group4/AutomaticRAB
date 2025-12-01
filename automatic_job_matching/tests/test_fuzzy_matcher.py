@@ -164,6 +164,26 @@ class SimilarityCalculatorTests(SimpleTestCase):
         self.assertGreater(score, 0.0)
         self.assertLess(score, 1.0)
 
+    def test_explain_similarity_empty_query(self):
+        """Explain similarity handles empty query gracefully."""
+        result = self.calculator.explain_similarity("", "batu")
+        self.assertEqual(result["sequence_score"], 0.0)
+        self.assertEqual(result["partial_score"], 0.0)
+        self.assertEqual(result["word_breakdown"], [])
+
+    def test_explain_similarity_with_match(self):
+        """Explain similarity reports exact match details."""
+        result = self.calculator.explain_similarity("batu", "batu belah")
+        self.assertGreater(result["sequence_score"], 0.5)
+        self.assertGreater(result["partial_score"], 0.0)
+        self.assertTrue(any(item["match_type"] == "exact" for item in result["word_breakdown"]))
+
+    def test_explain_similarity_without_match(self):
+        """Explain similarity reports no matches when words differ."""
+        result = self.calculator.explain_similarity("x", "yyyy")
+        self.assertEqual(result["matched_weight"], 0.0)
+        self.assertTrue(all(item["match_type"] == "none" for item in result["word_breakdown"]))
+
 
 class CandidateProviderTests(SimpleTestCase):
     """Test CandidateProvider class."""
@@ -325,6 +345,45 @@ class CandidateProviderTests(SimpleTestCase):
             with patch("automatic_job_matching.service.fuzzy_matcher.get_synonyms", return_value=["xyz", "abc"]):
                 result = provider._check_synonym_match("pemasangan", "batu belah")
                 self.assertFalse(result)
+
+    def test_check_word_match_returns_true_via_synonym(self):
+        """Ensure _check_word_match leverages synonyms for a positive match."""
+        repo = FakeAhsRepo([])
+        provider = CandidateProvider(repo)
+
+        with patch("automatic_job_matching.service.fuzzy_matcher.has_synonyms", return_value=True):
+            with patch("automatic_job_matching.service.fuzzy_matcher.get_synonyms", return_value=["pasang"]):
+                result = provider._check_word_match(
+                    "pemasangan", [], [], "pasang keramik", {}
+                )
+                self.assertTrue(result)
+
+    def test_candidate_matches_any_material_with_detected_compound(self):
+        """_candidate_matches_any_material handles detected compound materials."""
+        repo = FakeAhsRepo([])
+        provider = CandidateProvider(repo)
+
+        result = provider._candidate_matches_any_material(
+            "pekerjaan batu belah mesin",
+            ["compound-key"],
+            {"compound-key": "batu belah"},
+        )
+        self.assertTrue(result)
+
+    def test_get_candidates_internal_returns_material_filter_result(self):
+        """_get_candidates_internal falls back to material filter results."""
+        repo = FakeAhsRepo([
+            AhsRow(1, "A.01", "Pemasangan keramik premium lantai"),
+            AhsRow(2, "A.02", "Pengecatan dinding"),
+        ])
+        provider = CandidateProvider(repo)
+
+        with patch.object(provider, "_try_single_word_material_query", return_value=None), \
+             patch.object(provider, "_try_multi_word_query", return_value=None), \
+             patch("automatic_job_matching.service.fuzzy_matcher.is_compound_material", return_value=False):
+            result = provider._get_candidates_internal("keramik premium lantai")
+
+        self.assertEqual([row.id for row in result], [1])
 
     def test_check_fuzzy_match_with_long_words(self):
         """Test fuzzy match with words >= 6 characters."""
@@ -746,6 +805,83 @@ class MatchingProcessorTests(SimpleTestCase):
         self.assertGreater(len(results), 0)
         self.assertEqual(len(results), 2)
 
+    def test_find_matches_with_explanations_returns_details(self):
+        """find_matches_with_explanations returns breakdown metadata."""
+        repo = FakeAhsRepo([
+            AhsRow(1, "A.01", "pemasangan batu kali"),
+            AhsRow(2, "A.02", "pengecatan dinding"),
+        ])
+        calculator = SimilarityCalculator(WordWeightConfig())
+        provider = CandidateProvider(repo)
+        processor = MatchingProcessor(calculator, provider, 0.3)
+
+        results = processor.find_matches_with_explanations("pemasangan batu", limit=3)
+
+        self.assertGreater(len(results), 0)
+        first = results[0]
+        self.assertIn("scores", first)
+        self.assertIn("explanation", first)
+        self.assertIsInstance(first["explanation"], list)
+
+    def test_find_matches_with_explanations_zero_limit(self):
+        """find_matches_with_explanations respects zero limit."""
+        repo = FakeAhsRepo([
+            AhsRow(1, "A.01", "pemasangan batu"),
+        ])
+        calculator = SimilarityCalculator(WordWeightConfig())
+        provider = CandidateProvider(repo)
+        processor = MatchingProcessor(calculator, provider, 0.3)
+
+        results = processor.find_matches_with_explanations("pemasangan batu", limit=0)
+        self.assertEqual(results, [])
+
+    def test_find_matches_with_explanations_no_candidates_returns_empty(self):
+        """find_matches_with_explanations returns [] when provider yields no candidates."""
+        provider = Mock()
+        provider.get_candidates_by_head_token.return_value = []
+        calculator = Mock()
+        processor = MatchingProcessor(calculator, provider, 0.4)
+
+        results = processor.find_matches_with_explanations("pemasangan batu", limit=3)
+        self.assertEqual(results, [])
+        provider.get_candidates_by_head_token.assert_called_once()
+
+    def test_find_matches_with_explanations_skips_empty_candidate_names(self):
+        """find_matches_with_explanations skips candidates without names and continues."""
+        provider = Mock()
+        provider.get_candidates_by_head_token.return_value = [
+            AhsRow(1, "A.01", ""),
+            AhsRow(2, "A.02", "pemasangan batu"),
+        ]
+
+        explanation = {
+            "sequence_score": 0.9,
+            "partial_score": 0.8,
+            "matched_weight": 1.0,
+            "total_weight": 1.0,
+            "word_breakdown": [
+                {
+                    "query_word": "pemasangan",
+                    "matched_word": "pemasangan",
+                    "match_type": "exact",
+                    "score": 1.0,
+                    "weight": 1.0,
+                    "weighted_score": 1.0,
+                    "sequence_ratio": 1.0,
+                }
+            ],
+        }
+
+        calculator = Mock()
+        calculator.explain_similarity.return_value = explanation
+
+        processor = MatchingProcessor(calculator, provider, 0.3)
+
+        results = processor.find_matches_with_explanations("pemasangan batu", limit=3)
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0]["id"], 2)
+        calculator.explain_similarity.assert_called()
+
     def test_min_similarity_bounds_checking_negative(self):
         """Test min_similarity bounds with negative value."""
         repo = FakeAhsRepo([])
@@ -805,6 +941,33 @@ class FuzzyMatcherTests(SimpleTestCase):
         results = matcher.find_multiple_matches("batu", limit=5)
         self.assertGreater(len(results), 0)
         self.assertLessEqual(len(results), 5)
+
+    def test_find_matches_with_explanations(self):
+        """Test explanation output contains detailed breakdown."""
+        repo = FakeAhsRepo([
+            AhsRow(1, "A.01", "pemasangan batu kali"),
+            AhsRow(2, "A.02", "pengecatan dinding"),
+        ])
+        matcher = FuzzyMatcher(repo, min_similarity=0.3)
+
+        results = matcher.find_matches_with_explanations("pemasangan batu", limit=3)
+
+        self.assertGreater(len(results), 0)
+        first = results[0]
+        self.assertIn("scores", first)
+        self.assertIn("explanation", first)
+        self.assertIsInstance(first["explanation"], list)
+        self.assertTrue(any(item["match_type"] != "none" for item in first["explanation"]))
+
+    def test_find_matches_with_explanations_empty_description_returns_empty(self):
+        """FuzzyMatcher.find_matches_with_explanations handles empty descriptions."""
+        repo = FakeAhsRepo([
+            AhsRow(1, "A.01", "pemasangan batu"),
+        ])
+        matcher = FuzzyMatcher(repo, min_similarity=0.5)
+
+        results = matcher.find_matches_with_explanations("", limit=3)
+        self.assertEqual(results, [])
 
     def test_match_with_confidence(self):
         """Test match with confidence scoring."""
