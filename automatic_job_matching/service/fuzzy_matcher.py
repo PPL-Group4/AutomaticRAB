@@ -1,6 +1,6 @@
 from __future__ import annotations
 from dataclasses import dataclass
-from typing import List, Protocol, Optional, Set
+from typing import List, Protocol, Optional, Set, Tuple
 from functools import lru_cache
 from rapidfuzz import fuzz
 import logging
@@ -168,27 +168,100 @@ class SimilarityCalculator:
         if not query_words:
             return 0.0
 
-        total_weight = sum(self.word_weight_config.get_word_weight(w) for w in query_words)
+        matched_weight, total_weight, _ = self._evaluate_word_matches(
+            query_words,
+            candidate_words,
+            capture_breakdown=False,
+        )
+
         if total_weight == 0:
             return 0.0
 
+        return matched_weight / total_weight
+
+    def explain_similarity(self, query: str, candidate: str) -> dict:
+        """Return detailed similarity metrics for debugging or UI insights."""
+        query_words = query.split()
+        candidate_words = candidate.split()
+
+        if not query_words:
+            return {
+                "sequence_score": 0.0,
+                "partial_score": 0.0,
+                "matched_weight": 0.0,
+                "total_weight": 0.0,
+                "word_breakdown": [],
+            }
+
+        matched_weight, total_weight, breakdown = self._evaluate_word_matches(
+            query_words,
+            candidate_words,
+            capture_breakdown=True,
+        )
+
+        sequence_score = self.calculate_sequence_similarity(query, candidate)
+        partial_score = (matched_weight / total_weight) if total_weight else 0.0
+
+        return {
+            "sequence_score": sequence_score,
+            "partial_score": partial_score,
+            "matched_weight": matched_weight,
+            "total_weight": total_weight,
+            "word_breakdown": breakdown,
+        }
+
+    def _evaluate_word_matches(
+        self,
+        query_words: List[str],
+        candidate_words: List[str],
+        capture_breakdown: bool,
+    ) -> Tuple[float, float, List[dict]]:
         matched_weight = 0.0
+        total_weight = 0.0
+        breakdown: List[dict] = []
+
         for query_word in query_words:
             word_weight = self.word_weight_config.get_word_weight(query_word)
+            total_weight += word_weight
+
             best_match = 0.0
+            best_word: Optional[str] = None
+            match_type = "none"
 
             for candidate_word in candidate_words:
                 if query_word == candidate_word:
                     best_match = 1.0
+                    best_word = candidate_word
+                    match_type = "exact"
                     break
-                elif query_word in candidate_word or candidate_word in query_word:
-                    overlap = len(query_word) if len(query_word) < len(candidate_word) else len(candidate_word)
+
+                if query_word in candidate_word or candidate_word in query_word:
+                    overlap = min(len(query_word), len(candidate_word))
                     ratio = overlap / max(len(query_word), len(candidate_word))
-                    best_match = max(best_match, ratio)
+                    if ratio > best_match:
+                        best_match = ratio
+                        best_word = candidate_word
+                        match_type = "substring"
 
             matched_weight += word_weight * best_match
 
-        return matched_weight / total_weight
+            if capture_breakdown:
+                sequence_ratio = (
+                    fuzz.ratio(query_word, best_word) / 100.0
+                    if best_word
+                    else 0.0
+                )
+                breakdown.append({
+                    "query_word": query_word,
+                    "matched_word": best_word,
+                    "match_type": match_type if best_match > 0 else "none",
+                    "score": round(best_match, 3),
+                    "weight": round(word_weight, 3),
+                    "weighted_score": round(word_weight * best_match, 3),
+                    "sequence_ratio": round(sequence_ratio, 3),
+                })
+
+        return matched_weight, total_weight, breakdown
 
 class CandidateProvider:
     def __init__(self, repository: AhsRepository, synonym_expander: SynonymExpander = None):
@@ -368,13 +441,14 @@ class CandidateProvider:
 
     def _check_synonym_match(self, word: str, candidate_name: str) -> bool:
         """Check if word or its synonyms appear in candidate."""
-        if has_synonyms(word):
-            synonyms = get_synonyms(word)
-            for syn in synonyms:
-                if syn in candidate_name:
-                    logger.debug("Synonym match: '%s' -> '%s'", word, syn)
-                    return True
-        return False
+        if not has_synonyms(word):
+            return False
+
+        synonyms = get_synonyms(word)
+        match = next((syn for syn in synonyms if syn in candidate_name), None)
+        if match:
+            logger.debug("Synonym match: '%s' -> '%s'", word, match)
+        return bool(match)
 
     def _check_fuzzy_match(self, word: str, candidate_name: str) -> bool:
         """Check fuzzy match for longer words with early termination."""
@@ -640,6 +714,55 @@ class MatchingProcessor:
         logger.info("Multiple fuzzy matches found=%d (unit=%s)", len(matches), unit)
         return [match[1] for match in matches[:limit]]
 
+    def find_matches_with_explanations(self, query: str, limit: int = 5, unit: Optional[str] = None) -> List[dict]:
+        """Find matches along with similarity breakdown for each candidate."""
+        logger.debug("Finding matches with explanations (limit=%d) query=%s unit=%s", limit, query, unit)
+
+        normalized_query = _norm_name(query)
+        if limit <= 0 or not normalized_query:
+            return []
+
+        candidates = self._candidate_provider.get_candidates_by_head_token(normalized_query, unit)
+        if not candidates:
+            logger.info("No candidates after unit filtering for query=%r unit=%r", query, unit)
+            return []
+
+        matches = []
+
+        for candidate in candidates:
+            candidate_name = _norm_name(candidate.name)
+            if not candidate_name:
+                continue
+
+            explanation = self._similarity_calculator.explain_similarity(normalized_query, candidate_name)
+            similarity_score = max(explanation["sequence_score"], explanation["partial_score"])
+
+            if similarity_score >= self._min_similarity:
+                matches.append((
+                    similarity_score,
+                    {
+                        "source": "ahs",
+                        "id": candidate.id,
+                        "code": candidate.code,
+                        "name": candidate.name,
+                        "matched_on": "name",
+                        "similarity": round(similarity_score, 4),
+                        "scores": {
+                            "sequence": round(explanation["sequence_score"], 4),
+                            "partial": round(explanation["partial_score"], 4),
+                        },
+                        "weights": {
+                            "matched": round(explanation["matched_weight"], 4),
+                            "total": round(explanation["total_weight"], 4),
+                        },
+                        "explanation": list(explanation["word_breakdown"]),
+                    },
+                ))
+
+        matches.sort(key=lambda x: x[0], reverse=True)
+        logger.info("Matches with explanations found=%d (unit=%s)", len(matches), unit)
+        return [match[1] for match in matches[:limit]]
+
 
 class FuzzyMatcher:
     def __init__(self, repo: AhsRepository, min_similarity: float = 0.6, scorer: ConfidenceScorer | None = None, synonym_expander: SynonymExpander = None):
@@ -663,6 +786,17 @@ class FuzzyMatcher:
         if not description or limit <= 0:
             return []
         return self._matching_processor.find_multiple_matches(description.strip(), limit, unit=unit)
+
+    def find_matches_with_explanations(self, description: str, limit: int = 5, unit: Optional[str] = None) -> List[dict]:
+        """Find matches while exposing similarity breakdown details."""
+        logger.debug(
+            "FuzzyMatcher.find_matches_with_explanations called with description=%r unit=%r",
+            description,
+            unit,
+        )
+        if not description or limit <= 0:
+            return []
+        return self._matching_processor.find_matches_with_explanations(description.strip(), limit, unit=unit)
 
     def match_with_confidence(self, description: str, unit: Optional[str] = None) -> Optional[dict]:
         """Match with confidence scoring and optional unit."""
