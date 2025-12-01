@@ -34,7 +34,7 @@ def detect_headers(request):
 
     wb = load_workbook(f, data_only=True, read_only=True)
     ws = wb[wb.sheetnames[0]]
-    rows = [[c for c in r] for r in ws.iter_rows(values_only=True, min_row=1, max_row=200)]
+    rows = [list(r) for r in ws.iter_rows(values_only=True, min_row=1, max_row=200)]
 
     hdr_idx = find_header_row(rows)
     if hdr_idx < 0:
