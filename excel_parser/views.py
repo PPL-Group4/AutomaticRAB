@@ -2,6 +2,8 @@ from django.http import JsonResponse
 from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
 from django.core.exceptions import ValidationError
+from django.views import View
+from django.shortcuts import render, redirect
 
 from rest_framework.decorators import api_view, parser_classes
 from rest_framework.parsers import MultiPartParser
@@ -12,6 +14,9 @@ from openpyxl import load_workbook
 from .services.header_mapper import map_headers, find_header_row
 from .services.reader import preview_file
 from .services.validators import validate_excel_file
+
+# SENTRY +: import sentry_sdk untuk performance monitoring
+import sentry_sdk
 
 
 def validate_pdf_file(file):
@@ -31,29 +36,52 @@ def detect_headers(request):
     if not f:
         return Response({"detail": "file is required"}, status=400)
 
+    # SENTRY +: kasih tag supaya bisa difilter di Sentry
+    with sentry_sdk.configure_scope() as scope:
+        scope.set_tag("feature", "excel_detect_headers")
+        scope.set_tag("excel.file_name", getattr(f, "name", ""))
+        scope.set_tag("excel.file_size_bytes", getattr(f, "size", 0))
+        scope.set_tag("excel.content_type", getattr(f, "content_type", ""))
+
     try:
-        validate_excel_file(f)
+        # SENTRY +: span untuk validasi file
+        with sentry_sdk.start_span(
+            op="excel.validate",
+            description="Validate Excel file for header detection"
+        ):
+            validate_excel_file(f)
+
+        # SENTRY +: span untuk load workbook & baca 200 baris pertama
+        with sentry_sdk.start_span(
+            op="excel.load_workbook",
+            description="Load workbook for header detection"
+        ):
+            wb = load_workbook(f, data_only=True, read_only=True)
+            ws = wb[wb.sheetnames[0]]
+            rows = [list(r) for r in ws.iter_rows(values_only=True, min_row=1, max_row=200)]
+
+        # SENTRY +: span untuk cari header & mapping
+        with sentry_sdk.start_span(
+            op="excel.detect_header",
+            description="Find header row and map headers"
+        ):
+            hdr_idx = find_header_row(rows)
+            if hdr_idx < 0:
+                return Response({"detail": "header not found"}, status=422)
+
+            header_row = [str(c or '') for c in rows[hdr_idx]]
+            mapping, missing, originals = map_headers(header_row)
+
+        return Response({
+            "sheet": ws.title,
+            "header_row_index": hdr_idx + 1,  # 1-based index
+            "mapping": mapping,
+            "originals": originals,
+            "missing": missing
+        })
+
     except ValidationError as ve:
         return Response({"detail": str(ve)}, status=400)
-
-    wb = load_workbook(f, data_only=True, read_only=True)
-    ws = wb[wb.sheetnames[0]]
-    rows = [list(r) for r in ws.iter_rows(values_only=True, min_row=1, max_row=200)]
-
-    hdr_idx = find_header_row(rows)
-    if hdr_idx < 0:
-        return Response({"detail": "header not found"}, status=422)
-
-    header_row = [str(c or '') for c in rows[hdr_idx]]
-    mapping, missing, originals = map_headers(header_row)
-
-    return Response({
-        "sheet": ws.title,
-        "header_row_index": hdr_idx + 1,  # 1-based index
-        "mapping": mapping,
-        "originals": originals,
-        "missing": missing
-    })
 
 
 @csrf_exempt
@@ -75,26 +103,54 @@ def preview_rows(request):
     excel_apendo = request.FILES.get("excel_apendo")
     pdf_file = request.FILES.get("pdf_file")
 
+    # SENTRY +: tag umum untuk endpoint preview
+    with sentry_sdk.configure_scope() as scope:
+        scope.set_tag("feature", "excel_preview")
+        scope.set_tag("excel.has_legacy_file", bool(legacy_file))
+        scope.set_tag("excel.has_standard_file", bool(excel_standard))
+        scope.set_tag("excel.has_apendo_file", bool(excel_apendo))
+        scope.set_tag("excel.has_pdf_file", bool(pdf_file))
+
     try:
         results = {}
 
         # === Legacy path ===
         if legacy_file:
-            validate_excel_file(legacy_file)
-            results["rows"] = preview_file(legacy_file)
+            # SENTRY +: span khusus untuk preview legacy
+            with sentry_sdk.start_span(
+                op="excel.preview.legacy",
+                description="Preview legacy Excel file"
+            ):
+                validate_excel_file(legacy_file)
+                results["rows"] = preview_file(legacy_file)
 
         # === Extended path ===
         if excel_standard:
-            validate_excel_file(excel_standard)
-            results["excel_standard"] = preview_file(excel_standard)
+            # SENTRY +: span untuk preview standard
+            with sentry_sdk.start_span(
+                op="excel.preview.standard",
+                description="Preview standard Excel file"
+            ):
+                validate_excel_file(excel_standard)
+                results["excel_standard"] = preview_file(excel_standard)
 
         if excel_apendo:
-            validate_excel_file(excel_apendo)
-            results["excel_apendo"] = preview_file(excel_apendo)
+            # SENTRY +: span untuk preview APENDO
+            with sentry_sdk.start_span(
+                op="excel.preview.apendo",
+                description="Preview APENDO Excel file"
+            ):
+                validate_excel_file(excel_apendo)
+                results["excel_apendo"] = preview_file(excel_apendo)
 
         if pdf_file:
-            validate_pdf_file(pdf_file)
-            results["pdf_file"] = {"message": "PDF uploaded successfully (no parser yet)"}
+            # SENTRY +: span untuk upload PDF (belum ada parser)
+            with sentry_sdk.start_span(
+                op="excel.preview.pdf",
+                description="Upload PDF file (no parser yet)"
+            ):
+                validate_pdf_file(pdf_file)
+                results["pdf_file"] = {"message": "PDF uploaded successfully (no parser yet)"}
 
         if not results:
             return JsonResponse({"detail": "No file uploaded"}, status=400)
@@ -146,6 +202,7 @@ def upload_view(request):
             }, status=400)
 
     return render(request, TEMPLATE_UPLOAD)
+
 
 def rab_converted(request):
     """
