@@ -251,10 +251,11 @@
     let tbody = null;
     let bujakCounter = 0;
 
-    for (const row of rows) {
+    // process a single row and return the numeric amount to add to total (if any)
+    function processRow(row) {
       if (shouldSkipRow(row)) {
-        // original intent: ignore calculation/summary rows
-        continue;
+        // ignore calculation/summary rows
+        return 0;
       }
 
       if (isNewBujakStart(row)) {
@@ -262,28 +263,31 @@
         createBujakHeader(container, bujakCounter);
         currentTable = createBujakTable(container);
         tbody = currentTable.querySelector("tbody");
+        return 0;
       }
 
-      if (isCategoryRow(row)) {
-        if (!currentTable) continue;
+      // Category and Section rows are similar: render as section-like rows
+      if (isCategoryRow(row) || isSectionRow(row)) {
+        if (!currentTable) return 0;
         tbody = currentTable.querySelector("tbody");
-        appendSectionLikeRow(tbody, row, "category");
-        continue;
+        const role = isCategoryRow(row) ? "category" : "section";
+        appendSectionLikeRow(tbody, row, role);
+        return 0;
       }
 
-      if (isSectionRow(row)) {
-        if (!currentTable) continue;
-        tbody = currentTable.querySelector("tbody");
-        appendSectionLikeRow(tbody, row, "section");
-        continue;
-      }
-
+      // Regular item rows
       if (!row.is_section) {
-        if (!currentTable) continue;
+        if (!currentTable) return 0;
         tbody = currentTable.querySelector("tbody");
         appendItemRow(tbody, row);
-        total += row.total_price || 0;
+        return row.total_price || 0;
       }
+
+      return 0;
+    }
+
+    for (const row of rows) {
+      total += processRow(row);
     }
 
     updateGrandTotalBox(total);
