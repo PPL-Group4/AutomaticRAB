@@ -116,3 +116,5 @@ GitHub.sublime-settings
 !.vscode/extensions.json
 .history
 .vscode
+
+*.prof

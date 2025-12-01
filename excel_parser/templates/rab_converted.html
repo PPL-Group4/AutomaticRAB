@@ -115,141 +115,184 @@
   </div>
 
   <script>
-    function showError(message) {
-      const errorContainer = document.getElementById("errorContainer");
-      errorContainer.innerHTML = `<div class="error-message">${message}</div>`;
-      setTimeout(() => {
-        errorContainer.innerHTML = "";
-      }, 5000);
+  function showError(message) {
+    const errorContainer = document.getElementById("errorContainer");
+    errorContainer.innerHTML = `<div class="error-message">${message}</div>`;
+    setTimeout(() => {
+      errorContainer.innerHTML = "";
+    }, 5000);
+  }
+
+  document.getElementById("uploadForm").addEventListener("submit", async function(e) {
+    e.preventDefault();
+    const fileInput = document.getElementById("fileInput");
+    if (!fileInput.files.length) {
+      showError("Silakan pilih file Excel terlebih dahulu");
+      return;
+    }
+    const formData = new FormData();
+    formData.append("file", fileInput.files[0]);
+    try {
+      const resp = await fetch("/excel_parser/preview_rows", {
+        method: "POST",
+        body: formData
+      });
+      const data = await resp.json();
+      console.log("Response data:", data);
+
+      if (data.rows) {
+        renderTables(data.rows);
+      } else {
+        showError("Gagal memproses file: " + (data.error || "Terjadi kesalahan yang tidak diketahui"));
+      }
+    } catch (err) {
+      showError("Terjadi kesalahan saat mengunggah file: " + err.message);
+    }
+  });
+
+  // --- Helper predicates ---------------------------------------------------
+
+  function shouldSkipRow(row) {
+    const skipKeywords = ["PAJAK", "JUMLAH SETELAH PAJAK", "DIBULATKAN", "TERBILANG"];
+    const description = (row.description || "").toUpperCase();
+    return skipKeywords.some(k => description.includes(k));
+  }
+
+  function isNewBujakStart(row) {
+    return row.is_section && row.section_type === "CATEGORY" && row.number === "A";
+  }
+
+  function isCategoryRow(row) {
+    return row.is_section && row.section_type === "CATEGORY";
+  }
+
+  function isSectionRow(row) {
+    return row.is_section && row.section_type === "SECTION";
+  }
+
+  // --- DOM helpers ---------------------------------------------------------
+
+  function createBujakHeader(container, index) {
+    const header = document.createElement("div");
+    header.classList.add("bujak-header");
+    header.innerText = `BUJAK ${index}`;
+    container.appendChild(header);
+  }
+
+  function createBujakTable(container) {
+    const table = document.createElement("table");
+    table.classList.add("rab-category");
+    table.innerHTML = `
+      <thead>
+        <tr>
+          <th>No.</th>
+          <th>Uraian Pekerjaan</th>
+          <th>Kode</th>
+          <th>Volume</th>
+          <th>SAT</th>
+          <th>Harga Sat (Rp.)</th>
+          <th>Jumlah (Rp.)</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    `;
+    container.appendChild(table);
+    return table;
+  }
+
+  function appendSectionLikeRow(tbody, row, role) {
+    const tr = document.createElement("tr");
+    tr.dataset.role = role;
+    tr.innerHTML = `
+      <td>${row.number}</td>
+      <td colspan="6"><strong>${row.description}</strong></td>
+    `;
+    tbody.appendChild(tr);
+  }
+
+  function appendItemRow(tbody, row) {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td></td>
+      <td>${row.description || ""}</td>
+      <td>${row.analysis_code || ""}</td>
+      <td>${row.volume || ""}</td>
+      <td>${row.unit || ""}</td>
+      <td>${(row.price || 0).toLocaleString()}</td>
+      <td class="jumlah">Rp. ${(row.total_price || 0).toLocaleString()}</td>
+    `;
+    tbody.appendChild(tr);
+  }
+
+  function updateGrandTotalBox(total) {
+    const grandTotalBox = document.getElementById("grandTotalBox");
+    grandTotalBox.style.display = "block";
+
+    document.getElementById("grandTotal").innerText = "Rp. " + total.toLocaleString();
+
+    const ppn = total * 0.1;
+    document.getElementById("ppn").innerText = "Rp. " + ppn.toLocaleString();
+    document.getElementById("totalWithPpn").innerText = "Rp. " + (total + ppn).toLocaleString();
+
+    const terbilangText = total === 0
+      ? "NOL RUPIAH"
+      : numberToWords(total + ppn).toUpperCase();
+    document.getElementById("terbilang").innerText = terbilangText;
+  }
+
+  // --- Main rendering function ---------------------------------------------
+
+  function renderTables(rows) {
+    const container = document.getElementById("rabTables");
+    container.innerHTML = "";
+
+    let total = 0;
+    let currentTable = null;
+    let tbody = null;
+    let bujakCounter = 0;
+
+    for (const row of rows) {
+      if (shouldSkipRow(row)) {
+        // original intent: ignore calculation/summary rows
+        continue;
+      }
+
+      if (isNewBujakStart(row)) {
+        bujakCounter++;
+        createBujakHeader(container, bujakCounter);
+        currentTable = createBujakTable(container);
+        tbody = currentTable.querySelector("tbody");
+      }
+
+      if (isCategoryRow(row)) {
+        if (!currentTable) continue;
+        tbody = currentTable.querySelector("tbody");
+        appendSectionLikeRow(tbody, row, "category");
+        continue;
+      }
+
+      if (isSectionRow(row)) {
+        if (!currentTable) continue;
+        tbody = currentTable.querySelector("tbody");
+        appendSectionLikeRow(tbody, row, "section");
+        continue;
+      }
+
+      if (!row.is_section) {
+        if (!currentTable) continue;
+        tbody = currentTable.querySelector("tbody");
+        appendItemRow(tbody, row);
+        total += row.total_price || 0;
+      }
     }
 
-    document.getElementById("uploadForm").addEventListener("submit", async function(e) {
-      e.preventDefault();
-      const fileInput = document.getElementById("fileInput");
-      if (!fileInput.files.length) {
-        showError("Silakan pilih file Excel terlebih dahulu");
-        return;
-      }
-      const formData = new FormData();
-      formData.append("file", fileInput.files[0]);
-      try {
-        const resp = await fetch("/excel_parser/preview_rows", {
-          method: "POST",
-          body: formData
-        });
-        const data = await resp.json();
-        console.log("Response data:", data);
+    updateGrandTotalBox(total);
+  }
 
-        if (data.rows) {
-          renderTables(data.rows);
-        } else {
-          showError("Gagal memproses file: " + (data.error || "Terjadi kesalahan yang tidak diketahui"));
-        }
-      } catch (err) {
-        showError("Terjadi kesalahan saat mengunggah file: " + err.message);
-      }
-    });
-
-    function renderTables(rows) {
-      const container = document.getElementById("rabTables");
-      container.innerHTML = "";
-      let total = 0;
-      let currentTable = null;
-      let tbody = null;
-      let bujakCounter = 0;
-
-      for (const row of rows) {
-        // Skip calculation rows that should not appear in the table
-        const skipKeywords = ["PAJAK", "JUMLAH SETELAH PAJAK", "DIBULATKAN", "TERBILANG"];
-        if (row.description && skipKeywords.some(k => row.description.toUpperCase().includes(k))) {
-          return;
-        }
-
-        // Detect new BUJAK section
-        if (row.is_section && row.section_type === "CATEGORY" && row.number === "A") {
-          bujakCounter++;
-          const header = document.createElement("div");
-          header.classList.add("bujak-header");
-          header.innerText = `BUJAK ${bujakCounter}`;
-          container.appendChild(header);
-          
-          // Create a new table for this BUJAK
-          const table = document.createElement("table");
-          table.classList.add("rab-category");
-          table.innerHTML = `
-            <thead>
-              <tr>
-                <th>No.</th>
-                <th>Uraian Pekerjaan</th>
-                <th>Kode</th>
-                <th>Volume</th>
-                <th>SAT</th>
-                <th>Harga Sat (Rp.)</th>
-                <th>Jumlah (Rp.)</th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-          `;
-          container.appendChild(table);
-          currentTable = table;
-          tbody = table.querySelector("tbody");
-        }
-
-        if (row.is_section && row.section_type === "CATEGORY") {
-          if (!currentTable) return;
-          tbody = currentTable.querySelector("tbody");
-          const tr = document.createElement("tr");
-          tr.dataset.role = "category";
-          tr.innerHTML = `
-            <td>${row.number}</td>
-            <td colspan="6"><strong>${row.description}</strong></td>
-          `;
-          tbody.appendChild(tr);
-        }
-
-        else if (row.is_section && row.section_type === "SECTION") {
-          if (!currentTable) return;
-          tbody = currentTable.querySelector("tbody");
-          const tr = document.createElement("tr");
-          tr.dataset.role = "section";
-          tr.innerHTML = `
-            <td>${row.number}</td>
-            <td colspan="6"><strong>${row.description}</strong></td>
-          `;
-          tbody.appendChild(tr);
-        }
-
-        else if (!row.is_section) {
-          if (!currentTable) return;
-          tbody = currentTable.querySelector("tbody");
-          const tr = document.createElement("tr");
-          tr.innerHTML = `
-            <td></td>
-            <td>${row.description || ""}</td>
-            <td>${row.analysis_code || ""}</td>
-            <td>${row.volume || ""}</td>
-            <td>${row.unit || ""}</td>
-            <td>${(row.price || 0).toLocaleString()}</td>
-            <td class="jumlah">Rp. ${(row.total_price || 0).toLocaleString()}</td>
-          `;
-          tbody.appendChild(tr);
-          total += row.total_price || 0;
-        }
-      }
-
-      // Update grand total box
-      document.getElementById("grandTotalBox").style.display = "block";
-      document.getElementById("grandTotal").innerText = "Rp. " + total.toLocaleString();
-      const ppn = total * 0.1;
-      document.getElementById("ppn").innerText = "Rp. " + ppn.toLocaleString();
-      document.getElementById("totalWithPpn").innerText = "Rp. " + (total + ppn).toLocaleString();
-      document.getElementById("terbilang").innerText = total === 0 ? "NOL RUPIAH" : numberToWords(total + ppn).toUpperCase();
-    }
-
-    // Simple function to convert number into words (basic placeholder)
-    function numberToWords(number) {
-      return number.toLocaleString("id-ID") + " rupiah";
-    }
-  </script>
+  // Simple function to convert number into words (basic placeholder)
+  function numberToWords(number) {
+    return number.toLocaleString("id-ID") + " rupiah";
+  }
+</script>
 </body>
 </html>
