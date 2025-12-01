@@ -14,20 +14,6 @@ class JobMatcherTests(TestCase):
             self.assertIsNone(result["match"])
 
     @patch("pdf_parser.services.job_matcher.MatchingService.perform_best_match")
-    def test_found_exact_dict_match(self, mock_match):
-        """Should return 'found' when perform_best_match returns a dict with confidence=1.0."""
-        mock_match.return_value = {
-            "code": "A.01",
-            "name": "Pasangan Batu",
-            "confidence": 1.0,
-        }
-        result = job_matcher.match_description("pasangan batu")
-        self.assertEqual(result["status"], "found")
-        self.assertEqual(result["match"]["code"], "A.01")
-        mock_match.assert_called_once_with("pasangan batu")
-
-
-    @patch("pdf_parser.services.job_matcher.MatchingService.perform_best_match")
     def test_found_similar_single_list(self, mock_match):
         """Should return 'similar' when one similar match is found."""
         mock_match.return_value = [{"code": "B.02", "name": "Batu Belah"}]

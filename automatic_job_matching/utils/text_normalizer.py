@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 import unicodedata
+from functools import lru_cache
 from typing import Iterable, Optional, Set
 
 # Constants for pattern matching
@@ -116,6 +117,7 @@ def _restore_protected_codes(text: str, code_map: dict[str, str]) -> str:
     return text
 
 
+@lru_cache(maxsize=10000)
 def normalize_text(
     text: str,
     *,

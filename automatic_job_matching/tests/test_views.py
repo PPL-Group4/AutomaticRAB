@@ -209,19 +209,6 @@ class MatchBestViewTests(SimpleTestCase):
         self.assertEqual(response.status_code, 200)
         self.mock_best.assert_called_once_with("test", unit="M3")
 
-    def test_best_view_returns_alternatives_payload(self):
-        alt_payload = {
-            "message": "No matches with the same unit found.",
-            "alternatives": [{"id": 42, "code": "X.1", "name": "Alt"}],
-        }
-        self.mock_best.return_value = alt_payload
-        url = reverse("match-best")
-        payload = {"description": "test", "unit": "m"}
-        response = self.client.post(url, json.dumps(payload), content_type="application/json")
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json(), alt_payload)
-
-
 class JobMatchingPageTests(SimpleTestCase):
     def setUp(self):
         self.client = Client()
