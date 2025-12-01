@@ -15,6 +15,7 @@ from automatic_job_matching.security import (
     sanitize_description,
     sanitize_unit,
 )
+from automatic_job_matching.models import UnmatchedAhsEntry
 
 logger = logging.getLogger(__name__)
 security_logger = logging.getLogger("security.audit")
@@ -61,6 +62,11 @@ def match_best_view(request):
         status = f"found {len(result)} similar"
     else:
         status = "not found"
+        # Store unmatched entry in database
+        try:
+            UnmatchedAhsEntry.objects.get_or_create(name=description)
+        except Exception as e:
+            logger.error("Failed to store unmatched entry: %s", str(e))
 
     return JsonResponse({"status": status, "match": result}, status=200)
 
@@ -132,6 +138,11 @@ def match_bulk_view(request):
 
             if status == "not found":
                 log_unmatched_entry(description, unit)
+                # Store unmatched entry in database
+                try:
+                    UnmatchedAhsEntry.objects.get_or_create(name=description)
+                except Exception as e:
+                    logger.error("Failed to store unmatched entry: %s", str(e))
                 review_logger.warning(
                     "job_not_found description=%r unit=%r (bulk_index=%d)",
                     description,
