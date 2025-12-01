@@ -358,6 +358,19 @@ class CandidateProviderTests(SimpleTestCase):
                 )
                 self.assertTrue(result)
 
+    def test_check_word_match_returns_true_via_compound(self):
+        """Ensure _check_word_match leverages detected compounds when present."""
+        repo = FakeAhsRepo([])
+        provider = CandidateProvider(repo)
+
+        detected_compounds = {"compound-key": "batu belah"}
+        with patch("automatic_job_matching.service.fuzzy_matcher.has_synonyms", return_value=False):
+            result = provider._check_word_match(
+                "compound-key", [], [], "pekerjaan batu belah mesin", detected_compounds
+            )
+
+        self.assertTrue(result)
+
     def test_candidate_matches_any_material_with_detected_compound(self):
         """_candidate_matches_any_material handles detected compound materials."""
         repo = FakeAhsRepo([])
