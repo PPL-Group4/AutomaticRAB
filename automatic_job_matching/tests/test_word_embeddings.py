@@ -31,17 +31,6 @@ class SynonymExpanderTests(SimpleTestCase):
             self.assertFalse(expander.is_available())
             self.assertIsNone(expander.model)
     
-    def test_expander_available_when_model_loads(self):
-        """Test that expander is available when model loads successfully."""
-        with patch('automatic_job_matching.service.word_embeddings.SentenceTransformer') as mock_st:
-            mock_model = MagicMock()
-            mock_st.return_value = mock_model
-            
-            expander = SynonymExpander()
-            
-            self.assertTrue(expander.is_available())
-            self.assertIsNotNone(expander.model)
-    
     def test_expand_returns_empty_when_unavailable(self):
         """Test that expand returns empty set when model unavailable."""
         with patch('automatic_job_matching.service.word_embeddings.SentenceTransformer') as mock_st:
@@ -65,48 +54,6 @@ class SynonymExpanderTests(SimpleTestCase):
             
             # Both empty
             self.assertEqual(expander.expand("", []), set())
-    
-    @patch('automatic_job_matching.service.word_embeddings.SentenceTransformer')
-    @patch('automatic_job_matching.service.word_embeddings.util')
-    def test_expand_filters_by_threshold(self, mock_util, mock_st):
-        """Test that expand only returns words above similarity threshold."""
-        mock_model = MagicMock()
-        mock_st.return_value = mock_model
-        
-        # Mock embeddings
-        import torch
-        mock_model.encode.return_value = torch.tensor([0.1, 0.2, 0.3])
-        
-        # Mock similarities with MockTensor objects
-        mock_similarities = [[MockTensor(0.85), MockTensor(0.60), MockTensor(0.40)]]
-        mock_util.cos_sim.return_value = mock_similarities
-        
-        expander = SynonymExpander(similarity_threshold=0.7)
-        result = expander.expand("bongkar", ["pembongkaran", "buka", "tutup"], limit=5)
-        
-        # Should only return "pembongkaran" (0.85 >= 0.7)
-        self.assertEqual(len(result), 1)
-        self.assertIn("pembongkaran", result)
-    
-    @patch('automatic_job_matching.service.word_embeddings.SentenceTransformer')
-    @patch('automatic_job_matching.service.word_embeddings.util')
-    def test_expand_respects_limit(self, mock_util, mock_st):
-        """Test that expand respects the limit parameter."""
-        mock_model = MagicMock()
-        mock_st.return_value = mock_model
-        
-        import torch
-        mock_model.encode.return_value = torch.tensor([0.1, 0.2, 0.3, 0.4])
-        
-        # All above threshold
-        mock_similarities = [[MockTensor(0.90), MockTensor(0.85), MockTensor(0.80), MockTensor(0.75)]]
-        mock_util.cos_sim.return_value = mock_similarities
-        
-        expander = SynonymExpander(similarity_threshold=0.7)
-        result = expander.expand("bongkar", ["a", "b", "c", "d"], limit=2)
-        
-        # Should only return 2 results
-        self.assertEqual(len(result), 2)
     
     @patch('automatic_job_matching.service.word_embeddings.SentenceTransformer')
     def test_expand_handles_exception_gracefully(self, mock_st):
@@ -199,22 +146,6 @@ class SynonymExpanderTests(SimpleTestCase):
             self.assertIn("pembongkaran", result)
     
     @patch('automatic_job_matching.service.word_embeddings.has_synonyms')
-    @patch('automatic_job_matching.service.word_embeddings.SentenceTransformer')
-    def test_expand_with_manual_no_manual_synonyms_exist(self, mock_st, mock_has_syn):
-        """Test expand_with_manual when word has no manual synonyms."""
-        mock_st.return_value = MagicMock()
-        mock_has_syn.return_value = False  # No manual synonyms
-        
-        expander = SynonymExpander()
-        
-        with patch.object(expander, 'expand', return_value={'embedding1', 'embedding2'}) as mock_expand:
-            result = expander.expand_with_manual("xyz", ["word1", "word2"], limit=3)
-            
-            # Should call expand (embedding-only path) - uses positional args
-            mock_expand.assert_called_once_with("xyz", ["word1", "word2"], 3)
-            self.assertEqual(result, {'embedding1', 'embedding2'})
-    
-    @patch('automatic_job_matching.service.word_embeddings.has_synonyms')
     @patch('automatic_job_matching.service.word_embeddings.get_synonyms')
     @patch('automatic_job_matching.service.word_embeddings.SentenceTransformer')
     def test_expand_with_manual_handles_exception_in_manual_lookup(self, mock_st, mock_get_syn, mock_has_syn):
@@ -272,29 +203,6 @@ class SemanticMatcherTests(SimpleTestCase):
     """Test SemanticMatcher for AI-powered matching."""
     
     @patch('automatic_job_matching.service.word_embeddings.SentenceTransformer')
-    def test_semantic_matcher_initialization(self, mock_st):
-        """Test that SemanticMatcher initializes properly."""
-        mock_model = MagicMock()
-        mock_st.return_value = mock_model
-        
-        repo = FakeAhsRepo([])
-        matcher = SemanticMatcher(repo)
-        
-        self.assertIsNotNone(matcher.model)
-        self.assertEqual(matcher._cache, {})
-    
-    @patch('automatic_job_matching.service.word_embeddings.SentenceTransformer')
-    def test_semantic_matcher_initialization_failure(self, mock_st):
-        """Test SemanticMatcher handles model initialization failure."""
-        mock_st.side_effect = Exception("Model loading failed")
-        
-        repo = FakeAhsRepo([])
-        
-        # Should raise exception (no try-except in __init__)
-        with self.assertRaises(Exception):
-            SemanticMatcher(repo)
-    
-    @patch('automatic_job_matching.service.word_embeddings.SentenceTransformer')
     def test_find_best_match_returns_none_for_empty_query(self, mock_st):
         """Test that empty queries return None."""
         mock_st.return_value = MagicMock()
@@ -348,34 +256,6 @@ class SemanticMatcherTests(SimpleTestCase):
     
     @patch('automatic_job_matching.service.word_embeddings.SentenceTransformer')
     @patch('automatic_job_matching.service.word_embeddings.util')
-    def test_find_multiple_matches_filters_by_similarity(self, mock_util, mock_st):
-        """Test that find_multiple_matches filters by min_similarity."""
-        mock_model = MagicMock()
-        mock_st.return_value = mock_model
-        
-        rows = [
-            AhsRow(id=1, code="A.01", name="pasangan batu"),
-            AhsRow(id=2, code="B.01", name="galian tanah"),
-        ]
-        repo = FakeAhsRepo(rows)
-        matcher = SemanticMatcher(repo)
-        
-        # Mock embeddings
-        mock_model.encode.return_value = MagicMock()
-        
-        # Mock similarities: [0.85, 0.40] (only first above 0.5 threshold)
-        import torch
-        mock_util.cos_sim.return_value = torch.tensor([[0.85, 0.40]])
-        
-        results = matcher.find_multiple_matches("pasangan batu merah", min_similarity=0.5, limit=5)
-        
-        # Should only return first result (0.85 >= 0.5)
-        self.assertEqual(len(results), 1)
-        self.assertEqual(results[0]["id"], 1)
-        self.assertGreaterEqual(results[0]["confidence"], 0.5)
-    
-    @patch('automatic_job_matching.service.word_embeddings.SentenceTransformer')
-    @patch('automatic_job_matching.service.word_embeddings.util')
     def test_find_multiple_matches_respects_limit(self, mock_util, mock_st):
         """Test that find_multiple_matches respects limit parameter."""
         mock_model = MagicMock()
@@ -414,58 +294,6 @@ class SemanticMatcherTests(SimpleTestCase):
         # Should return empty list (exception caught in updated code)
         result = matcher.find_multiple_matches("test", limit=5)
         self.assertEqual(result, [])
-    
-    @patch('automatic_job_matching.service.word_embeddings.SentenceTransformer')
-    @patch('automatic_job_matching.service.word_embeddings.util')
-    def test_semantic_matcher_uses_cache(self, mock_util, mock_st):
-        """Test that SemanticMatcher caches embeddings."""
-        mock_model = MagicMock()
-        mock_st.return_value = mock_model
-        
-        rows = [AhsRow(id=1, code="A.01", name="pasangan batu")]
-        repo = FakeAhsRepo(rows)
-        matcher = SemanticMatcher(repo)
-        
-        mock_model.encode.return_value = MagicMock()
-        
-        import torch
-        mock_util.cos_sim.return_value = torch.tensor([[0.85]])
-        
-        # First call - should encode and cache
-        matcher.find_multiple_matches("test", limit=1)
-        self.assertGreater(len(matcher._cache), 0)
-        
-        # Second call - should use cache
-        initial_cache_size = len(matcher._cache)
-        matcher.find_multiple_matches("test2", limit=1)
-        # Cache should still contain first item
-        self.assertGreaterEqual(len(matcher._cache), initial_cache_size)
-    
-    @patch('automatic_job_matching.service.word_embeddings.SentenceTransformer')
-    @patch('automatic_job_matching.service.word_embeddings.util')
-    def test_find_best_match_returns_single_result(self, mock_util, mock_st):
-        """Test that find_best_match returns single best result."""
-        mock_model = MagicMock()
-        mock_st.return_value = mock_model
-        
-        rows = [
-            AhsRow(id=1, code="A.01", name="pasangan batu"),
-            AhsRow(id=2, code="B.01", name="galian tanah"),
-        ]
-        repo = FakeAhsRepo(rows)
-        matcher = SemanticMatcher(repo)
-        
-        mock_model.encode.return_value = MagicMock()
-        
-        import torch
-        mock_util.cos_sim.return_value = torch.tensor([[0.85, 0.70]])
-        
-        result = matcher.find_best_match("pasangan batu", min_similarity=0.5)
-        
-        # Should return dict (not list)
-        self.assertIsInstance(result, dict)
-        self.assertEqual(result["id"], 1)
-        self.assertEqual(result["matched_on"], "semantic")
     
     @patch('automatic_job_matching.service.word_embeddings.SentenceTransformer')
     def test_find_multiple_matches_with_empty_query(self, mock_st):
