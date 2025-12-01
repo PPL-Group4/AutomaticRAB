@@ -21,6 +21,7 @@ PDF_UPLOAD_TEMPLATE = "pdf_upload.html"
 # Error message constants
 NO_FILE_UPLOADED_MSG = "No file uploaded"
 
+
 class PdfUploadHandler:
     """Template Method for handling PDF upload, temp save, parse, and response."""
 
@@ -46,7 +47,7 @@ class PdfUploadHandler:
 
                 s = io.StringIO()
                 pstats.Stats(profiler, stream=s).sort_stats(pstats.SortKey.TIME).print_stats(15)
-                print(s.getvalue())  
+                print(s.getvalue())
             else:
                 rows = parser_fn(tmp_path)
 
@@ -71,10 +72,27 @@ def _convert_decimals(obj):
     """Recursively convert Decimal objects to float for JSON serialization."""
     if isinstance(obj, Decimal):
         return float(obj)
+
+    if isinstance(obj, dict):
+        new = {}
+        for k, v in obj.items():
+            if isinstance(v, (int, float, str, bool, type(None))):
+                new[k] = v
+            elif isinstance(v, Decimal):
+                new[k] = float(v)
+            elif isinstance(v, list):
+                new[k] = [_convert_decimals(i) for i in v]
+            elif isinstance(v, dict):
+                new[k] = _convert_decimals(v)
+            else:
+                # fallback for match objects or unusual data types
+                new[k] = str(v)
+        return new
+
     if isinstance(obj, list):
         return [_convert_decimals(i) for i in obj]
-    if isinstance(obj, dict):
-        return {k: _convert_decimals(v) for k, v in obj.items()}
+
+    # primitive types
     return obj
 
 
@@ -85,17 +103,17 @@ def _create_test_job_from_rows(rows, filename="Uploaded PDF"):
     """
     # Create job
     job = TestJob.objects.create(name=f"RAB - {filename}")
-    
+
     # Create items from rows (skip section headers)
     for row in rows:
         # Skip section/category rows
         if row.get("is_section") or row.get("job_match_status") == "skipped":
             continue
-            
+
         description = row.get("description", "Unknown Item")
         if not description or description.strip() == "":
             continue
-            
+
         # Parse quantity and price
         try:
             quantity = Decimal(str(row.get("volume", 0)))
@@ -103,14 +121,14 @@ def _create_test_job_from_rows(rows, filename="Uploaded PDF"):
                 quantity = Decimal("1")
         except (ValueError, TypeError, KeyError):
             quantity = Decimal("1")
-            
+
         try:
             unit_price = Decimal(str(row.get("price", 0)))
             if unit_price < 0:
                 unit_price = Decimal("0")
         except (ValueError, TypeError, KeyError):
             unit_price = Decimal("0")
-        
+
         # Create item
         TestItem.objects.create(
             job=job,
@@ -118,10 +136,10 @@ def _create_test_job_from_rows(rows, filename="Uploaded PDF"):
             quantity=quantity,
             unit_price=unit_price
         )
-    
+
     # Calculate totals and weights
     job.calculate_totals()
-    
+
     return job
 
 
@@ -133,7 +151,7 @@ def rab_converted_pdf(request):
     if request.method == "POST":
         handler = PdfUploadHandler()
         return handler.handle_upload(request, parse_pdf_to_dtos, enable_profiling=True)
-    
+
     return HttpResponseNotAllowed(["GET", "POST"])
 
 
@@ -177,29 +195,29 @@ def parse_pdf_async(request):
     """
     try:
         pdf_file = request.FILES.get("pdf_file")
-        
+
         if not pdf_file:
             return Response({"detail": "No PDF file uploaded"}, status=400)
-        
+
         # Validate file type
         if pdf_file.content_type != "application/pdf":
             return Response({"detail": "Only .pdf files are allowed."}, status=400)
-        
+
         # Save file to temp location
         with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp:
             for chunk in pdf_file.chunks():
                 tmp.write(chunk)
             tmp_path = tmp.name
-        
+
         # Submit task to Celery
         task = process_pdf_file_task.delay(tmp_path, pdf_file.name)
-        
+
         return Response({
             "task_id": task.id,
             "status": "processing",
             "message": "PDF is being processed. Use task_id to check status."
         }, status=202)
-        
+
     except Exception as e:
         return Response({"detail": str(e)}, status=500)
 
@@ -212,7 +230,7 @@ def task_status(request, task_id):
     """
     try:
         task = AsyncResult(task_id)
-        
+
         if task.state == 'PENDING':
             response = {
                 'state': task.state,
@@ -240,8 +258,8 @@ def task_status(request, task_id):
                 'state': task.state,
                 'status': str(task.info)
             }
-        
+
         return Response(response)
-        
+
     except Exception as e:
         return Response({"error": str(e)}, status=500)
