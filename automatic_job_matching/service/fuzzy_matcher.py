@@ -224,44 +224,80 @@ class SimilarityCalculator:
             word_weight = self.word_weight_config.get_word_weight(query_word)
             total_weight += word_weight
 
-            best_match = 0.0
-            best_word: Optional[str] = None
-            match_type = "none"
-
-            for candidate_word in candidate_words:
-                if query_word == candidate_word:
-                    best_match = 1.0
-                    best_word = candidate_word
-                    match_type = "exact"
-                    break
-
-                if query_word in candidate_word or candidate_word in query_word:
-                    overlap = min(len(query_word), len(candidate_word))
-                    ratio = overlap / max(len(query_word), len(candidate_word))
-                    if ratio > best_match:
-                        best_match = ratio
-                        best_word = candidate_word
-                        match_type = "substring"
+            best_match, best_word, match_type = self._find_best_match(
+                query_word,
+                candidate_words,
+            )
 
             matched_weight += word_weight * best_match
 
             if capture_breakdown:
-                sequence_ratio = (
-                    fuzz.ratio(query_word, best_word) / 100.0
-                    if best_word
-                    else 0.0
-                )
-                breakdown.append({
-                    "query_word": query_word,
-                    "matched_word": best_word,
-                    "match_type": match_type if best_match > 0 else "none",
-                    "score": round(best_match, 3),
-                    "weight": round(word_weight, 3),
-                    "weighted_score": round(word_weight * best_match, 3),
-                    "sequence_ratio": round(sequence_ratio, 3),
-                })
+                breakdown.append(self._build_breakdown_entry(
+                    query_word,
+                    best_word,
+                    match_type,
+                    best_match,
+                    word_weight,
+                ))
 
         return matched_weight, total_weight, breakdown
+
+    def _find_best_match(
+        self,
+        query_word: str,
+        candidate_words: List[str],
+    ) -> Tuple[float, Optional[str], str]:
+        best_match = 0.0
+        best_word: Optional[str] = None
+        match_type = "none"
+
+        for candidate_word in candidate_words:
+            if query_word == candidate_word:
+                return 1.0, candidate_word, "exact"
+
+            if self._is_substring_overlap(query_word, candidate_word):
+                ratio = self._calculate_overlap_ratio(query_word, candidate_word)
+                if ratio > best_match:
+                    best_match = ratio
+                    best_word = candidate_word
+                    match_type = "substring"
+
+        return best_match, best_word, match_type
+
+    @staticmethod
+    def _is_substring_overlap(query_word: str, candidate_word: str) -> bool:
+        return query_word in candidate_word or candidate_word in query_word
+
+    @staticmethod
+    def _calculate_overlap_ratio(query_word: str, candidate_word: str) -> float:
+        max_length = max(len(query_word), len(candidate_word))
+        if max_length == 0:
+            return 0.0
+        overlap = min(len(query_word), len(candidate_word))
+        return overlap / max_length
+
+    def _build_breakdown_entry(
+        self,
+        query_word: str,
+        best_word: Optional[str],
+        match_type: str,
+        best_match: float,
+        word_weight: float,
+    ) -> dict:
+        sequence_ratio = (
+            fuzz.ratio(query_word, best_word) / 100.0
+            if best_word
+            else 0.0
+        )
+        return {
+            "query_word": query_word,
+            "matched_word": best_word,
+            "match_type": match_type if best_match > 0 else "none",
+            "score": round(best_match, 3),
+            "weight": round(word_weight, 3),
+            "weighted_score": round(word_weight * best_match, 3),
+            "sequence_ratio": round(sequence_ratio, 3),
+        }
 
 class CandidateProvider:
     def __init__(self, repository: AhsRepository, synonym_expander: SynonymExpander = None):
