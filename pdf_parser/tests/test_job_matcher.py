@@ -14,6 +14,22 @@ class JobMatcherTests(TestCase):
             self.assertIsNone(result["match"])
 
     @patch("pdf_parser.services.job_matcher.MatchingService.perform_best_match")
+    def test_sanitizes_description_before_matching(self, mock_match):
+        """Should strip control characters before invoking the matcher."""
+        mock_match.return_value = None
+        result = job_matcher.match_description(" \x00Hello\tWorld\n")
+        mock_match.assert_called_once_with("Hello World", unit=None)
+        self.assertEqual(result["status"], "not found")
+
+    @patch("pdf_parser.services.job_matcher.MatchingService.perform_best_match")
+    def test_skip_when_only_control_characters(self, mock_match):
+        """Should skip matching when sanitization leaves an empty description."""
+        result = job_matcher.match_description("\x00\t\n")
+        self.assertEqual(result["status"], "skipped")
+        self.assertIsNone(result["match"])
+        mock_match.assert_not_called()
+
+    @patch("pdf_parser.services.job_matcher.MatchingService.perform_best_match")
     def test_found_similar_single_list(self, mock_match):
         """Should return 'similar' when one similar match is found."""
         mock_match.return_value = [{"code": "B.02", "name": "Batu Belah"}]
@@ -56,7 +72,10 @@ class JobMatcherTests(TestCase):
         mock_match.side_effect = Exception("Database unavailable")
         result = job_matcher.match_description("test error")
         self.assertEqual(result["status"], "error")
-        self.assertIn("Database unavailable", result["error"])
+        self.assertEqual(
+            result["error"],
+            "Job matching failed; please try again later.",
+        )
         mock_logger.exception.assert_called_once_with("Job matching failed for description")
 
     # ---------- Internal function _derive_status ----------
