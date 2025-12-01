@@ -429,15 +429,18 @@ class CandidateProvider:
         detected_compounds: dict
     ) -> bool:
         """Check if a word matches in candidate name."""
-        if word in candidate_name:
-            return True
-        if self._check_synonym_match(word, candidate_name):
-            return True
-        if self._check_fuzzy_match(word, candidate_name):
-            return True
-        if self._check_compound_material_match(word, candidate_name, detected_compounds):
-            return True
-        return False
+        matchers = (
+            lambda: self._has_direct_match(word, candidate_name),
+            lambda: self._check_synonym_match(word, candidate_name),
+            lambda: self._check_fuzzy_match(word, candidate_name),
+            lambda: self._check_compound_material_match(word, candidate_name, detected_compounds),
+        )
+
+        return any(check() for check in matchers)
+
+    def _has_direct_match(self, word: str, candidate_name: str) -> bool:
+        """Direct containment check kept separate for extensibility."""
+        return word in candidate_name
 
     def _check_synonym_match(self, word: str, candidate_name: str) -> bool:
         """Check if word or its synonyms appear in candidate."""
