@@ -125,27 +125,27 @@ def upload_view(request):
 
             if excel_apendo:
                 validate_excel_file(excel_apendo)
-                return render(request, 'excel_upload.html', {
+                TEMPLATE_UPLOAD = 'excel_upload.html'
+                return render(request, TEMPLATE_UPLOAD, {
                     'success': 'APENDO Excel uploaded successfully'
                 })
 
             if pdf_file:
                 validate_pdf_file(pdf_file)
-                return render(request, 'excel_upload.html', {
+                return render(request, TEMPLATE_UPLOAD, {
                     'success': 'PDF uploaded successfully'
                 })
 
-            return render(request, 'excel_upload.html', {
+            return render(request, TEMPLATE_UPLOAD, {
                 'error': 'No file selected'
             }, status=400)
 
         except ValidationError as ve:
-            return render(request, 'excel_upload.html', {
+            return render(request, TEMPLATE_UPLOAD, {
                 'error': str(ve)
             }, status=400)
 
-    return render(request, 'excel_upload.html')
-
+    return render(request, TEMPLATE_UPLOAD)
 
 def rab_converted(request):
     """
