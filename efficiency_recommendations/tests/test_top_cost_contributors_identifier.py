@@ -202,7 +202,7 @@ class TopCostContributorsIdentifierTest(TestCase):
         original_items_count = len(self.job_data['items'])
         original_first_item = self.job_data['items'][0].copy()
 
-        result = identify_top_cost_contributors(self.job_data)
+        _ = identify_top_cost_contributors(self.job_data)
 
         # Original data should remain unchanged
         self.assertEqual(len(self.job_data['items']), original_items_count)
