@@ -50,31 +50,17 @@ def match_best_view(request):
     tag_match_event(description, unit)
     result = MatchingService.perform_best_match(description, unit=unit)  # Pass unit to matching service
 
-    status = MatchingService.determine_status(result)
-
-    if status == "not found":
-        log_unmatched_entry(description, unit)
-        review_logger.warning(
-            "job_not_found description=%r unit=%r",
-            description,
-            unit,
-        )
-    elif status in {"unit mismatch", "similar"} or (status.startswith("found") and status != "found"):
-        review_logger.info(
-            "job_needs_review status=%s description=%r unit=%r",
-            status,
-            description,
-            unit,
-        )
-
-    if isinstance(result, dict) and "alternatives" in result:
-        review_logger.info(
-            "job_needs_review status=alternatives description=%r unit=%r alternatives=%d",
-            description,
-            unit,
-            len(result.get("alternatives", []) or []),
-        )
-        return JsonResponse(result, status=200)
+    if isinstance(result, dict) and result:
+        if result.get("confidence", 1.0) == 1.0:
+            status = "found"
+        else:
+            status = "similar"
+    elif isinstance(result, list) and len(result) == 1:
+        status = "similar"
+    elif isinstance(result, list) and len(result) > 1:
+        status = f"found {len(result)} similar"
+    else:
+        status = "not found"
 
     return JsonResponse({"status": status, "match": result}, status=200)
 
@@ -190,3 +176,9 @@ def ahs_breakdown_view(request, code: str):
         "code": code,
         "breakdown": breakdown,
     }, status=200)
+
+def ahs_breakdown_page(request):
+    return render(request, "ahs_breakdown.html")
+
+def rab_breakdown_page(request):
+    return render(request, "rab_breakdown_list.html")

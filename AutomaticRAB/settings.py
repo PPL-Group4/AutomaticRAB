@@ -103,8 +103,12 @@ REST_FRAMEWORK = {
     "DEFAULT_PARSER_CLASSES": [
         "rest_framework.parsers.JSONParser",
     ],
-    "DEFAULT_THROTTLE_CLASSES": [],
-    "DEFAULT_THROTTLE_RATES": {},
+    "DEFAULT_THROTTLE_CLASSES": [
+        "rest_framework.throttling.AnonRateThrottle",
+    ],
+    "DEFAULT_THROTTLE_RATES": {
+        "anon": os.getenv("API_THROTTLE_RATE", "100/hour"),
+    },
 }
 
 MIDDLEWARE = [
@@ -153,7 +157,7 @@ DATABASES = {
         'HOST': os.getenv('MYSQL_HOST'),
         'PORT': os.getenv('MYSQL_PORT'),
         'OPTIONS': {
-            'ssl': True
+            'ssl': False
         },
     },
     'scraper': {
@@ -164,7 +168,7 @@ DATABASES = {
         'HOST': os.getenv('MYSQL_HOST'),
         'PORT': os.getenv('MYSQL_PORT'),
         'OPTIONS': {
-            'ssl': True
+            'ssl': False
         },
     },
 }
@@ -290,6 +294,26 @@ DATA_UPLOAD_MAX_NUMBER_FIELDS = int(os.getenv("DATA_UPLOAD_MAX_NUMBER_FIELDS", "
 
 FILE_UPLOAD_TEMP_DIR = os.path.join(BASE_DIR, 'tmp')
 os.makedirs(FILE_UPLOAD_TEMP_DIR, exist_ok=True)
+
+# Celery Configuration
+# Default URLs work for both:
+# - Local development: redis://localhost:6379/0
+# - Docker: redis://redis:6379/0 (set in docker-compose.yml)
+# - CI/CD tests: memory:// (no Redis needed)
+CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL', 'redis://localhost:6379/0')
+CELERY_RESULT_BACKEND = os.getenv('CELERY_RESULT_BACKEND', 'redis://localhost:6379/0')
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = 'UTC'
+CELERY_TASK_TRACK_STARTED = True
+CELERY_TASK_TIME_LIMIT = 30 * 60  # 30 minutes max for any task
+CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
+
+# For tests, use eager mode to run tasks synchronously (no Redis needed)
+if RUNNING_TESTS:
+    CELERY_TASK_ALWAYS_EAGER = True
+    CELERY_TASK_EAGER_PROPAGATES = True
 
 import sentry_sdk
 from sentry_sdk.integrations.django import DjangoIntegration

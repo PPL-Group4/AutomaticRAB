@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="section-box">
+  <h5 class="section-title">Rincian Harga AHS (Semua Kode Terpilih)</h5>
+
+  <p class="text-muted">
+    Halaman ini menampilkan breakdown harga untuk <strong>semua kode AHS</strong> 
+    yang telah dipilih/otomatis dicocokkan di halaman RAB.
+  </p>
+
+  <div id="breakdown-container"></div>
+</div>
+
+<style>
+  .breakdown-card {
+    background: white;
+    border: 1px solid #ddd;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 25px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  }
+  .table th { background:#00365a; color:white; text-align:center; }
+  .group-header {
+    background:#f0f6fb; font-weight:bold; padding:6px 12px; margin-top:15px; border-left:4px solid #00365a;
+  }
+</style>
+
+<script>
+// Read codes stored from RAB page
+const matchedCodes = JSON.parse(localStorage.getItem("matched_ahs_codes") || "[]");
+
+document.addEventListener("DOMContentLoaded", async () => {
+    const container = document.getElementById("breakdown-container");
+
+    if (matchedCodes.length === 0) {
+        container.innerHTML = "<p class='text-danger'>Tidak ada kode AHS yang ditemukan.</p>";
+        return;
+    }
+
+    for (const code of matchedCodes) {
+        await fetchOneCode(code);
+    }
+});
+
+async function fetchOneCode(code) {
+    const url = `/api/ahs-breakdown/${code}/`;
+
+    try {
+        const response = await fetch(url);
+        const data = await response.json();
+
+        if (data.error) {
+            renderNotFound(code);
+            return;
+        }
+        renderBreakdown(code, data.breakdown);
+    } catch (err) {
+        console.error(err);
+        renderError(code);
+    }
+}
+
+function renderBreakdown(code, breakdown) {
+    const container = document.getElementById("breakdown-container");
+
+    const card = document.createElement("div");
+    card.className = "breakdown-card";
+
+    card.innerHTML = `
+      <h4>${code} — ${breakdown.name}</h4>
+      <p><strong>Harga Satuan Pekerjaan:</strong> Rp ${formatNumber(breakdown.unit_price)}</p>
+
+      <div class="group-header">A. TENAGA KERJA</div>
+      ${makeTable(breakdown.components.labor)}
+
+      <div class="group-header">B. BAHAN</div>
+      ${makeTable(breakdown.components.materials)}
+
+      <div class="group-header">C. PERALATAN</div>
+      ${makeTable(breakdown.components.equipment)}
+    `;
+
+    container.appendChild(card);
+}
+
+function renderNotFound(code) {
+    const container = document.getElementById("breakdown-container");
+    const card = document.createElement("div");
+    card.className = "breakdown-card";
+    card.innerHTML = `<h4>${code}</h4>
+                      <p class="text-danger"><strong>Breakdown tidak ditemukan.</strong></p>`;
+    container.appendChild(card);
+}
+
+function renderError(code) {
+    const container = document.getElementById("breakdown-container");
+    const card = document.createElement("div");
+    card.className = "breakdown-card";
+    card.innerHTML = `<h4>${code}</h4>
+                      <p class="text-danger"><strong>Terjadi kesalahan mengambil data.</strong></p>`;
+    container.appendChild(card);
+}
+
+function makeTable(items) {
+    if (!items || !items.length) return "<p class='text-muted'>Tidak ada data.</p>";
+
+    let html = `
+      <table class="table table-bordered mt-2">
+        <thead>
+          <tr>
+            <th>No</th>
+            <th>Uraian</th>
+            <th>Sat.</th>
+            <th>Koefisien</th>
+            <th>Harga Satuan</th>
+            <th>Jumlah Harga</th>
+          </tr>
+        </thead>
+        <tbody>
+    `;
+    items.forEach((row, i) => {
+        html += `
+          <tr>
+            <td>${i+1}</td>
+            <td>${row.name}</td>
+            <td>${row.unit || ''}</td>
+            <td>${formatQuantity(row.quantity)}</td>
+            <td>${formatNumber(row.unit_price)}</td>
+            <td>${formatNumber(row.total_cost)}</td>
+          </tr>
+        `;
+    });
+    html += "</tbody></table>";
+    return html;
+}
+
+function formatNumber(num) {
+    if (num === null || num === undefined) return "-";
+    return num.toLocaleString('id-ID', {minimumFractionDigits:2, maximumFractionDigits:2});
+}
+
+function formatQuantity(q) {
+    if (q === null || q === undefined) return "-";
+    return q.toLocaleString('id-ID', {minimumFractionDigits:3, maximumFractionDigits:3});
+}
+</script>
+{% endblock %}

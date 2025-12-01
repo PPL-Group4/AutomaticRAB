@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Dict, List
 
 from django.db.models import Q
+from django.db.utils import ConnectionDoesNotExist, DatabaseError, OperationalError, ProgrammingError
 from target_bid.models.scraped_product import (
     JuraganMaterialProduct,
     Mitra10Product,
@@ -156,11 +157,26 @@ class ScrapedProductRepository:
 
         results = []
 
+        scraper_db_available = True
+
         for model in self.sources:
-            q = model.objects.using("scraper").filter(filters)
-            for w in words:
-                q = q.filter(name__icontains=w)
-            items = q.values("name", "price", "unit", "url", "category")[:limit]
+            if not scraper_db_available:
+                break
+
+            try:
+                q = model.objects.using("scraper").filter(filters)
+                for w in words:
+                    q = q.filter(name__icontains=w)
+                items = list(q.values("name", "price", "unit", "url", "category")[:limit])
+            except (ConnectionDoesNotExist, OperationalError, ProgrammingError, DatabaseError) as exc:
+                scraper_db_available = False
+                logger.warning(
+                    "Skipping scraper DB lookup for %s due to database error: %s",
+                    model.__name__,
+                    exc,
+                    exc_info=False,
+                )
+                continue
             for item in items:
                 item["source"] = model._meta.db_table
                 results.append(item)

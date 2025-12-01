@@ -71,7 +71,14 @@ class AhspCiptaKaryaRepository:
                 reader = csv.DictReader(f, delimiter=";")
 
                 for row in reader:
-                    row = {k.strip().upper(): (v or "").strip() for k, v in row.items()}
+                    cleaned_row = {}
+                    for key, value in row.items():
+                        if not key:
+                            # Extra columns beyond the header are mapped to a None key; skip them.
+                            continue
+                        cleaned_row[key.strip().upper()] = (value or "").strip()
+
+                    row = cleaned_row
 
                     code = row.get("NO") or row.get(";NO") or ""
                     name = row.get("URAIAN PEKERJAAN") or ""

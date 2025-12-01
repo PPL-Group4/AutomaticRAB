@@ -87,6 +87,12 @@
     </div>
     <p class="mt-2">Memproses file, mohon tunggu...</p>
   </div>
+  
+  <button id="view-breakdown-btn"
+      class="btn btn-primary mb-3"
+      style="background:#00365a; border:none;">
+    Lihat Uraian Harga
+  </button>
 
   <div id="rabTables" class="mt-3"></div>
 
@@ -145,8 +151,6 @@
   </div>
 
   {% include "efficiency_recommendations/recommendations_panel.html" %}
-
-  <a href="#" class="btn btn-outline-primary mt-3">+ Tambah Kategori Pekerjaan / Pilih Referensi RAB</a>
 </div>
 {% endblock %}
 
@@ -976,7 +980,6 @@
     let currentTable = null;
     let tbody = null;
     let bujakCounter = 0;
-    const matchPromises = []; 
 
     rows.forEach((row, rowIndex) => {
       const skipKeywords = ["PAJAK", "JUMLAH SETELAH PAJAK", "DIBULATKAN", "TERBILANG"];
@@ -1062,22 +1065,11 @@
       tbody.appendChild(tr);
       total += parseCurrencyNumber(row.total_price);
 
-      matchPromises.push((async () => {
-        const matchCell = tr.querySelector("td:nth-child(5)");
-        const analysisCell = tr.querySelector(".analysis-code-cell");
-        const statusCell = tr.querySelector("td:nth-child(4)");
+      const matchCell = tr.querySelector("td:nth-child(5)");
+      const analysisCell = tr.querySelector(".analysis-code-cell");
+      const statusCell = tr.querySelector("td:nth-child(4)");
+      populateMatchCell(matchCell, row, analysisCell, statusCell);
 
-        try {
-          const results = await fetchAndStoreSuggestions(row, row.description || "");
-          populateMatchCell(matchCell, row, analysisCell, statusCell);
-        } catch (err) {
-          console.warn("Match fetch failed for row:", row.description, err);
-        }
-      })());
-    });
-
-    Promise.all(matchPromises).then(() => {
-      console.log("✅ All sectioned table matches complete");
     });
 
     updateGrandTotal(total);
@@ -1133,29 +1125,15 @@
       total += parseCurrencyNumber(row.total_price);
     });
 
-    const matchPromises = rows.map(async (row, rowIndex) => {
-      if (row.is_section || row.job_match_status === "skipped") return;
-
-      const tr = table.querySelector(
-        `tr[data-row-key="${sanitizeRowKey(row.row_key || row.rowKey, `row-${rowIndex}`)}"]`
-      );
-      if (!tr) return;
-
+    // ✅ Just populate matches from backend - no async fetching
+    rows.forEach((row, rowIndex) => {
+      const tr = tbody.rows[rowIndex];
       const matchCell = tr.querySelector("td:nth-child(5)");
       const analysisCell = tr.querySelector(".analysis-code-cell");
       const statusCell = tr.querySelector("td:nth-child(4)");
-
-      try {
-        const results = await fetchAndStoreSuggestions(row, row.description || "");
-        populateMatchCell(matchCell, row, analysisCell, statusCell);
-      } catch (err) {
-        console.warn("Match fetch failed for row:", row.description, err);
-      }
+      populateMatchCell(matchCell, row, analysisCell, statusCell);
     });
 
-    Promise.all(matchPromises).then(() => {
-      console.log("✅ All matching complete");
-    });
 
     updateGrandTotal(total);
   }
@@ -1691,56 +1669,6 @@
     const selectableMatches = matches.filter(m => m && m.code);
     const fallbackMessages = matches.filter(m => !m || !m.code);
 
-    // === ALTERNATIVES / UNIT MISMATCH CASE ===
-    if (row.unit_mismatch === true) {
-      statusCell.textContent = "Not found (no same-unit match)";
-      statusCell.classList.remove("text-success");
-      statusCell.classList.add("text-danger");
-
-      analysisCell.textContent = "";
-
-      const tr = analysisCell.closest("tr");
-      if (tr) {
-        const priceInput = tr.querySelector(".price-input");
-        if (priceInput) {
-          priceInput.value = "0";
-          priceInput.dataset.referencePrice = "";
-          priceInput.dataset.manualConfirmed = "true";
-          updatePriceOriginUI(priceInput, "manual");
-        }
-      }
-
-      const alternatives = row.job_match;
-      if (Array.isArray(alternatives) && alternatives.length) {
-        const helper = document.createElement("div");
-        helper.className = "fw-semibold small mb-2 text-warning";
-        helper.textContent =
-          "Sugesti dengan unit berbeda";
-        cell.appendChild(helper);
-
-        alternatives.forEach(match => {
-          const button = document.createElement("button");
-          button.type = "button";
-          button.className =
-            "btn btn-sm btn-outline-warning w-100 text-start match-option mb-1";
-          const label = buildMatchLabel(match);
-          button.dataset.label = label;
-          if (match.code) button.dataset.code = match.code;
-          button.textContent = label;
-          button.addEventListener("click", () =>
-            handleMatchSelection(match, row, analysisCell, statusCell, cell, button)
-          );
-          cell.appendChild(button);
-        });
-      }
-
-      renderManualInput(cell, row, analysisCell, statusCell, "", {
-        noticeClass: selectableMatches.length ? "text-muted small mb-2" : "text-warning small mb-2"
-      });
-
-      return;
-    }
-
     // === FOUND CASES ===
     if (selectableMatches.length === 1) {
       // ✅ Automatically match the single result
@@ -1753,7 +1681,7 @@
       statusCell.classList.add("text-success");
 
       const span = document.createElement("span");
-      span.className = "text-success fw-semibold";
+      span.className = "text-success fw-semibold auto-match-code";
       span.textContent = buildMatchLabel(match);
       cell.appendChild(span);
 
@@ -1762,53 +1690,29 @@
     }
 
     else if (selectableMatches.length > 1) {
-      // ✅ Automatically pick the one with highest confidence
       const bestMatch = getBestConfidenceMatch(selectableMatches);
+
+      // Auto-select best match
       if (bestMatch) {
         row.job_match_selected = bestMatch;
-        row.analysis_code = bestMatch.code;
-        analysisCell.textContent = bestMatch.code;
+        row.analysis_code = bestMatch.code || "";
+        updateRowLookup(row, [bestMatch]);
+
+        analysisCell.textContent = row.analysis_code;
         statusCell.textContent = "Dipilih (Auto)";
-        statusCell.classList.remove("text-danger");
         statusCell.classList.add("text-success");
 
-        const span = document.createElement("span");
-        span.className = "text-success fw-semibold";
-        span.textContent = buildMatchLabel(bestMatch);
-        cell.appendChild(span);
+        const matchLabel = document.createElement("span");
+        matchLabel.className = "text-success fw-bold";
+        matchLabel.textContent = buildMatchLabel(bestMatch);
+        cell.appendChild(matchLabel);
 
+        // Fetch price for best match
         const tr = analysisCell.closest("tr");
-        if (tr) setTimeout(() => setPriceForRow(bestMatch, tr), 0);
-      }
-
-      // Still render all available buttons for manual re-selection
-      const helper = document.createElement("div");
-      helper.className = "fw-semibold small mb-2 text-dark";
-      helper.textContent = "Sugesti lain:";
-      cell.appendChild(helper);
-
-      selectableMatches.forEach(match => {
-        const button = document.createElement("button");
-        button.type = "button";
-        button.className =
-          "btn btn-sm btn-outline-primary w-100 text-start match-option mb-1";
-        const label = buildMatchLabel(match);
-        button.dataset.label = label;
-        if (match.code) button.dataset.code = match.code;
-        button.textContent = label;
-
-        // Mark the automatically selected one visually
-        if (bestMatch && match.code === bestMatch.code) {
-          button.classList.remove("btn-outline-primary");
-          button.classList.add("btn-success");
-          button.textContent = `Dipilih: ${button.dataset.label}`;
+        if (tr) {
+          setPriceForRow(bestMatch, tr);
         }
-
-        button.addEventListener("click", () =>
-          handleMatchSelection(match, row, analysisCell, statusCell, cell, button)
-        );
-        cell.appendChild(button);
-      });
+      }
     }
 
     else {
@@ -1883,8 +1787,8 @@
 
     const input = document.createElement("input");
     input.type = "text";
-    input.className = "form-control";
-    input.placeholder = "Masukkan kode AHSP secara manual";
+    input.className = "form-control manual-input";
+    input.placeholder = "Masukkan kode atau pilih sugesti";
     input.value = "";
     input.autocomplete = "off";
 
@@ -1917,51 +1821,61 @@
     };
 
     const applyManual = async () => {
-      const value = input.value.trim();
-      if (!value) {
-        input.focus();
-        return;
-      }
+  const value = input.value.trim();
+  if (!value) {
+    input.focus();
+    return;
+  }
 
-      if (warnIfUnsafeCode(value)) {
-        input.focus();
-        return;
-      }
+  if (warnIfUnsafeCode(value)) {
+    input.focus();
+    return;
+  }
 
-      const matched = findMatchByCode(row, value);
-      row.analysis_code = value;
-      row.job_match_selected = matched ? { ...matched, match_status: "Manual" } : {
-        code: value,
-        match_status: "Manual",
-      };
-      row.job_match_status = "manual";
-      updateRowLookup(row, matched ? [matched] : []);
+  const matched = findMatchByCode(row, value);
+  row.analysis_code = value;
+  row.job_match_selected = matched ? { ...matched, match_status: "Manual" } : {
+    code: value,
+    match_status: "Manual",
+  };
+  row.job_match_status = "manual";
+  updateRowLookup(row, matched ? [matched] : []);
 
-      // updateNotice("Masukkan kode AHSP secara manual");
+  analysisCell.textContent = value;
+  statusCell.textContent = "Manual";
+  statusCell.classList.add("text-success");
 
-      analysisCell.textContent = value;
-      statusCell.textContent = "Manual";
-      statusCell.classList.add("text-success");
+  // Update all match option buttons
+  cell.querySelectorAll("button.match-option").forEach(btn => {
+    btn.classList.remove("btn-success");
+    btn.classList.add("btn-outline-primary");
+    if (btn.dataset.label) {
+      btn.textContent = btn.dataset.label;
+    }
+  });
 
-      cell.querySelectorAll("button.match-option").forEach(btn => {
-        btn.classList.remove("btn-success");
-        btn.classList.add("btn-outline-primary");
-        if (btn.dataset.label) {
-          btn.textContent = btn.dataset.label;
-        }
-      });
+  // ✅ UPDATE: Also update the green match label if it exists
+  const existingMatchLabel = cell.querySelector(".text-success.fw-semibold, .text-success.fw-bold");
+  if (existingMatchLabel) {
+    if (matched) {
+      existingMatchLabel.textContent = buildMatchLabel(matched);
+    } else {
+      existingMatchLabel.textContent = `${value} – Manual`;
+    }
+  }
 
-      button.classList.remove("btn-primary");
-      button.classList.add("btn-success");
-      button.textContent = "Dipakai";
-      dropdown.style.display = "none";
+  button.classList.remove("btn-primary");
+  button.classList.add("btn-success");
+  button.textContent = "Dipakai";
+  dropdown.style.display = "none";
 
-      // AFTER manual apply: try to fetch unit price and set Harga Sat for this row
-      const tr = analysisCell.closest("tr");
-      if (tr) {
-        await setPriceForRow(row.job_match_selected || { code: value }, tr);
-      }
-    };
+  // AFTER manual apply: try to fetch unit price and set Harga Sat for this row
+  const tr = analysisCell.closest("tr");
+  if (tr) {
+    await setPriceForRow(row.job_match_selected || { code: value }, tr);
+  }
+};
+
 
     button.addEventListener("click", applyManual);
     input.addEventListener("keydown", event => {
@@ -2085,14 +1999,15 @@
       if (!match || !match.code) {
         return;
       }
-      if (match.unit_mismatch) {
-        item.style.color = "#dc3545"; // red text
-        item.style.fontStyle = "italic";
-      }
       const item = document.createElement("button");
       item.type = "button";
-      item.className = "dropdown-item text-wrap";
-      item.textContent = `${match.code} – ${match.name || ""}`;
+      item.className = "dropdown-item text-wrap manual-select";
+      let label = `${match.code} – ${match.name || ""}`;
+      if (typeof match.confidence === "number") {
+          const pct = Math.round(match.confidence * 100);
+          label += ` – ${pct}%`;
+      }
+      item.textContent = label;
       item.addEventListener("click", () => {
         input.value = match.code;
         dropdown.style.display = "none";
@@ -2159,24 +2074,13 @@
           return [];
         }
 
-        // === Unit mismatch alternatives ===
-        if (data.alternatives && Array.isArray(data.alternatives)) {
-          row.unit_mismatch = true;
-          return data.alternatives.map(a => ({ ...a, unit_mismatch: true }));
-        }
-
         // === Normal matches (same-unit) ===
         if (data.match) {
-          const matchList = Array.isArray(data.match) ? data.match : [data.match];
-          const validMatches = matchList.filter(m => m && !m.unit_mismatch);
-          if (validMatches.length) {
-            row.unit_mismatch = false;
-            return validMatches;
-          }
+            const matchList = Array.isArray(data.match) ? data.match : [data.match];
+            return matchList.filter(m => m && m.code);
         }
 
         // === No results ===
-        row.unit_mismatch = false;
         return [];
       })
       .catch(err => {
@@ -2195,7 +2099,7 @@
       updateRowLookup(row, results);
 
       if (!results || !results.length) {
-        row.job_match = []; 
+        row.job_match = [];
       } else {
         row.job_match = results;
       }
@@ -2276,16 +2180,7 @@
     const totalCell = tr.querySelector(".total-cell");
     if (!priceInput) return;
 
-    if (match && match.unit_mismatch === true) {
-      const priceWrapper = priceInput.closest(".price-origin-wrapper");
-      if (priceWrapper) {
-        priceInput.value = "";
-        priceInput.dataset.referencePrice = "";
-        priceInput.dataset.baseAutoPrice = "";
-        updatePriceOriginUI(priceInput, "manual");
-      }
-      return;
-    }
+
 
     // prefer any price present on match object (various keys)
     const possiblePrice = match && (match.unit_price ?? match.price ?? match.unitPrice ?? match.unitPriceRp ?? null);
@@ -2399,7 +2294,7 @@
   const act = parseFloat(actual);
   if (!isFinite(ref) || ref <= 0 || !isFinite(act)) return null;
 
-  const pct = ((act - ref) / ref) * 100; 
+  const pct = ((act - ref) / ref) * 100;
   const absPct = Math.abs(pct);
 
   let level = null;
@@ -2430,18 +2325,56 @@ function renderWarningChip(host, info) {
 }
 
 function updatePriceWarningForRow(tr) {
-  if (!tr) return;
-  const priceInput = tr.querySelector(".price-input");
-  const host = tr.querySelector(".price-warning-host");
-  if (!priceInput || !host) return;
+    if (!tr) return;
+    const priceInput = tr.querySelector(".price-input");
+    const host = tr.querySelector(".price-warning-host");
+    if (!priceInput || !host) return;
 
-  const reference = priceInput.dataset.referencePrice;
-  if (!reference) { host.innerHTML = ""; return; }
+    const reference = priceInput.dataset.referencePrice;
+    if (!reference) {
+        host.innerHTML = "";
+        return;
+    }
 
-  const info = computeDeviationInfo(priceInput.value, reference);
-  renderWarningChip(host, info);
+    const info = computeDeviationInfo(priceInput.value, reference);
+    renderWarningChip(host, info);
+
 }
 </script>
+
+<script>
+  function extractAhsCode(text) {
+      if (!text) return null;
+      // Grab only the first numeric pattern like 3.16.2 or 2.1.1.3
+      const match = text.trim().match(/^\d+(?:\.\d+)*?/);
+      return match ? match[0] : null;
+  }
+</script>
+  
+
+<script>
+  document.getElementById("view-breakdown-btn").addEventListener("click", () => {
+      const codes = new Set();
+
+      // Collect AHS codes directly from the analysis column
+      document.querySelectorAll(".analysis-code-cell").forEach(cell => {
+          const code = cell.textContent.trim();
+          if (code.match(/^\d+(?:\.\d+)+$/)) {
+              codes.add(code);
+          }
+      });
+
+      if (codes.size === 0) {
+          alert("Belum ada kode AHSP yang dipilih untuk ditampilkan pada halaman rincian.");
+          return;
+      }
+
+      localStorage.setItem("matched_ahs_codes", JSON.stringify([...codes]));
+      window.location.href = "/api/rab-breakdown-page/";
+  });
+</script>
+  
+  
 
 <!-- Include Efficiency Recommendations JavaScript -->
 <script src="{% static 'efficiency_recommendations/recommendations.js' %}"></script>
