@@ -128,12 +128,12 @@ def upload_view(request):
             }, status=400)
 
         except ValidationError as ve:
-            return render(request, 'excel_upload.html', {
+            TEMPLATE_UPLOAD = 'excel_upload.html'
+            return render(request, TEMPLATE_UPLOAD, {
                 'error': str(ve)
             }, status=400)
 
-    return render(request, 'excel_upload.html')
-
+    return render(request, TEMPLATE_UPLOAD)
 def rab_converted(request):
     """
     Show the converted RAB preview.
