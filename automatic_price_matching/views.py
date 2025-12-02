@@ -8,7 +8,7 @@ from typing import Any, Dict, Optional
 from django.core.exceptions import ValidationError
 from django.http import JsonResponse, HttpRequest
 from django.views.decorators.http import require_POST
-from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.csrf import csrf_exempt, csrf_protect
 
 from .price_retrieval import AhspPriceRetriever, CombinedAhspSource
 from .validators import validate_recompute_payload
@@ -33,8 +33,25 @@ def _store_override(request: HttpRequest, row_key: str, payload: Dict[str, Any])
     request.session.modified = True
 
 
-@csrf_exempt
+def canonicalize_row_key(request, raw_key: str) -> str:
+    # Scope row keys to the user session
+    session_id = request.session.session_key or "anon"
+    if not isinstance(raw_key, str) or not raw_key.isalnum():
+        raise ValidationError("invalid row_key")
+
+    return f"{session_id}:{raw_key}"
+
+import secrets
+
+def generate_row_key():
+    return secrets.token_hex(16)  # 32-char unguessable key
+
+
+from django_ratelimit.decorators import ratelimit
+
+@ratelimit(key="ip", rate="5/10s", block=True)
 @require_POST
+@csrf_protect
 def recompute_total_cost(request: HttpRequest):
     """
     POST JSON: { "code": "A.1.1.4", "volume": 2.5 }
@@ -54,6 +71,16 @@ def recompute_total_cost(request: HttpRequest):
 
     canonical_code = cleaned_payload.get("analysis_code") or cleaned_payload.get("code")
     row_key = cleaned_payload.get("row_key")
+    user_overrides = request.session.get("rab_overrides", {})
+
+    if row_key:
+        # UPDATE existing row only if row_key belongs to this session
+        if row_key not in user_overrides:
+            return JsonResponse({"error": "invalid_row_key"}, status=400)
+    else:
+        # CREATE new row
+        row_key = generate_row_key()
+
     volume_value = cleaned_payload.get("volume")
     unit_price = cleaned_payload.get("unit_price")
     volume = volume_value if volume_value is not None else Decimal("0")
