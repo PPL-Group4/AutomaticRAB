@@ -9,6 +9,15 @@
     yang telah dipilih/otomatis dicocokkan di halaman RAB.
   </p>
 
+  <div class="btn-group mb-3" role="group" aria-label="View toggle">
+    <a href="{% url 'rab_converted' %}" class="btn btn-outline-primary" style="border-color:#00365a; color:#00365a;">
+      RAB Preview
+    </a>
+    <button type="button" class="btn btn-primary active" style="background:#00365a; border:1px solid #00365a;">
+      Uraian Harga
+    </button>
+  </div>
+
   <div id="breakdown-container"></div>
 </div>
 
@@ -28,122 +37,544 @@
 </style>
 
 <script>
-// Read codes stored from RAB page
 const matchedCodes = JSON.parse(localStorage.getItem("matched_ahs_codes") || "[]");
+const OVERRIDES_STORAGE_KEY = "matched_breakdown_overrides";
+const breakdownCards = {};
 
 document.addEventListener("DOMContentLoaded", async () => {
-    const container = document.getElementById("breakdown-container");
+  const container = document.getElementById("breakdown-container");
 
-    if (matchedCodes.length === 0) {
-        container.innerHTML = "<p class='text-danger'>Tidak ada kode AHS yang ditemukan.</p>";
-        return;
-    }
+  if (!matchedCodes.length) {
+    container.innerHTML = "<p class='text-danger'>Tidak ada kode AHS yang ditemukan.</p>";
+    return;
+  }
 
-    for (const code of matchedCodes) {
-        await fetchOneCode(code);
-    }
+  for (const code of matchedCodes) {
+    await fetchOneCode(code);
+  }
 });
 
 async function fetchOneCode(code) {
-    const url = `/api/ahs-breakdown/${code}/`;
+  const url = `/api/ahs-breakdown/${code}/`;
 
-    try {
-        const response = await fetch(url);
-        const data = await response.json();
+  try {
+    const response = await fetch(url);
+    const data = await response.json();
 
-        if (data.error) {
-            renderNotFound(code);
-            return;
-        }
-        renderBreakdown(code, data.breakdown);
-    } catch (err) {
-        console.error(err);
-        renderError(code);
+    if (data.error) {
+      renderNotFound(code);
+      return;
     }
+
+    renderBreakdown(code, data.breakdown);
+  } catch (error) {
+    console.error(error);
+    renderError(code);
+  }
 }
 
 function renderBreakdown(code, breakdown) {
-    const container = document.getElementById("breakdown-container");
+  const container = document.getElementById("breakdown-container");
+  const card = document.createElement("div");
+  card.className = "breakdown-card";
 
-    const card = document.createElement("div");
-    card.className = "breakdown-card";
+  const cardId = `breakdown-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  card.dataset.cardId = cardId;
+  container.appendChild(card);
 
-    card.innerHTML = `
-      <h4>${code} — ${breakdown.name}</h4>
-      <p><strong>Harga Satuan Pekerjaan:</strong> Rp ${formatNumber(breakdown.unit_price)}</p>
+  const normalized = normalizeBreakdown(breakdown);
+  const wrapper = {
+    cardId,
+    code,
+    canonicalCode: canonicalizeCode(code),
+    cardElement: card,
+    originalSnapshot: cloneDeep(normalized),
+    currentState: cloneDeep(normalized),
+  };
 
-      <div class="group-header">A. TENAGA KERJA</div>
-      ${makeTable(breakdown.components.labor)}
+  breakdownCards[cardId] = wrapper;
 
-      <div class="group-header">B. BAHAN</div>
-      ${makeTable(breakdown.components.materials)}
+  const storedOverride = getOverrideForCode(wrapper.canonicalCode);
+  if (storedOverride) {
+    applyOverrideData(wrapper.currentState, storedOverride);
+  }
 
-      <div class="group-header">C. PERALATAN</div>
-      ${makeTable(breakdown.components.equipment)}
+  drawCard(wrapper, { skipPersist: true });
+
+  if (storedOverride) {
+    setStatusMessage(cardId, "Menggunakan penyesuaian tersimpan.", "success");
+    syncTotals(cardId, { skipPersist: true });
+  } else {
+    setStatusMessage(cardId, "Mengikuti data referensi AHS.", "muted");
+    syncTotals(cardId, { skipPersist: true });
+  }
+}
+
+function drawCard(wrapper, { skipPersist = false } = {}) {
+  const { cardElement, cardId, code, currentState } = wrapper;
+
+  cardElement.innerHTML = `
+    <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+      <div>
+        <h4>${escapeHtml(code)} — ${escapeHtml(currentState.name)}</h4>
+        <p>
+          <strong>Harga Satuan Pekerjaan:</strong>
+          Rp <span id="${cardId}-unit-price">${formatNumber(currentState.unit_price)}</span>
+        </p>
+      </div>
+      <div class="d-flex gap-2">
+        <button class="btn btn-sm btn-outline-secondary" onclick="resetCard('${cardId}')">Reset</button>
+      </div>
+    </div>
+
+    <div class="group-header">A. TENAGA KERJA</div>
+    ${makeTable(currentState.components.labor, cardId, "labor")}
+
+    <div class="group-header">B. BAHAN</div>
+    ${makeTable(currentState.components.materials, cardId, "materials")}
+
+    <div class="group-header">C. PERALATAN</div>
+    ${makeTable(currentState.components.equipment, cardId, "equipment")}
+
+    <h5 class="mt-4">Total</h5>
+    <ul>
+      <li>Tenaga Kerja: Rp <span id="${cardId}-labor-sum">${formatNumber(currentState.totals.labor)}</span></li>
+      <li>Bahan: Rp <span id="${cardId}-materials-sum">${formatNumber(currentState.totals.materials)}</span></li>
+      <li>Peralatan: Rp <span id="${cardId}-equipment-sum">${formatNumber(currentState.totals.equipment)}</span></li>
+      <li><strong>Harga Satuan Pekerjaan: Rp <span id="${cardId}-unit-total">${formatNumber(currentState.unit_price)}</span></strong></li>
+    </ul>
+    <div class="small mt-2" id="${cardId}-status"></div>
+  `;
+
+  syncTotals(cardId, { skipPersist });
+}
+
+function makeTable(items, cardId, category) {
+  const rows = Array.isArray(items) ? items : [];
+  if (!rows.length) {
+    return "<p class='text-muted'>Tidak ada data.</p>";
+  }
+
+  let html = `
+    <table class="table table-bordered mt-2">
+      <thead>
+        <tr>
+          <th style="width:60px;">No</th>
+          <th>Uraian</th>
+          <th style="width:90px;">Sat.</th>
+          <th style="width:120px;">Koefisien</th>
+          <th style="width:150px;">Harga Satuan (Rp)</th>
+          <th style="width:160px;">Jumlah Harga (Rp)</th>
+        </tr>
+      </thead>
+      <tbody>
+  `;
+
+  rows.forEach((row, index) => {
+    const quantityValue = toNumber(row.quantity);
+    const unitPriceValue = toNumber(row.unit_price);
+    const totalValue = calculateRowTotal(quantityValue, unitPriceValue);
+
+    html += `
+      <tr>
+        <td class="text-center">${index + 1}</td>
+        <td>${escapeHtml(row.name || "")}</td>
+        <td class="text-center">${escapeHtml(row.unit || "")}</td>
+        <td>
+          <input
+            type="number"
+            class="form-control form-control-sm text-end"
+            min="0"
+            step="0.001"
+            value="${quantityValue.toFixed(3)}"
+            data-card="${cardId}"
+            data-category="${category}"
+            data-index="${index}"
+            data-field="quantity"
+            onchange="handleCellInput(this)"
+          />
+        </td>
+        <td>
+          <input
+            type="number"
+            class="form-control form-control-sm text-end"
+            min="0"
+            step="0.01"
+            value="${unitPriceValue.toFixed(2)}"
+            data-card="${cardId}"
+            data-category="${category}"
+            data-index="${index}"
+            data-field="unit_price"
+            onchange="handleCellInput(this)"
+          />
+        </td>
+        <td class="text-end" id="${cardId}-${category}-total-${index}">${formatNumber(totalValue)}</td>
+      </tr>
     `;
+  });
 
-    container.appendChild(card);
+  html += "</tbody></table>";
+  return html;
 }
 
-function renderNotFound(code) {
-    const container = document.getElementById("breakdown-container");
-    const card = document.createElement("div");
-    card.className = "breakdown-card";
-    card.innerHTML = `<h4>${code}</h4>
-                      <p class="text-danger"><strong>Breakdown tidak ditemukan.</strong></p>`;
-    container.appendChild(card);
+function handleCellInput(input) {
+  const cardId = input.dataset.card;
+  const category = input.dataset.category;
+  const index = Number(input.dataset.index);
+  const field = input.dataset.field;
+
+  if (!cardId || !category || Number.isNaN(index)) {
+    return;
+  }
+
+  const wrapper = breakdownCards[cardId];
+  if (!wrapper) {
+    return;
+  }
+
+  const rows = wrapper.currentState.components?.[category];
+  if (!Array.isArray(rows) || !rows[index]) {
+    return;
+  }
+
+  const numericValue = toNumber(input.value);
+  if (field === "quantity") {
+    rows[index].quantity = numericValue;
+    input.value = numericValue.toFixed(3);
+  } else {
+    rows[index].unit_price = numericValue;
+    input.value = numericValue.toFixed(2);
+  }
+
+  const totalCell = document.getElementById(`${cardId}-${category}-total-${index}`);
+  if (totalCell) {
+    const newTotal = calculateRowTotal(rows[index].quantity, rows[index].unit_price);
+    rows[index].total_cost = newTotal;
+    totalCell.textContent = formatNumber(newTotal);
+  }
+
+  syncTotals(cardId);
 }
 
-function renderError(code) {
-    const container = document.getElementById("breakdown-container");
-    const card = document.createElement("div");
-    card.className = "breakdown-card";
-    card.innerHTML = `<h4>${code}</h4>
-                      <p class="text-danger"><strong>Terjadi kesalahan mengambil data.</strong></p>`;
-    container.appendChild(card);
+function syncTotals(cardId, { skipPersist = false } = {}) {
+  const wrapper = breakdownCards[cardId];
+  if (!wrapper) {
+    return;
+  }
+
+  const state = wrapper.currentState;
+
+  ["labor", "materials", "equipment"].forEach(category => {
+    const sum = sumCategory(state, category);
+    state.totals[category] = sum;
+
+    const span = document.getElementById(`${cardId}-${category}-sum`);
+    if (span) {
+      span.textContent = formatNumber(sum);
+    }
+  });
+
+  state.totals.overall = state.totals.labor + state.totals.materials + state.totals.equipment;
+  state.unit_price = state.totals.overall;
+
+  const totalSpan = document.getElementById(`${cardId}-unit-total`);
+  if (totalSpan) {
+    totalSpan.textContent = formatNumber(state.totals.overall);
+  }
+
+  const headerSpan = document.getElementById(`${cardId}-unit-price`);
+  if (headerSpan) {
+    headerSpan.textContent = formatNumber(state.unit_price);
+  }
+
+  if (!skipPersist) {
+    persistOverrideForCard(cardId);
+  }
 }
 
-function makeTable(items) {
-    if (!items || !items.length) return "<p class='text-muted'>Tidak ada data.</p>";
+function persistOverrideForCard(cardId) {
+  const wrapper = breakdownCards[cardId];
+  if (!wrapper) {
+    return;
+  }
 
-    let html = `
-      <table class="table table-bordered mt-2">
-        <thead>
-          <tr>
-            <th>No</th>
-            <th>Uraian</th>
-            <th>Sat.</th>
-            <th>Koefisien</th>
-            <th>Harga Satuan</th>
-            <th>Jumlah Harga</th>
-          </tr>
-        </thead>
-        <tbody>
-    `;
-    items.forEach((row, i) => {
-        html += `
-          <tr>
-            <td>${i+1}</td>
-            <td>${row.name}</td>
-            <td>${row.unit || ''}</td>
-            <td>${formatQuantity(row.quantity)}</td>
-            <td>${formatNumber(row.unit_price)}</td>
-            <td>${formatNumber(row.total_cost)}</td>
-          </tr>
-        `;
+  const currentComparable = comparableState(wrapper.currentState);
+  const originalComparable = comparableState(wrapper.originalSnapshot);
+
+  const overrides = loadOverrides();
+  const canonical = wrapper.canonicalCode;
+
+  if (JSON.stringify(currentComparable) === JSON.stringify(originalComparable)) {
+    if (overrides.hasOwnProperty(canonical)) {
+      delete overrides[canonical];
+      if (!saveOverrides(overrides)) {
+        setStatusMessage(cardId, "Gagal menyinkronkan perubahan (localStorage).", "error");
+        return;
+      }
+    }
+    setStatusMessage(cardId, "Mengikuti data referensi AHS.", "muted");
+    return;
+  }
+
+  overrides[canonical] = {
+    code: wrapper.code,
+    unit_price: wrapper.currentState.unit_price,
+    totals: wrapper.currentState.totals,
+    components: cloneDeep(wrapper.currentState.components),
+    updated_at: Date.now(),
+  };
+
+  if (saveOverrides(overrides)) {
+    setStatusMessage(cardId, "Perubahan disimpan & diterapkan ke halaman RAB.", "success");
+  } else {
+    setStatusMessage(cardId, "Gagal menyimpan perubahan ke localStorage.", "error");
+  }
+}
+
+function resetCard(cardId) {
+  const wrapper = breakdownCards[cardId];
+  if (!wrapper) {
+    return;
+  }
+
+  wrapper.currentState = cloneDeep(wrapper.originalSnapshot);
+  drawCard(wrapper, { skipPersist: true });
+  persistOverrideForCard(cardId);
+}
+
+function sumCategory(state, category) {
+  const rows = state.components?.[category];
+  if (!Array.isArray(rows) || !rows.length) {
+    return 0;
+  }
+
+  return rows.reduce((sum, row) => {
+    const total = calculateRowTotal(row.quantity, row.unit_price);
+    row.total_cost = total;
+    return sum + total;
+  }, 0);
+}
+
+function comparableState(state) {
+  const buildCategory = category => {
+    const rows = state.components?.[category];
+    if (!Array.isArray(rows)) {
+      return [];
+    }
+    return rows.map(row => ({
+      quantity: toNumber(row.quantity).toFixed(3),
+      unit_price: toNumber(row.unit_price).toFixed(2),
+    }));
+  };
+
+  return {
+    unit_price: toNumber(state.unit_price).toFixed(2),
+    labor: buildCategory("labor"),
+    materials: buildCategory("materials"),
+    equipment: buildCategory("equipment"),
+  };
+}
+
+function getOverrideForCode(canonicalCode) {
+  if (!canonicalCode) {
+    return null;
+  }
+  const overrides = loadOverrides();
+  return overrides[canonicalCode] || null;
+}
+
+function loadOverrides() {
+  if (typeof localStorage === "undefined") {
+    return {};
+  }
+  try {
+    const raw = localStorage.getItem(OVERRIDES_STORAGE_KEY);
+    if (!raw) {
+      return {};
+    }
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch (error) {
+    console.warn("Failed to parse overrides", error);
+    return {};
+  }
+}
+
+function saveOverrides(overrides) {
+  if (typeof localStorage === "undefined") {
+    return false;
+  }
+  try {
+    localStorage.setItem(OVERRIDES_STORAGE_KEY, JSON.stringify(overrides));
+    return true;
+  } catch (error) {
+    console.error("Failed to persist overrides", error);
+    return false;
+  }
+}
+
+function normalizeBreakdown(breakdown) {
+  const cloned = JSON.parse(JSON.stringify(breakdown || {}));
+  cloned.name = cloned.name || "-";
+  cloned.components = cloned.components || {};
+
+  ["labor", "materials", "equipment"].forEach(category => {
+    const rows = Array.isArray(cloned.components[category]) ? cloned.components[category] : [];
+    cloned.components[category] = rows.map(row => {
+      const quantity = toNumber(row.quantity);
+      const unitPrice = toNumber(row.unit_price);
+      const total = calculateRowTotal(quantity, unitPrice);
+      return {
+        ...row,
+        quantity,
+        unit_price: unitPrice,
+        total_cost: total,
+      };
     });
-    html += "</tbody></table>";
-    return html;
+  });
+
+  cloned.totals = {
+    labor: 0,
+    materials: 0,
+    equipment: 0,
+    overall: 0,
+  };
+
+  cloned.totals.labor = sumCategory(cloned, "labor");
+  cloned.totals.materials = sumCategory(cloned, "materials");
+  cloned.totals.equipment = sumCategory(cloned, "equipment");
+  cloned.totals.overall = cloned.totals.labor + cloned.totals.materials + cloned.totals.equipment;
+  cloned.unit_price = toNumber(cloned.unit_price, cloned.totals.overall);
+
+  return cloned;
+}
+
+function applyOverrideData(target, override) {
+  if (!override || !target) {
+    return;
+  }
+
+  const components = override.components || {};
+  ["labor", "materials", "equipment"].forEach(category => {
+    if (Array.isArray(components[category])) {
+      target.components[category] = components[category].map(item => {
+        const quantity = toNumber(item.quantity);
+        const unitPrice = toNumber(item.unit_price);
+        const total = calculateRowTotal(quantity, unitPrice);
+        return {
+          ...item,
+          quantity,
+          unit_price: unitPrice,
+          total_cost: total,
+        };
+      });
+    }
+  });
+
+  if (override.totals) {
+    target.totals = {
+      labor: toNumber(override.totals.labor),
+      materials: toNumber(override.totals.materials),
+      equipment: toNumber(override.totals.equipment),
+      overall: toNumber(override.totals.overall),
+    };
+  }
+
+  if (override.unit_price !== undefined) {
+    target.unit_price = toNumber(override.unit_price, target.unit_price);
+  }
+}
+
+function toNumber(value, fallback = 0) {
+  if (value === null || value === undefined || value === "") {
+    return fallback;
+  }
+  const num = Number(value);
+  return Number.isFinite(num) ? num : fallback;
+}
+
+function calculateRowTotal(quantity, unitPrice) {
+  const total = toNumber(quantity) * toNumber(unitPrice);
+  return Math.round((total + Number.EPSILON) * 100) / 100;
 }
 
 function formatNumber(num) {
-    if (num === null || num === undefined) return "-";
-    return num.toLocaleString('id-ID', {minimumFractionDigits:2, maximumFractionDigits:2});
+  if (num === null || num === undefined) {
+    return "-";
+  }
+  return toNumber(num).toLocaleString("id-ID", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-function formatQuantity(q) {
-    if (q === null || q === undefined) return "-";
-    return q.toLocaleString('id-ID', {minimumFractionDigits:3, maximumFractionDigits:3});
+function escapeHtml(input) {
+  if (input === null || input === undefined) {
+    return "";
+  }
+  return String(input)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function canonicalizeCode(value) {
+  if (typeof value !== "string") {
+    return "";
+  }
+  let text = value.trim().toUpperCase();
+  if (!text) {
+    return "";
+  }
+  text = text.replace(/[-_/ ]+/g, ".");
+  text = text.replace(/[^A-Z0-9.]/g, "");
+  text = text.replace(/\.{2,}/g, ".");
+  while (text.includes("..")) {
+    text = text.replace("..", ".");
+  }
+  return text.replace(/^\.+|\.+$/g, "");
+}
+
+function cloneDeep(value) {
+  return JSON.parse(JSON.stringify(value));
+}
+
+function setStatusMessage(cardId, message, variant = "muted") {
+  const el = document.getElementById(`${cardId}-status`);
+  if (!el) {
+    return;
+  }
+
+  const baseClass = "small mt-2";
+  let colorClass = "text-muted";
+  if (variant === "success") {
+    colorClass = "text-success";
+  } else if (variant === "error") {
+    colorClass = "text-danger";
+  }
+  el.className = `${baseClass} ${colorClass}`;
+  el.textContent = message;
+}
+
+function renderNotFound(code) {
+  const container = document.getElementById("breakdown-container");
+  const card = document.createElement("div");
+  card.className = "breakdown-card";
+  card.innerHTML = `
+    <h4>${escapeHtml(code)}</h4>
+    <p class="text-danger"><strong>Breakdown tidak ditemukan.</strong></p>
+  `;
+  container.appendChild(card);
+}
+
+function renderError(code) {
+  const container = document.getElementById("breakdown-container");
+  const card = document.createElement("div");
+  card.className = "breakdown-card";
+  card.innerHTML = `
+    <h4>${escapeHtml(code)}</h4>
+    <p class="text-danger"><strong>Terjadi kesalahan saat mengambil data.</strong></p>
+  `;
+  container.appendChild(card);
 }
 </script>
 {% endblock %}
