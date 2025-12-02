@@ -5,7 +5,7 @@ from decimal import Decimal
 from pdf_parser.services.pdfreader import PdfReader
 from pdf_parser.services.row_parser import PdfRowParser
 from pdf_parser.services.normalizer import PdfRowNormalizer
-from pdf_parser.services.job_matcher import match_description  
+from pdf_parser.services.job_matcher import match_description
 
 logger = logging.getLogger(__name__)
 
@@ -70,17 +70,9 @@ def merge_broken_rows(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
             merged.append(row)
     return merged
 
-
 def parse_pdf_to_dtos(path: str) -> List[Dict[str, Any]]:
-    """
-    Orchestrates full pipeline:
-    1. Extract raw text fragments (PdfReader).
-    2. Parse into row structures (PdfRowParser).
-    3. Normalize into clean DTO dicts (PdfRowNormalizer).
-    4. Merge broken rows.
-    5. Filter out URL/link rows.
-    6. Run automatic job matching on each description.
-    """
+    print("🔥🔥 USING THIS parse_pdf_to_dtos FUNCTION 🔥🔥")
+
     reader = PdfReader()
     fragments = reader.extract(path)
 
@@ -94,7 +86,8 @@ def parse_pdf_to_dtos(path: str) -> List[Dict[str, Any]]:
     normalized = merge_broken_rows(normalized)
     normalized = filter_url_rows(normalized)
 
-    # 🆕 Step 6: perform automatic job matching
+    print("⚠️ BEFORE ENRICH rows:", normalized[:3])
+
     enriched_rows = []
 
     roman_sections = {
@@ -113,22 +106,35 @@ def parse_pdf_to_dtos(path: str) -> List[Dict[str, Any]]:
         )
         number = str(row.get("number") or "").strip()
 
+        # ---------- SECTION NORMALIZATION ----------
         if number in roman_sections:
+            is_section = True
+            if number == "I":
+                section_type = "CATEGORY"
+                normalized_number = "A"
+            else:
+                section_type = "SECTION"
+                normalized_number = number
+        else:
+            is_section = False
+            section_type = None
+            normalized_number = number
+        # ------------------------------------------
+
+        # ---------- MATCHING LOGIC ----------
+        if is_section:
             match_info = {"status": "skipped", "match": None}
-            logger.debug("Skipping match for Roman numeral section: %s", number)
 
         elif analysis_code and any(ch.isdigit() for ch in analysis_code):
             code = analysis_code.strip()
-            match_info = {
-                "status": "found",
-                "match": {"code": code, "confidence": 1.0},
-            }
-            logger.debug("Detected existing analysis code: %s", code)
+            match_info = {"status": "found", "match": {"code": code, "confidence": 1.0}}
 
         else:
             unit = row.get("unit") or row.get("sat") or ""
             match_info = match_description(desc, unit=unit)
+        # ------------------------------------
 
+        # ---------- PRICE COMPUTATION ----------
         try:
             volume = Decimal(str(row.get("volume") or "0"))
             price = Decimal(str(row.get("harga satuan") or row.get("price") or "0"))
@@ -137,18 +143,30 @@ def parse_pdf_to_dtos(path: str) -> List[Dict[str, Any]]:
             volume = Decimal("0")
             price = Decimal("0")
             total_price = Decimal("0")
+        # --------------------------------------
 
-        enriched_rows.append(
-            {
-                **row,
-                "volume": float(volume),
-                "price": float(price),
-                "total_price": float(total_price),
-                "job_match_status": match_info.get("status"),
-                "job_match": match_info.get("match"),
-                "job_match_error": match_info.get("error"),
-            }
-        )
+        normalized_row = {
+            **row,
+            "number": normalized_number,
+            "is_section": is_section,
+            "section_type": section_type,
+            "volume": float(volume),
+            "price": float(price),
+            "total_price": float(total_price),
+            "job_match_status": match_info.get("status"),
+            "job_match": match_info.get("match"),
+            "job_match_error": match_info.get("error"),
+            "matches": match_info.get("matches", []),
+            "best_match": match_info.get("match", None),
+            "analysis_code": analysis_code,
+            "sat": row.get("unit") or "",
+            "row_key": f"pdf-{normalized_number}-{id(row)}",
+        }
+
+        enriched_rows.append(normalized_row)
+
+        if len(enriched_rows) < 3:
+            print("✅ AFTER ENRICH row:", normalized_row)
 
     logger.info("Parsed %d rows with job matching from %s", len(enriched_rows), path)
     return enriched_rows
