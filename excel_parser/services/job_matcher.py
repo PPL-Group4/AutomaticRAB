@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 from automatic_job_matching.service.matching_service import MatchingService
 from automatic_job_matching.models import UnmatchedAhsEntry
@@ -18,7 +18,7 @@ def _derive_status(match: Any) -> str:
     return "not found"
 
 
-def match_description(description: str) -> Dict[str, Any]:
+def match_description(description: Optional[str]) -> Dict[str, Any]:
     """Run automatic job matching for a single description."""
     if not description or not description.strip():
         return {"status": "skipped", "match": None}

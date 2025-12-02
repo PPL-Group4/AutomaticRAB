@@ -21,6 +21,60 @@ logger = logging.getLogger(__name__)
 security_logger = logging.getLogger("security.audit")
 review_logger = logging.getLogger("job_matching.review")
 
+
+def _validate_bulk_item(item, idx):
+    """Validate and sanitize a single bulk match item."""
+    if not isinstance(item, dict):
+        return None, {
+            "index": idx,
+            "status": "error",
+            "error": "Each item must be an object.",
+            "match": None,
+        }
+
+    try:
+        description = sanitize_description(item.get("description"))
+        unit = sanitize_unit(item.get("unit"))
+        return {"description": description, "unit": unit}, None
+    except (SecurityValidationError, ValidationError) as exc:
+        security_logger.warning("Rejected bulk item at index %d: %s", idx, exc)
+        return None, {
+            "index": idx,
+            "status": "error",
+            "error": "Invalid input",
+            "match": None,
+        }
+
+
+def _process_bulk_result(bulk_result, original_index):
+    """Process a single bulk match result and store unmatched entries."""
+    status = bulk_result.get("status")
+    description = bulk_result.get("description")
+    unit = bulk_result.get("unit")
+
+    if status == "not found":
+        log_unmatched_entry(description, unit)
+        try:
+            UnmatchedAhsEntry.objects.get_or_create(name=description)
+        except Exception as e:
+            logger.error("Failed to store unmatched entry: %s", str(e))
+        review_logger.warning(
+            "job_not_found description=%r unit=%r (bulk_index=%d)",
+            description,
+            unit,
+            original_index,
+        )
+    elif status in {"unit mismatch", "similar"} or (
+        isinstance(status, str) and status.startswith("found") and status != "found"
+    ):
+        review_logger.info(
+            "job_needs_review status=%s description=%r unit=%r (bulk_index=%d)",
+            status,
+            description,
+            unit,
+            original_index,
+        )
+
 @api_view(['POST'])
 @cache_control(no_store=True, no_cache=True, must_revalidate=True)
 def match_best_view(request):
@@ -99,65 +153,25 @@ def match_bulk_view(request):
     valid_entries = []
     valid_indices = []
 
+    # Validate and collect valid entries
     for idx, item in enumerate(payload):
-        if not isinstance(item, dict):
-            results[idx] = {
-                "index": idx,
-                "status": "error",
-                "error": "Each item must be an object.",
-                "match": None,
-            }
+        valid_entry, error_result = _validate_bulk_item(item, idx)
+        if error_result:
+            results[idx] = error_result
             continue
 
-        try:
-            description = sanitize_description(item.get("description"))
-            unit = sanitize_unit(item.get("unit"))
-        except (SecurityValidationError, ValidationError) as exc:
-            security_logger.warning("Rejected bulk item at index %d: %s", idx, exc)
-            results[idx] = {
-                "index": idx,
-                "status": "error",
-                "error": "Invalid input",
-                "match": None,
-            }
-            continue
-
-        tag_match_event(description, unit)
-        valid_entries.append({"description": description, "unit": unit})
+        tag_match_event(valid_entry["description"], valid_entry["unit"])
+        valid_entries.append(valid_entry)
         valid_indices.append(idx)
 
+    # Process valid entries
     if valid_entries:
         bulk_results = MatchingService.perform_bulk_best_match(valid_entries)
-
         for original_index, bulk_result in zip(valid_indices, bulk_results):
             results[original_index] = {"index": original_index, **bulk_result}
+            _process_bulk_result(bulk_result, original_index)
 
-            status = bulk_result.get("status")
-            description = bulk_result.get("description")
-            unit = bulk_result.get("unit")
-
-            if status == "not found":
-                log_unmatched_entry(description, unit)
-                # Store unmatched entry in database
-                try:
-                    UnmatchedAhsEntry.objects.get_or_create(name=description)
-                except Exception as e:
-                    logger.error("Failed to store unmatched entry: %s", str(e))
-                review_logger.warning(
-                    "job_not_found description=%r unit=%r (bulk_index=%d)",
-                    description,
-                    unit,
-                    original_index,
-                )
-            elif status in {"unit mismatch", "similar"} or (isinstance(status, str) and status.startswith("found") and status != "found"):
-                review_logger.info(
-                    "job_needs_review status=%s description=%r unit=%r (bulk_index=%d)",
-                    status,
-                    description,
-                    unit,
-                    original_index,
-                )
-
+    # Fill in any remaining None entries
     for idx, entry in enumerate(results):
         if entry is None:
             results[idx] = {
