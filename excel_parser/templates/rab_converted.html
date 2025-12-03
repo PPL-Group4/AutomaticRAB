@@ -2915,10 +2915,11 @@ function updatePriceWarningForRow(tr) {
   
   
 
-<!-- Efficiency Recommendations JavaScript -->
+<!-- Include Efficiency Recommendations JavaScript -->
 <script src="{% static 'efficiency_recommendations/recommendations.js' %}"></script>
 <script>
   // Initialize efficiency recommendations after table is rendered
+  // This will be called when data is loaded
   let currentTestJobId = null;
 
   // Hook into the existing renderTables function to trigger recommendations
@@ -2930,13 +2931,26 @@ function updatePriceWarningForRow(tr) {
     // Extract job_id from response if available
     if (options.jobId) {
       currentTestJobId = options.jobId;
-
-      // Initialize and fetch recommendations
-      if (typeof EfficiencyRecommendations !== 'undefined') {
-        EfficiencyRecommendations.init(options.jobId);
-        EfficiencyRecommendations.refresh();
+      // Initialize recommendations panel
+      if (window.EfficiencyRecommendations) {
+        window.EfficiencyRecommendations.init(currentTestJobId);
       }
     }
   };
+
+  restoreRabPreviewState();
+
+  // Also trigger refresh when price inputs change
+  document.addEventListener('input', function(event) {
+    if (event.target.classList.contains('price-input')) {
+      // Debounce the refresh to avoid too many API calls
+      if (window.EfficiencyRecommendations && currentTestJobId) {
+        clearTimeout(window.refreshRecommendationsTimeout);
+        window.refreshRecommendationsTimeout = setTimeout(() => {
+          window.EfficiencyRecommendations.refresh();
+        }, 2000); // Wait 2 seconds after last price change
+      }
+    }
+  });
 </script>
 {% endblock %}
