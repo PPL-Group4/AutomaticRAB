@@ -53,200 +53,325 @@
 </style>
 
 <script>
+const breakdownState = {};
+
+function toNumber(value, fallback = 0) {
+  if (value === null || value === undefined || value === "") {
+    return fallback;
+  }
+  const num = Number(value);
+  return Number.isFinite(num) ? num : fallback;
+}
+
 function formatNumber(num) {
-    if (num === null || num === undefined) return "-";
-    return num.toLocaleString('id-ID', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+  const value = toNumber(num, null);
+  if (value === null) {
+    return "-";
+  }
+  return value.toLocaleString('id-ID', {minimumFractionDigits: 2, maximumFractionDigits: 2});
 }
 
-function formatQuantity(q) {
-    return q.toLocaleString('id-ID', {minimumFractionDigits: 3, maximumFractionDigits: 3});
+function calculateRowTotal(quantity, unitPrice) {
+  const total = toNumber(quantity) * toNumber(unitPrice);
+  return Math.round((total + Number.EPSILON) * 100) / 100;
 }
 
-async function addBreakdown() {
-    const code = document.getElementById("ahs-code-input").value.trim();
-    if (!code) return alert("Masukkan kode!");
+function sumCategory(state, category) {
+  const rows = state.components?.[category];
+  if (!Array.isArray(rows) || rows.length === 0) {
+    return 0;
+  }
 
-    const url = `/api/ahs-breakdown/${code}/`;
+  return rows.reduce((sum, row) => {
+    const total = calculateRowTotal(row.quantity, row.unit_price);
+    row.total_cost = total;
+    return sum + total;
+  }, 0);
+}
 
-    try {
-        const response = await fetch(url);
-        const data = await response.json();
+function normalizeBreakdown(raw) {
+  const cloned = JSON.parse(JSON.stringify(raw || {}));
+  cloned.name = cloned.name || "-";
+  cloned.components = cloned.components || {};
 
-        if (data.error) {
-          const container = document.getElementById("breakdown-container");
+  ["labor", "materials", "equipment"].forEach(category => {
+    const rows = Array.isArray(cloned.components[category]) ? cloned.components[category] : [];
+    cloned.components[category] = rows.map(row => {
+      const quantity = toNumber(row.quantity);
+      const unitPrice = toNumber(row.unit_price);
+      const total = calculateRowTotal(quantity, unitPrice);
+      return {
+        ...row,
+        quantity,
+        unit_price: unitPrice,
+        total_cost: total,
+      };
+    });
+  });
 
-          const card = document.createElement("div");
-          card.className = "breakdown-card";
-          card.innerHTML = `
-              <h4>${code}</h4>
-              <p class="text-danger">
-                  <strong>Maaf, kami tidak menemui rincian harga kode AHSP ini.</strong>
-              </p>
-          `;
+  cloned.totals = cloned.totals || {};
+  cloned.totals.labor = sumCategory(cloned, "labor");
+  cloned.totals.materials = sumCategory(cloned, "materials");
+  cloned.totals.equipment = sumCategory(cloned, "equipment");
+  cloned.totals.overall = cloned.totals.labor + cloned.totals.materials + cloned.totals.equipment;
+  cloned.unit_price = toNumber(cloned.unit_price, cloned.totals.overall);
 
-          container.appendChild(card);
-          return;
-      }
+  return cloned;
+}
 
+function makeTable(rows, cardId, category) {
+  const items = Array.isArray(rows) ? rows : [];
+  if (!items.length) {
+    return "<p class='text-muted'>Tidak ada data.</p>";
+  }
 
-        renderBreakdown(code, data.breakdown);
-    } catch (error) {
-        console.error(error);
-        alert("Failed to fetch breakdown.");
-    }
+  let html = `
+    <table class="table table-bordered mt-2">
+    <thead>
+      <tr>
+      <th style="width:60px;">No</th>
+      <th>Uraian</th>
+      <th style="width:90px;">Sat.</th>
+      <th style="width:130px;">Koefisien</th>
+      <th style="width:170px;">Harga Satuan (Rp)</th>
+      <th style="width:170px;">Jumlah Harga (Rp)</th>
+      </tr>
+    </thead>
+    <tbody>
+  `;
+
+  items.forEach((row, index) => {
+    const quantityValue = toNumber(row.quantity);
+    const unitPriceValue = toNumber(row.unit_price);
+    const totalValue = calculateRowTotal(quantityValue, unitPriceValue);
+
+    html += `
+      <tr>
+      <td class="text-center">${index + 1}</td>
+      <td>${row.name ?? ""}</td>
+      <td class="text-center">${row.unit ?? ""}</td>
+      <td>
+        <input
+        type="number"
+        class="form-control form-control-sm text-end"
+        min="0"
+        step="0.001"
+        value="${quantityValue.toFixed(3)}"
+        data-card="${cardId}"
+        data-category="${category}"
+        data-index="${index}"
+        data-field="quantity"
+        onchange="handleCellInput(this)"
+        />
+      </td>
+      <td>
+        <input
+        type="number"
+        class="form-control form-control-sm text-end"
+        min="0"
+        step="0.01"
+        value="${unitPriceValue.toFixed(2)}"
+        data-card="${cardId}"
+        data-category="${category}"
+        data-index="${index}"
+        data-field="unit_price"
+        onchange="handleCellInput(this)"
+        />
+      </td>
+      <td class="text-end" id="${cardId}-${category}-total-${index}">${formatNumber(totalValue)}</td>
+      </tr>
+    `;
+  });
+
+  html += "</tbody></table>";
+  return html;
 }
 
 function renderBreakdown(code, breakdown) {
-    const container = document.getElementById("breakdown-container");
+  const container = document.getElementById("breakdown-container");
+  const card = document.createElement("div");
+  card.className = "breakdown-card";
 
-    const card = document.createElement("div");
-    card.className = "breakdown-card";
+  const cardId = `breakdown-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  const state = normalizeBreakdown(breakdown);
+  breakdownState[cardId] = state;
 
-    card.innerHTML = `
-      <h4>${code} — ${breakdown.name}</h4>
-      <p><strong>Harga Satuan Pekerjaan:</strong> Rp ${formatNumber(breakdown.unit_price)}</p>
+  card.innerHTML = `
+    <h4>${code} — ${state.name}</h4>
+    <p><strong>Harga Satuan Pekerjaan:</strong> Rp <span id="${cardId}-unit-price">${formatNumber(state.unit_price)}</span></p>
 
-      <div class="group-header">A. TENAGA KERJA</div>
-      ${makeTable(breakdown.components.labor)}
+    <div class="group-header">A. TENAGA KERJA</div>
+    ${makeTable(state.components.labor, cardId, "labor")}
 
-      <div class="group-header">B. BAHAN</div>
-      ${makeTable(breakdown.components.materials)}
+    <div class="group-header">B. BAHAN</div>
+    ${makeTable(state.components.materials, cardId, "materials")}
 
-      <div class="group-header">C. PERALATAN</div>
-      ${makeTable(breakdown.components.equipment)}
+    <div class="group-header">C. PERALATAN</div>
+    ${makeTable(state.components.equipment, cardId, "equipment")}
 
-      <h5 class="mt-4">Total</h5>
-      <ul>
-        <li>Tenaga Kerja: Rp ${formatNumber(breakdown.totals.labor)}</li>
-        <li>Bahan: Rp ${formatNumber(breakdown.totals.materials)}</li>
-        <li>Peralatan: Rp ${formatNumber(breakdown.totals.equipment)}</li>
-        <li><strong>Harga Satuan Pekerjaan: Rp ${formatNumber(breakdown.unit_price)}</strong></li>
-      </ul>
-    `;
+    <h5 class="mt-4">Total</h5>
+    <ul>
+    <li>Tenaga Kerja: Rp <span id="${cardId}-labor-sum">${formatNumber(state.totals.labor)}</span></li>
+    <li>Bahan: Rp <span id="${cardId}-materials-sum">${formatNumber(state.totals.materials)}</span></li>
+    <li>Peralatan: Rp <span id="${cardId}-equipment-sum">${formatNumber(state.totals.equipment)}</span></li>
+    <li><strong>Harga Satuan Pekerjaan: Rp <span id="${cardId}-unit-total">${formatNumber(state.unit_price)}</span></strong></li>
+    </ul>
+  `;
 
-    container.appendChild(card);
+  container.appendChild(card);
+  syncTotals(cardId);
 }
 
-function makeTable(items) {
-    if (!items || !items.length) {
-        return "<p class='text-muted'>Tidak ada data.</p>";
+function handleCellInput(input) {
+  const cardId = input.dataset.card;
+  const category = input.dataset.category;
+  const index = Number(input.dataset.index);
+  const field = input.dataset.field;
+
+  if (!cardId || !category || Number.isNaN(index)) {
+    return;
+  }
+
+  const state = breakdownState[cardId];
+  if (!state) {
+    return;
+  }
+
+  const rows = state.components?.[category];
+  if (!Array.isArray(rows) || !rows[index]) {
+    return;
+  }
+
+  const numericValue = toNumber(input.value);
+  if (field === "quantity") {
+    rows[index].quantity = numericValue;
+    input.value = numericValue.toFixed(3);
+  } else {
+    rows[index].unit_price = numericValue;
+    input.value = numericValue.toFixed(2);
+  }
+
+  const totalCell = document.getElementById(`${cardId}-${category}-total-${index}`);
+  if (totalCell) {
+    const newTotal = calculateRowTotal(rows[index].quantity, rows[index].unit_price);
+    rows[index].total_cost = newTotal;
+    totalCell.textContent = formatNumber(newTotal);
+  }
+
+  syncTotals(cardId);
+}
+
+function syncTotals(cardId) {
+  const state = breakdownState[cardId];
+  if (!state) {
+    return;
+  }
+
+  ["labor", "materials", "equipment"].forEach(category => {
+    const sum = sumCategory(state, category);
+    state.totals[category] = sum;
+    const span = document.getElementById(`${cardId}-${category}-sum`);
+    if (span) {
+      span.textContent = formatNumber(sum);
     }
+  });
 
-    let html = `
-      <table class="table table-bordered mt-2">
-        <thead>
-          <tr>
-            <th style="width:60px;">No</th>
-            <th>Uraian</th>
-            <th style="width:90px;">Sat.</th>
-            <th style="width:110px;">Koefisien</th>
-            <th style="width:150px;">Harga Satuan (Rp)</th>
-            <th style="width:160px;">Jumlah Harga (Rp)</th>
-          </tr>
-        </thead>
-        <tbody>
-    `;
+  state.totals.overall = state.totals.labor + state.totals.materials + state.totals.equipment;
+  state.unit_price = state.totals.overall;
 
-    items.forEach((row, i) => {
-        html += `
-          <tr>
-            <td class="text-center">${i+1}</td>
-            <td>${row.name}</td>
-            <td class="text-center">${row.unit ?? ""}</td>
-            <td class="text-center">${formatQuantity(row.quantity)}</td>
-            <td class="text-end">${formatNumber(row.unit_price)}</td>
-            <td class="text-end">${formatNumber(row.total_cost)}</td>
-          </tr>
-        `;
-    });
+  const totalSpan = document.getElementById(`${cardId}-unit-total`);
+  if (totalSpan) {
+    totalSpan.textContent = formatNumber(state.totals.overall);
+  }
 
-    html += `</tbody></table>`;
-    return html;
+  const headerSpan = document.getElementById(`${cardId}-unit-price`);
+  if (headerSpan) {
+    headerSpan.textContent = formatNumber(state.unit_price);
+  }
 }
 
 function addRow() {
-    const list = document.getElementById("input-list");
+  const list = document.getElementById("input-list");
 
-    const row = document.createElement("div");
-    row.className = "d-flex gap-2 mb-2 input-row";
+  const row = document.createElement("div");
+  row.className = "d-flex gap-2 mb-2 input-row";
 
-    row.innerHTML = `
-        <input type="text" class="form-control ahs-input" placeholder="Contoh: 3.6.4.1">
-        <button class="btn btn-outline-danger" onclick="removeRow(this)">
-          <i class="bi bi-trash"></i>
-        </button>
-    `;
+  row.innerHTML = `
+    <input type="text" class="form-control ahs-input" placeholder="Contoh: 3.6.4.1">
+    <button class="btn btn-outline-danger" onclick="removeRow(this)">
+      <i class="bi bi-trash"></i>
+    </button>
+  `;
 
-    list.appendChild(row);
+  list.appendChild(row);
 }
 
 function removeRow(button) {
-    const row = button.parentElement;
-    const list = document.getElementById("input-list");
+  const row = button.parentElement;
+  const list = document.getElementById("input-list");
 
-    // Don't let user delete the last row
-    if (list.children.length > 1) {
-        row.remove();
-    }
+  if (list.children.length > 1) {
+    row.remove();
+  }
 }
 
 async function submitAll() {
-    const inputs = document.querySelectorAll(".ahs-input");
-    const codes = [...inputs].map(i => i.value.trim()).filter(v => v !== "");
+  const inputs = document.querySelectorAll(".ahs-input");
+  const codes = [...inputs].map(i => i.value.trim()).filter(v => v !== "");
 
-    if (codes.length === 0) {
-        alert("Masukkan minimal satu kode AHS!");
-        return;
-    }
+  if (codes.length === 0) {
+    alert("Masukkan minimal satu kode AHS!");
+    return;
+  }
 
-    const container = document.getElementById("breakdown-container");
-    container.innerHTML = ""; // clear old results
+  const container = document.getElementById("breakdown-container");
+  container.innerHTML = "";
 
-    for (const code of codes) {
-        await fetchOneCode(code);
-    }
+  for (const code of codes) {
+    await fetchOneCode(code);
+  }
 }
 
 async function fetchOneCode(code) {
-    const url = `/api/ahs-breakdown/${code}/`;
+  const url = `/api/ahs-breakdown/${code}/`;
 
-    try {
-        const response = await fetch(url);
-        const data = await response.json();
+  try {
+    const response = await fetch(url);
+    const data = await response.json();
 
-        if (data.error) {
-            renderNotFound(code);
-            return;
-        }
-
-        renderBreakdown(code, data.breakdown);
-
-    } catch (error) {
-        console.error(error);
-        renderError(code);
+    if (data.error) {
+      renderNotFound(code);
+      return;
     }
+
+    renderBreakdown(code, data.breakdown);
+
+  } catch (error) {
+    console.error(error);
+    renderError(code);
+  }
 }
 
 function renderNotFound(code) {
-    const container = document.getElementById("breakdown-container");
-    const card = document.createElement("div");
-    card.className = "breakdown-card";
-    card.innerHTML = `
-      <h4>${code}</h4>
-      <p class="text-danger"><strong>Maaf, kami tidak menemui rincian harga kode AHSP ini.</strong></p>
-    `;
-    container.appendChild(card);
+  const container = document.getElementById("breakdown-container");
+  const card = document.createElement("div");
+  card.className = "breakdown-card";
+  card.innerHTML = `
+    <h4>${code}</h4>
+    <p class="text-danger"><strong>Maaf, kami tidak menemui rincian harga kode AHSP ini.</strong></p>
+  `;
+  container.appendChild(card);
 }
 
 function renderError(code) {
-    const container = document.getElementById("breakdown-container");
-    const card = document.createElement("div");
-    card.className = "breakdown-card";
-    card.innerHTML = `
-      <h4>${code}</h4>
-      <p class="text-danger"><strong>Terjadi kesalahan saat mengambil data.</strong></p>
-    `;
-    container.appendChild(card);
+  const container = document.getElementById("breakdown-container");
+  const card = document.createElement("div");
+  card.className = "breakdown-card";
+  card.innerHTML = `
+    <h4>${code}</h4>
+    <p class="text-danger"><strong>Terjadi kesalahan saat mengambil data.</strong></p>
+  `;
+  container.appendChild(card);
 }
 
 </script>
