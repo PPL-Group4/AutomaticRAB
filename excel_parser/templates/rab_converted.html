@@ -3,7 +3,55 @@
 
 {% block content %}
 <style>
-    .warning-chip {
+  .rab-breakdown-card {
+    background: white;
+    border: 1px solid #ddd;
+    padding: 20px 25px;
+    border-radius: 8px;
+    margin-bottom: 30px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  }
+
+  /* Group header A / B / C */
+  .rab-section-header {
+    background: #f0f6fb;
+    font-weight: bold;
+    padding: 8px 14px;
+    border-left: 4px solid #00365a;
+    margin-top: 18px;
+    margin-bottom: 10px;
+  }
+
+  /* Table */
+  .rab-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 15px;
+  }
+
+  .rab-table th {
+    background: #00365a !important;
+    color: white;
+    text-align: center;
+    padding: 8px;
+    border: 1px solid #ccc;
+    font-weight: 600;
+  }
+
+  .rab-table td {
+    border: 1px solid #ddd;
+    padding: 6px 10px;
+    vertical-align: middle;
+  }
+
+  .rab-table tbody tr:nth-child(even) {
+    background: #fafafa;
+  }
+
+  .text-end { text-align: right !important; }
+  .text-center { text-align: center !important; }
+
+  .warning-chip {
     display: inline-flex;
     align-items: center;
     gap: .4rem;
@@ -104,9 +152,16 @@
     background-color: #002744 !important;
     border-color: #002744 !important;
   }
+
+  #view-breakdown-btn:hover {
+    background: #f0f6fb !important;   
+    color: #00365a !important;       
+    border-color: #00365a !important;
+  }
+
 </style>
 <div class="section-box position-relative">
-  <h5 class="section-title">RAB Preview</h5>
+  <h5 class="section-title">RAB Calculator Preview</h5>
 
   <div class="row g-3 mb-3">
     <div class="col-lg-6">
@@ -828,10 +883,6 @@
 
     // Build failed codes list
     let failedCodesHtml = "";
-    if (failedCodes.length) {
-      const failedList = failedCodes.map(entry => escapeHtml(entry.code)).join(", ");
-      failedCodesHtml = `<div class="mt-2 small text-danger"><strong>Kode yang gagal diproses:</strong> ${failedList}</div>`;
-    }
 
     // Build overview table
     const overviewTable = `
@@ -926,7 +977,6 @@
 
     summary.innerHTML = `
       <div class="alert alert-info mb-0">
-        <div class="mb-3">${summaryHeader}${failedCodesHtml}</div>
         ${overviewTable}
         ${materialsTableHtml}
         ${footerTable}
@@ -1492,6 +1542,7 @@
   function renderSectionedTables(rows, container) {
     let total = 0;
     let currentTable = null;
+    let currentWrapper = null;
     let tbody = null;
     let bujakCounter = 0;
 
@@ -1501,94 +1552,93 @@
         return;
       }
 
+      // ===========================
+      // NEW: Start a new BUJAK card
+      // ===========================
       if (row.is_section && row.section_type === "CATEGORY" && row.number === "A") {
         bujakCounter++;
+
+        // Create card wrapper
+        currentWrapper = document.createElement("div");
+        currentWrapper.classList.add("rab-breakdown-card");
+        container.appendChild(currentWrapper);
+
+        // Add BUJAK label
         const header = document.createElement("div");
-        header.classList.add("alert", "alert-warning", "fw-bold", "mt-3");
-        header.innerText = `BUJAK ${bujakCounter}`;
-        container.appendChild(header);
+        header.classList.add("alert", "alert-warning", "fw-bold", "mb-3");
+        header.textContent = `BUJAK ${bujakCounter}`;
+        currentWrapper.appendChild(header);
 
-        const table = document.createElement("table");
-        table.classList.add("table", "table-bordered", "table-sm", "align-middle", "mb-4");
-        table.innerHTML = `
-      <thead class="table-light">
-        <tr>
-          <th>No.</th>
-          <th>Uraian Pekerjaan</th>
-          <th>Kode</th>
-          <th>Status Pencocokan</th>
-          <th>Hasil AHSP</th>
-          <th>Volume</th>
-          <th>SAT</th>
-          <th>Harga Satuan (Rp.)</th>
-          <th>Jumlah</th>
-        </tr>
-      </thead>
+        // Create new table
+        currentTable = document.createElement("table");
+        currentTable.classList.add("rab-table");
+
+        currentTable.innerHTML = `
+          <thead>
+            <tr>
+              <th>No.</th>
+              <th>Uraian Pekerjaan</th>
+              <th>Kode</th>
+              <th>Status Pencocokan</th>
+              <th>Hasil AHSP</th>
+              <th>Volume</th>
+              <th>SAT</th>
+              <th>Harga Satuan (Rp)</th>
+              <th>Jumlah</th>
+            </tr>
+          </thead>
         `;
-        const newBody = document.createElement("tbody");
-        table.appendChild(newBody);
-        container.appendChild(table);
 
-        currentTable = table;
-        tbody = newBody;
+        tbody = document.createElement("tbody");
+        currentTable.appendChild(tbody);
+        currentWrapper.appendChild(currentTable);
       }
 
-      if (!currentTable || !tbody) {
-        return;
+      if (!currentTable || !tbody) return;
+
+      // =====================================
+      // NEW: Render GROUP HEADER (A/B/C)
+      // =====================================
+      if (row.is_section && (row.section_type === "CATEGORY" || row.section_type === "SECTION")) {
+          const tr = document.createElement("tr");
+
+          const td = document.createElement("td");
+          td.colSpan = 9;
+          td.style.padding = "0";
+
+          // Header DIV styled like your sample
+          const header = document.createElement("div");
+          header.classList.add("rab-section-header");
+
+          const number = row.number ? `${row.number}. ` : "";
+          header.textContent = `${number}${row.description || ""}`;
+
+          td.appendChild(header);
+          tr.appendChild(td);
+
+          tbody.appendChild(tr);
+          return;
       }
 
-      if (row.is_section && row.section_type === "CATEGORY") {
-        const tr = document.createElement("tr");
-        const numberCell = document.createElement("td");
-        numberCell.textContent = row.number || "";
-        tr.appendChild(numberCell);
+      if (row.is_section) return;
 
-        const titleCell = document.createElement("td");
-        titleCell.colSpan = 8;
-        const strong = document.createElement("strong");
-        strong.textContent = row.description || "";
-        titleCell.appendChild(strong);
-        tr.appendChild(titleCell);
-
-        tbody.appendChild(tr);
-        return;
-      }
-
-      if (row.is_section && row.section_type === "SECTION") {
-        const tr = document.createElement("tr");
-        const numberCell = document.createElement("td");
-        numberCell.textContent = row.number || "";
-        tr.appendChild(numberCell);
-
-        const titleCell = document.createElement("td");
-        titleCell.colSpan = 8;
-        const emphasis = document.createElement("em");
-        emphasis.textContent = row.description || "";
-        titleCell.appendChild(emphasis);
-        tr.appendChild(titleCell);
-
-        tbody.appendChild(tr);
-        return;
-      }
-
-      if (row.is_section) {
-        return;
-      }
-
+      // =============================
+      // Normal data rows
+      // =============================
       const tr = buildDataRow(row, rowIndex);
       tbody.appendChild(tr);
+
       total += parseCurrencyNumber(row.total_price);
 
       const matchCell = tr.querySelector("td:nth-child(5)");
       const analysisCell = tr.querySelector(".analysis-code-cell");
       const statusCell = tr.querySelector("td:nth-child(4)");
       populateMatchCell(matchCell, row, analysisCell, statusCell);
-
     });
 
     updateGrandTotal(total);
   }
-  
+
   function renderFlatTable(rows, container) {
     let total = 0;
 

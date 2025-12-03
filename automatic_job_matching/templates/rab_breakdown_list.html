@@ -4,19 +4,42 @@
 <div class="section-box">
   <h5 class="section-title">Rincian Harga AHS (Semua Kode Terpilih)</h5>
 
-  <p class="text-muted">
-    Halaman ini menampilkan breakdown harga untuk <strong>semua kode AHS</strong> 
-    yang telah dipilih/otomatis dicocokkan di halaman RAB.
-  </p>
+  <div class="row g-3 mb-3">
+    <div class="col-lg-6">
+      <form id="excelUploadForm" enctype="multipart/form-data" class="h-100 p-3 border rounded bg-light-subtle">
+        <label for="excelFileInput" class="form-label fw-semibold">Upload Excel</label>
+        <div class="input-group">
+          <input type="file" name="file" id="excelFileInput" accept=".xls,.xlsx" class="form-control">
+          <button type="submit" class="btn btn-primary" style="background-color:#00365a;">Upload & Preview Excel</button>
+        </div>
+        <small class="text-muted">Format didukung: .xls, .xlsx</small>
+      </form>
+    </div>
+    <div class="col-lg-6">
+      <form id="pdfUploadForm" enctype="multipart/form-data" class="h-100 p-3 border rounded bg-light-subtle">
+        <label for="pdfFileInput" class="form-label fw-semibold">Upload PDF</label>
+        <div class="input-group">
+          <input type="file" name="pdf_file" id="pdfFileInput" accept=".pdf" class="form-control">
+          <button type="submit" class="btn btn-primary" style="background-color:#00365a;">Upload & Preview PDF</button>
+        </div>
+        <small class="text-muted">Format didukung: .pdf</small>
+      </form>
+    </div>
+  </div>
 
   <div class="btn-group mb-3" role="group" aria-label="View toggle">
-    <a href="{% url 'rab_converted' %}" class="btn btn-outline-primary" style="border-color:#00365a; color:#00365a;">
+    <a href="{% url 'rab_converted' %}" class="btn btn-outline-primary" id="rab-preview-tab" style="border-color:#00365a; color:#00365a;">
       RAB Preview
     </a>
     <button type="button" class="btn btn-primary active" style="background:#00365a; border:1px solid #00365a;">
       Uraian Harga
     </button>
   </div>
+
+  <p class="text-muted">
+    Halaman ini menampilkan breakdown harga untuk <strong>semua kode AHS</strong> 
+    yang telah dipilih/otomatis dicocokkan di halaman RAB.
+  </p>
 
   <div id="breakdown-container"></div>
 </div>
@@ -34,6 +57,13 @@
   .group-header {
     background:#f0f6fb; font-weight:bold; padding:6px 12px; margin-top:15px; border-left:4px solid #00365a;
   }
+
+  #rab-preview-tab:hover {
+    background: #f0f6fb !important;   /* light blue */
+    color: #00365a !important;        /* dark blue text */
+    border-color: #00365a !important;
+  }
+
 </style>
 
 <script>
@@ -576,5 +606,26 @@ function renderError(code) {
   `;
   container.appendChild(card);
 }
+
+document.addEventListener("DOMContentLoaded", () => {
+  const excelInput = document.getElementById("excelFileInput");
+  const pdfInput = document.getElementById("pdfFileInput");
+  const excelForm = document.getElementById("excelUploadForm");
+  const pdfForm = document.getElementById("pdfUploadForm");
+
+  function blockUpload(e) {
+    e.preventDefault();
+    alert("Maaf, silakan kembali ke halaman RAB Preview untuk mengunggah file baru.");
+  }
+
+  // Block input clicks
+  excelInput.addEventListener("click", blockUpload);
+  pdfInput.addEventListener("click", blockUpload);
+
+  // Block form submission
+  excelForm.addEventListener("submit", blockUpload);
+  pdfForm.addEventListener("submit", blockUpload);
+});
+
 </script>
 {% endblock %}
