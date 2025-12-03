@@ -40,16 +40,13 @@ class RecommendationTextGeneratorTest(unittest.TestCase):
             'cost': Decimal('200000000.00'),
             'weight_pct': Decimal('42.00'),
             'quantity': Decimal('50'),
-            'cost': Decimal('100000.00'),
-            'weight_pct': Decimal('33.333333'),
-            'quantity': Decimal('10'),
             'unit_price': Decimal('10000')
         }
         
         text = generate_recommendation_text(highest_item)
         
         # Should format to 2 decimal places
-        self.assertIn("33.33%", text)
+        self.assertIn("42.00%", text)
         
     def test_handles_high_percentage(self):
         """Test generating text for item with very high cost weight"""

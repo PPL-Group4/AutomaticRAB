@@ -53,9 +53,20 @@ class DbAhsRepository:
 
     def get_all_ahs(self) -> List[AhsRow]:
         logger.debug("get_all_ahs called")
-        
+
+        # Check cache first
+        cached = self.cache.get_all()
+        if cached is not None:
+            logger.debug("Cache HIT for get_all_ahs (len=%d)", len(cached))
+            return cached
+
+        # Cache miss - fetch from database
+        logger.debug("Cache MISS for get_all_ahs - fetching from database")
         qs = Ahs.objects.all()[:5000]
         results = [AhsRow(id=a.id, code=(a.code or ""), name=(a.name or "")) for a in qs]
-        
+
+        # Store in cache
+        self.cache.set_all(results)
+
         logger.info("get_all_ahs returned %d rows", len(results))
         return results

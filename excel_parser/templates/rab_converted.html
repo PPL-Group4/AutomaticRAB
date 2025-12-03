@@ -53,6 +53,57 @@
     min-width: 100px;
     text-align: justify;     /* keeps prices neatly aligned */
   }
+
+  /* Target Bid Table Styling */
+  .target-bid-table thead {
+    background-color: #00365a !important; /* Navy matching Terapkan Target Bid button */
+  }
+
+  .target-bid-table thead tr {
+    background-color: #00365a !important;
+  }
+
+  .target-bid-table thead th {
+    color: #ffffff !important; /* White text on navy */
+    font-weight: 600;
+    background-color: #00365a !important;
+  }
+
+  /* Main Tables: Price Deviations & Grand Total Styling */
+  table thead.table-light {
+    background-color: #d0e7ff !important;
+  }
+
+  /* Font color for table cells (except brand) */
+  #priceDeviationTable tbody td,
+  #rabTables tbody td {
+    color: #6c757d; /* text-muted equivalent */
+  }
+
+  /* Brand column stays in primary blue */
+  #priceDeviationTable tbody td span.text-primary,
+  #rabTables tbody td span.text-primary {
+    color: #0d6efd !important;
+  }
+
+  .target-bid-table tbody td {
+    color: #1e293b;
+  }
+
+  .target-bid-table tbody td .text-primary {
+    color: #0d6efd !important;
+  }
+
+  /* Target Bid Apply Button */
+  #applyTargetBidButton {
+    background-color: #00365a !important;
+    border-color: #00365a !important;
+  }
+
+  #applyTargetBidButton:hover {
+    background-color: #002744 !important;
+    border-color: #002744 !important;
+  }
 </style>
 <div class="section-box position-relative">
   <h5 class="section-title">RAB Preview</h5>
@@ -153,7 +204,38 @@
     </div>
   </div>
 
-  {% include "efficiency_recommendations/recommendations_panel.html" %}
+  <!-- Efficiency Recommendations -->
+  <div class="card mt-4 p-3 shadow-sm" id="efficiencyRecommendationsPanel" style="display:none;">
+    <h5 class="mb-3">💡 Rekomendasi Efisiensi</h5>
+
+    <!-- Cost Weight Recommendation -->
+    <div id="costWeightRecommendation" class="mb-4" style="display:none;">
+      <div class="alert alert-info mb-0" role="alert">
+        <div class="d-flex align-items-start gap-2">
+          <i class="bi bi-info-circle-fill fs-5"></i>
+          <div class="flex-grow-1">
+            <p class="mb-0" id="costWeightRecommendationText"></p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Items Not in AHSP Database - HIDDEN -->
+    <div id="notInDatabaseSection" class="mb-4" style="display:none !important;"></div>
+
+    <!-- No Warnings State -->
+    <div id="noWarningsSection" style="display:none;">
+      <div class="alert alert-success mb-0" role="alert">
+        <div class="d-flex align-items-center gap-2">
+          <i class="bi bi-check-circle-fill fs-5"></i>
+          <div>
+            <h6 class="alert-heading mb-1">✓ Semua Oke!</h6>
+            <p class="mb-0">Tidak ada peringatan atau rekomendasi saat ini.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 {% endblock %}
 
@@ -738,13 +820,38 @@
     const direction = afterTotal >= targetNominal ? "lebih tinggi" : "lebih rendah";
     const metCount = appliedCodes.filter(item => item.metTarget).length;
 
-    let failureNote = "";
+    // Build summary header
+    const successCount = appliedCodes.length;
+    const failedCount = failedCodes.length;
+    const totalProcessed = successCount + failedCount;
+    const summaryHeader = `<strong>${totalProcessed} kode AHSP diproses</strong>, ${successCount} berhasil${failedCount > 0 ? `, <span class="text-danger">${failedCount} gagal</span>` : ''}`;
+
+    // Build failed codes list
+    let failedCodesHtml = "";
     if (failedCodes.length) {
-      const reported = failedCodes.slice(0, 3).map(entry => entry.code).join(", ");
-      const suffix = failedCodes.length > 3 ? ", ..." : "";
-      failureNote = `<div class="small text-muted">Gagal memproses: ${reported}${suffix}.</div>`;
+      const failedList = failedCodes.map(entry => escapeHtml(entry.code)).join(", ");
+      failedCodesHtml = `<div class="mt-2 small text-danger"><strong>Kode yang gagal diproses:</strong> ${failedList}</div>`;
     }
 
+    // Build overview table
+    const overviewTable = `
+      <table class="table table-sm table-bordered mb-3 target-bid-table">
+        <thead>
+          <tr style="background-color: #00365a !important;">
+            <th style="color: white;">Total Awal</th>
+            <th style="color: white;">Target</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>${formatCurrencyId(beforeTotal)}</td>
+            <td>${targetMode === "percentage" ? `${targetNumeric}% (${formatCurrencyId(targetNominal)})` : formatCurrencyId(targetNominal)}</td>
+          </tr>
+        </tbody>
+      </table>
+    `;
+
+    // Build material adjustments table
     const adjustmentSummaries = appliedCodes
       .map(item => ({
         code: item.code,
@@ -752,56 +859,79 @@
       }))
       .filter(entry => entry.adjustments.length);
 
-    const adjustmentHtml = adjustmentSummaries.length
-      ? `
+    let materialsTableHtml = "";
+    if (adjustmentSummaries.length) {
+      const materialRows = [];
+
+      adjustmentSummaries.forEach(entry => {
+        entry.adjustments.forEach(material => {
+          materialRows.push({
+            code: entry.code || "-",
+            name: material.name || "-",
+            brand: material.brand || "Brand tidak tersedia",
+            priceBefore: material.originalUnitPrice || 0,
+            priceAfter: material.newUnitPrice || 0,
+          });
+        });
+      });
+
+      materialsTableHtml = `
         <div class="mt-3">
-          <div class="fw-semibold mb-2">Rincian penyesuaian material:</div>
-          ${adjustmentSummaries
-            .map(entry => {
-              const listItems = entry.adjustments
-                .map(material => {
-                  const nameText = escapeHtml(material.name || "-");
-                  const unitText = material.unit ? ` (${escapeHtml(material.unit)})` : "";
-                  const brandLabel = material.brand
-                    ? escapeHtml(material.brand)
-                    : "Brand tidak tersedia";
-                  const newPriceLabel = formatCurrencyRp(material.newUnitPrice, { fallback: null });
-                  const originalPriceLabel = formatCurrencyRp(material.originalUnitPrice, { fallback: null });
-                  let priceSnippet = "";
-                  if (newPriceLabel) {
-                    priceSnippet = `${newPriceLabel}`;
-                    if (originalPriceLabel && originalPriceLabel !== newPriceLabel) {
-                      priceSnippet += ` (dari ${originalPriceLabel})`;
-                    }
-                  }
-                  const extraInfo = priceSnippet ? `, ${priceSnippet}` : "";
-                  return `<li class="mb-1">` +
-                    `<strong>${nameText}</strong>${unitText} — brand <span class="text-primary">${brandLabel}</span>${extraInfo}</li>`;
-                })
-                .join("");
-              return `
-                <div class="mb-2">
-                  <div class="text-muted small">AHS ${escapeHtml(entry.code || "(tanpa kode)")}</div>
-                  <ul class="mb-0 ps-3">${listItems}</ul>
-                </div>
-              `;
-            })
-            .join("")
-          }
+          <h6 class="fw-semibold mb-2">Rincian Penyesuaian Material</h6>
+          <div class="table-responsive">
+            <table class="table table-sm table-striped table-bordered target-bid-table">
+              <thead>
+                <tr style="background-color: #00365a !important;">
+                  <th style="color: white;">Kode</th>
+                  <th style="color: white;">Nama</th>
+                  <th style="color: white;">Brand</th>
+                  <th class="text-end" style="color: white;">Harga Sebelum</th>
+                  <th class="text-end" style="color: white;">Harga Sesudah</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${materialRows.map(row => `
+                  <tr>
+                    <td>${escapeHtml(row.code)}</td>
+                    <td>${escapeHtml(row.name)}</td>
+                    <td><span class="text-primary">${escapeHtml(row.brand)}</span></td>
+                    <td class="text-end">${formatCurrencyRp(row.priceBefore, { fallback: '-' })}</td>
+                    <td class="text-end">${formatCurrencyRp(row.priceAfter, { fallback: '-' })}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
         </div>
-      `
-      : "";
+      `;
+    }
+
+    // Build footer table
+    const footerTable = `
+      <table class="table table-sm table-bordered mb-0 mt-3 target-bid-table">
+        <thead>
+          <tr style="background-color: #00365a !important;">
+            <th style="color: white;">Selisih Terhadap Target</th>
+            <th style="color: white;">Total Sekarang</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>${formatCurrencyId(gap)} (${direction})</td>
+            <td><strong>${formatCurrencyId(afterTotal)}</strong></td>
+          </tr>
+        </tbody>
+      </table>
+    `;
 
     summary.innerHTML = `
       <div class="alert alert-info mb-0">
-        <div><strong>${appliedCodes.length}</strong> kode AHSP diproses.${failedCodes.length ? ` <span class="text-danger">${failedCodes.length} kode gagal.</span>` : ""}</div>
-        <div>Total awal: ${formatCurrencyId(beforeTotal)} → Total sekarang: ${formatCurrencyId(afterTotal)}.</div>
-        <div>Target: ${targetMode === "percentage" ? `${targetNumeric}% (${formatCurrencyId(targetNominal)})` : formatCurrencyId(targetNominal)}.</div>
-        <div>Selisih terhadap target: ${formatCurrencyId(gap)} (${direction}).</div>
-        ${metCount ? `<div>${metCount} kode sudah memenuhi target unitnya.</div>` : ""}
-        ${failureNote}
+        <div class="mb-3">${summaryHeader}${failedCodesHtml}</div>
+        ${overviewTable}
+        ${materialsTableHtml}
+        ${footerTable}
+        ${metCount ? `<div class="mt-2 small text-muted">${metCount} kode sudah memenuhi target unitnya.</div>` : ""}
       </div>
-      ${adjustmentHtml}
     `;
   }
 
@@ -1213,14 +1343,6 @@
       updateGrandTotalFromRows();
       afterTotal = calculateGrandTotalFromRows();
 
-      if (window.EfficiencyRecommendations && typeof currentTestJobId !== "undefined" && currentTestJobId) {
-        try {
-          window.EfficiencyRecommendations.refresh();
-        } catch (refreshErr) {
-          console.warn("Failed to refresh efficiency recommendations after target bid.", refreshErr);
-        }
-      }
-
       renderTargetBidSummary({
         appliedCodes,
         failedCodes,
@@ -1345,12 +1467,18 @@
     }
 
     const hasSections = rows.some(row => row && row.is_section);
-    if (hasSections) {
-      renderSectionedTables(rows, container);
-    } else {
-      renderFlatTable(rows, container);
+
+    try {
+      if (hasSections) {
+        renderSectionedTables(rows, container);
+      } else {
+        renderFlatTable(rows, container);
+      }
+    } catch (error) {
+      console.error("Error rendering tables:", error);
     }
 
+    // Always show these even if table rendering has errors
     document.getElementById("grandTotalBox").style.display = "block";
     setTargetBidVisibility(true);
     updateGrandTotalFromRows();
@@ -1383,19 +1511,19 @@
         const table = document.createElement("table");
         table.classList.add("table", "table-bordered", "table-sm", "align-middle", "mb-4");
         table.innerHTML = `
-          <thead class="table-light">
-            <tr>
-              <th>No.</th>
-              <th>Uraian Pekerjaan</th>
-              <th>Kode</th>
-              <th>Status Pencocokan</th>
-              <th>Hasil AHSP</th>
-              <th>Volume</th>
-              <th>SAT</th>
-              <th>Harga Satuan (Rp.)</th>
-              <th>Jumlah</th>
-            </tr>
-          </thead>
+      <thead class="table-light">
+        <tr>
+          <th>No.</th>
+          <th>Uraian Pekerjaan</th>
+          <th>Kode</th>
+          <th>Status Pencocokan</th>
+          <th>Hasil AHSP</th>
+          <th>Volume</th>
+          <th>SAT</th>
+          <th>Harga Satuan (Rp.)</th>
+          <th>Jumlah</th>
+        </tr>
+      </thead>
         `;
         const newBody = document.createElement("tbody");
         table.appendChild(newBody);
@@ -1999,6 +2127,11 @@
       });
       legendContainer.appendChild(legendItem);
     });
+
+    // Update efficiency recommendations after chart is rendered
+    if (typeof EfficiencyRecommendations !== 'undefined') {
+      EfficiencyRecommendations.refresh();
+    }
   }
 
   function numberToWords(number) {
@@ -2696,9 +2829,9 @@
     }
   }
   function computeDeviationInfo(actual, reference) {
-  const ref = parseFloat(reference);
-  const act = parseFloat(actual);
-  if (!isFinite(ref) || ref <= 0 || !isFinite(act)) return null;
+  const ref = Number.parseFloat(reference);
+  const act = Number.parseFloat(actual);
+  if (!Number.isFinite(ref) || ref <= 0 || !Number.isFinite(act)) return null;
 
   const pct = ((act - ref) / ref) * 100;
   const absPct = Math.abs(pct);
@@ -2782,11 +2915,10 @@ function updatePriceWarningForRow(tr) {
   
   
 
-<!-- Include Efficiency Recommendations JavaScript -->
+<!-- Efficiency Recommendations JavaScript -->
 <script src="{% static 'efficiency_recommendations/recommendations.js' %}"></script>
 <script>
   // Initialize efficiency recommendations after table is rendered
-  // This will be called when data is loaded
   let currentTestJobId = null;
 
   // Hook into the existing renderTables function to trigger recommendations
@@ -2794,30 +2926,17 @@ function updatePriceWarningForRow(tr) {
   renderTables = function(rows, options = {}) {
     // Call original function
     originalRenderTables(rows, options);
-    
+
     // Extract job_id from response if available
     if (options.jobId) {
       currentTestJobId = options.jobId;
-      // Initialize recommendations panel
-      if (window.EfficiencyRecommendations) {
-        window.EfficiencyRecommendations.init(currentTestJobId);
+
+      // Initialize and fetch recommendations
+      if (typeof EfficiencyRecommendations !== 'undefined') {
+        EfficiencyRecommendations.init(options.jobId);
+        EfficiencyRecommendations.refresh();
       }
     }
   };
-
-  restoreRabPreviewState();
-
-  // Also trigger refresh when price inputs change
-  document.addEventListener('input', function(event) {
-    if (event.target.classList.contains('price-input')) {
-      // Debounce the refresh to avoid too many API calls
-      if (window.EfficiencyRecommendations && currentTestJobId) {
-        clearTimeout(window.refreshRecommendationsTimeout);
-        window.refreshRecommendationsTimeout = setTimeout(() => {
-          window.EfficiencyRecommendations.refresh();
-        }, 2000); // Wait 2 seconds after last price change
-      }
-    }
-  });
 </script>
 {% endblock %}

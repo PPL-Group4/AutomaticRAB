@@ -1,5 +1,8 @@
 from typing import Dict, List
 
+# Constants
+COST_FORMAT = "      Cost: Rp {:,} ({}%)"
+
 
 def identify_top_cost_contributors(job_data: Dict, top_n: int = 3) -> Dict:
     """
@@ -24,9 +27,9 @@ def identify_top_cost_contributors(job_data: Dict, top_n: int = 3) -> Dict:
                 'top_items': List[Dict] - top N items sorted by weight_pct descending
             }
     """
-    print(f"\n{'='*60}")
-    print(f"IDENTIFYING TOP {top_n} COST CONTRIBUTORS")
-    print(f"{'='*60}")
+    print("\n" + "="*60)
+    print("IDENTIFYING TOP {} COST CONTRIBUTORS".format(top_n))
+    print("="*60)
 
     # Extract job metadata
     job_id = job_data['job_id']
@@ -34,35 +37,35 @@ def identify_top_cost_contributors(job_data: Dict, top_n: int = 3) -> Dict:
     total_cost = job_data['total_cost']
     items = job_data['items']
 
-    print(f"\nJob Information:")
-    print(f"   Job ID: {job_id}")
-    print(f"   Job Name: {job_name}")
-    print(f"   Total Cost: Rp {total_cost:,}")
-    print(f"   Number of Items: {len(items)}")
+    print("\nJob Information:")
+    print("   Job ID: {}".format(job_id))
+    print("   Job Name: {}".format(job_name))
+    print("   Total Cost: Rp {:,}".format(total_cost))
+    print("   Number of Items: {}".format(len(items)))
 
-    print(f"\n All Items (before sorting):")
+    print("\n All Items (before sorting):")
     for i, item in enumerate(items, 1):
-        print(f"   {i}. {item['name']}")
-        print(f"      Cost: Rp {item['cost']:,} ({item['weight_pct']}%)")
+        print("   {}. {}".format(i, item['name']))
+        print(COST_FORMAT.format(item['cost'], item['weight_pct']))
 
     # Sort items by weight_pct in descending order and take top N
-    print(f"\nSorting items by weight_pct (descending)...")
+    print("\nSorting items by weight_pct (descending)...")
     sorted_items = sorted(items, key=lambda x: x['weight_pct'], reverse=True)
 
-    print(f"\nSorted Items:")
+    print("\nSorted Items:")
     for i, item in enumerate(sorted_items, 1):
-        print(f"   {i}. {item['name']}")
-        print(f"      Cost: Rp {item['cost']:,} ({item['weight_pct']}%)")
+        print("   {}. {}".format(i, item['name']))
+        print(COST_FORMAT.format(item['cost'], item['weight_pct']))
 
     top_items = sorted_items[:top_n]
 
-    print(f"\nTop {len(top_items)} Cost Contributors Selected:")
+    print("\nTop {} Cost Contributors Selected:".format(len(top_items)))
     for i, item in enumerate(top_items, 1):
-        print(f"   {i}. {item['name']}")
-        print(f"      Cost: Rp {item['cost']:,} ({item['weight_pct']}%)")
+        print("   {}. {}".format(i, item['name']))
+        print(COST_FORMAT.format(item['cost'], item['weight_pct']))
 
-    print(f"\nResult prepared with {len(top_items)} top items")
-    print(f"{'='*60}\n")
+    print("\nResult prepared with {} top items".format(len(top_items)))
+    print("="*60 + "\n")
 
     # Return result with job metadata and top items
     return {

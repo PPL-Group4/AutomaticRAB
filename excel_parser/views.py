@@ -352,13 +352,17 @@ def _create_test_job_from_rows(rows, filename="Uploaded File"):
                 unit_price = Decimal("0")
         except (ValueError, TypeError, KeyError):
             unit_price = Decimal("0")
-        
-        # Create item
+
+        # Get AHSP code from analysis_code column
+        ahsp_code = row.get("analysis_code", "").strip() if row.get("analysis_code") else None
+
+        # Create item with ahsp_code
         TestItem.objects.create(
             job=job,
             name=description,
             quantity=quantity,
-            unit_price=unit_price
+            unit_price=unit_price,
+            ahsp_code=ahsp_code if ahsp_code else None
         )
     
     # Calculate totals and weights
