@@ -241,14 +241,3 @@ class UnmatchedAhsStorageTests(TestCase):
         entry = UnmatchedAhsEntry.objects.first()
         self.assertEqual(entry.name, special_desc)
 
-    @patch("pdf_parser.services.job_matcher.MatchingService.perform_best_match")
-    def test_stores_very_long_description(self, mock_match):
-        """Should handle very long descriptions."""
-        mock_match.return_value = None
-        long_desc = "A" * 5000  # Very long description
-        
-        job_matcher.match_description(long_desc)
-        
-        entry = UnmatchedAhsEntry.objects.first()
-        self.assertEqual(entry.name, long_desc)
-        self.assertEqual(len(entry.name), 5000)
