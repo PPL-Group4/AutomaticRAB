@@ -327,11 +327,7 @@ def _env_flag(name: str, default: bool = False) -> bool:
     return raw.strip().lower() in {"1", "true", "yes", "on"}
 
 
-SENTRY_DSN = os.getenv(
-    "SENTRY_DSN",
-    "https://9f3bc5e234ea076cf3c43a4388542357@o4510418038685696.ingest.us.sentry.io/4510418045239296",
-)
-
+SENTRY_DSN= "https://86415d4c03d00a1d4fa34f2b7e6b5ff5@o4510424416452608.ingest.us.sentry.io/4510470123552768"
 if SENTRY_DSN:
     sentry_logging = LoggingIntegration(
         level=getattr(

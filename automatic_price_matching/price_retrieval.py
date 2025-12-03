@@ -142,54 +142,53 @@ class DatabaseAhspSource:
         return None
 
 
+import sentry_sdk
+
 class CombinedAhspSource:
-    """Try DB then CSV for price lookup; attempt common code variants."""
-
-    def __init__(self, db_source: DatabaseAhspSource | None = None, csv_source: CsvAhspSource | None = None):
-        self.db = db_source or DatabaseAhspSource()
-        self.csv = csv_source or CsvAhspSource()
-
-    def _try_variants_in_db(self, canonical_code: str) -> Optional[Decimal]:
-        variants = {
-            canonical_code,
-            canonical_code.replace(".", "-"),
-            canonical_code.replace("-", "."),
-            canonical_code.replace(".", "").replace("-", ""),
-        }
-        for v in variants:
-            price = self.db.get_price_by_code(v)
-            if price is not None:
-                logger.debug("CombinedAhspSource: DB hit for variant=%s price=%s", v, price)
-                return price
-        return None
+    def __init__(self):
+        self.db = DatabaseAhspSource()
+        self.csv = CsvAhspSource()
 
     def get_price_by_code(self, canonical_code: str) -> Optional[Decimal]:
         if not canonical_code:
             return None
-        db_price = self._try_variants_in_db(canonical_code)
-        csv_price: Optional[Decimal] = None
-        try:
-            csv_price = self.csv.get_price_by_code(canonical_code)
-        except Exception:
-            logger.exception("CombinedAhspSource: CSV lookup failed for %s", canonical_code)
 
-        if csv_price is not None:
-            if (
-                db_price is not None
-                and db_price.quantize(Decimal("0.01")) != csv_price.quantize(Decimal("0.01"))
-            ):
-                logger.info(
-                    "CombinedAhspSource: Preferring CSV price %s over DB price %s for code=%s",
-                    csv_price,
-                    db_price,
-                    canonical_code,
-                )
-            elif db_price is None:
-                logger.debug("CombinedAhspSource: CSV hit for code=%s price=%s", canonical_code, csv_price)
-            return csv_price
+        with sentry_sdk.start_span(
+            op="price_lookup",
+            description=f"combined_lookup_{canonical_code}"
+        ):
+            # 1. DB lookup
+            db_price = self.db.get_price_by_code(canonical_code)
 
-        return db_price
+            # 2. CSV lookup
+            csv_price = None
+            try:
+                csv_price = self.csv.get_price_by_code(canonical_code)
+            except Exception as e:
+                logger.exception("CombinedAhspSource: CSV lookup failed for %s", canonical_code)
+                sentry_sdk.capture_exception(e)
 
+            # 3. Prefer CSV if available
+            if csv_price is not None:
+                # Log if they disagree
+                if (
+                    db_price is not None
+                    and db_price.quantize(Decimal("0.01")) != csv_price.quantize(Decimal("0.01"))
+                ):
+                    sentry_sdk.add_breadcrumb(
+                        category="price_discrepancy",
+                        message="CSV and DB prices differ",
+                        level="warning",
+                        data={
+                            "code": canonical_code,
+                            "csv_price": str(csv_price),
+                            "db_price": str(db_price),
+                        }
+                    )
+                return csv_price
+
+            # 4. Fallback to DB
+            return db_price
 
 @dataclass
 class AhspPriceRetriever:
