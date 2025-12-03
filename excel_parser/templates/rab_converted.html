@@ -38,6 +38,10 @@
     font-weight: 600;
   }
 
+  .rab-table td:not(:nth-child(4)) {
+    color: #000 !important;
+  }
+
   .rab-table td {
     border: 1px solid #ddd;
     padding: 6px 10px;
@@ -1547,6 +1551,20 @@
     let bujakCounter = 0;
 
     rows.forEach((row, rowIndex) => {
+      if (row.number !== undefined && row.number !== null) {
+        let num = row.number;
+
+        // if number is numeric → convert to string
+        if (typeof num === "number") {
+            // remove trailing .0 or .000
+            num = String(num).replace(/\.0+$/, "");
+        } else {
+            // if it's a string that looks like  "4.0"
+            num = String(num).replace(/\.0+$/, "");
+        }
+
+        row.number = num;
+      }
       const skipKeywords = ["PAJAK", "JUMLAH SETELAH PAJAK", "DIBULATKAN", "TERBILANG"];
       if (row.description && skipKeywords.some(k => row.description.toUpperCase().includes(k))) {
         return;
