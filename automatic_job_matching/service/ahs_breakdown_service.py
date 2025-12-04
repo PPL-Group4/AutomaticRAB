@@ -140,15 +140,6 @@ def _components_by_code() -> Dict[str, List[Dict[str, str]]]:
 
 
 def get_ahs_breakdown(ahs_code: str) -> Optional[Dict[str, object]]:
-    """Return labor, equipment, and material totals for an AHSP code.
-
-    The breakdown is sourced from the normalised CSV datasets under
-    ``target_bid/normalized``. Values are expressed as floats rounded to
-    currency precision (two decimals) for costs and four decimals for
-    quantities. When the code is unknown or the reference data is missing,
-    ``None`` is returned.
-    """
-
     canonical = canonicalize_job_code(ahs_code)
     if not canonical:
         return None
@@ -167,18 +158,25 @@ def get_ahs_breakdown(ahs_code: str) -> Optional[Dict[str, object]]:
         "materials": Decimal("0"),
     }
 
-    details = {"materials": []}
+    details = {
+        "labor": [],
+        "equipment": [],
+        "materials": [],
+    }
 
     for row in component_rows:
         comp_type = row["component_type"]
         out_key = _COMPONENT_MAP[comp_type]
+
         catalog = {
             "labor": labor_catalog,
             "equipment": equipment_catalog,
             "material": material_catalog,
         }[comp_type]
 
-        catalog_entry = catalog.get(row["component_id"], {})
+        catalog_entry = catalog.get(row["component_id"], None)
+
+        # Quantity (coefficient)
         quantity = _parse_decimal(row.get("quantity"))
         if quantity is None:
             quantity = _parse_decimal(row.get("coefficient"))
@@ -187,33 +185,42 @@ def get_ahs_breakdown(ahs_code: str) -> Optional[Dict[str, object]]:
 
         unit_price = catalog_entry.get("unit_price") if catalog_entry else None
         total_cost = quantity * unit_price if unit_price is not None else None
+
+        # Add to totals
         if total_cost is not None:
             totals[out_key] += total_cost
 
-        if out_key == "materials":
-            detail = {
-                "id": row["component_id"],
-                "code": catalog_entry.get("code") if catalog_entry else None,
-                "name": catalog_entry.get("name") if catalog_entry else None,
-                "unit": catalog_entry.get("unit") if catalog_entry else None,
-                "quantity": _format_decimal(quantity, _QUANTITY_QUANTUM),
-                "unit_price": _format_decimal(unit_price, _MONEY_QUANTUM),
-                "total_cost": _format_decimal(total_cost, _MONEY_QUANTUM),
-                "brand": catalog_entry.get("brand") if catalog_entry else None,
-            }
-            details["materials"].append(detail)
+        # Build detail row
+        detail = {
+            "id": row["component_id"],
+            "code": catalog_entry.get("code") if catalog_entry else None,
+            "name": catalog_entry.get("name") if catalog_entry else None,
+            "unit": catalog_entry.get("unit") if catalog_entry else None,
+            "quantity": _format_decimal(quantity, _QUANTITY_QUANTUM),
+            "unit_price": _format_decimal(unit_price, _MONEY_QUANTUM),
+            "total_cost": _format_decimal(total_cost, _MONEY_QUANTUM),
+        }
 
+        # Add material-specific fields
+        if comp_type == "material":
+            detail["brand"] = catalog_entry.get("brand") if catalog_entry else None
+
+        details[out_key].append(detail)
+
+    # Compute totals
     labor_total = totals["labor"]
     equipment_total = totals["equipment"]
     materials_total = totals["materials"]
     labor_equipment_total = labor_total + equipment_total
     overall_total = labor_equipment_total + materials_total
 
+    # Main AHS info
     main_entry = _ahs_main_catalog().get(canonical, {})
 
-    breakdown: Dict[str, object] = {
+    breakdown = {
         "name": main_entry.get("name"),
         "unit_price": _format_decimal(main_entry.get("unit_price"), _MONEY_QUANTUM),
+
         "totals": {
             "labor": _format_decimal(labor_total, _MONEY_QUANTUM),
             "equipment": _format_decimal(equipment_total, _MONEY_QUANTUM),
@@ -221,7 +228,9 @@ def get_ahs_breakdown(ahs_code: str) -> Optional[Dict[str, object]]:
             "materials": _format_decimal(materials_total, _MONEY_QUANTUM),
             "overall": _format_decimal(overall_total, _MONEY_QUANTUM),
         },
+
         "components": details,
     }
 
     return breakdown
+

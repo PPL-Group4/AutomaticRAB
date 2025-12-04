@@ -47,42 +47,44 @@ id,code,name,unit,unit_price
 46,E.46,Mata bor auger 50 cm,hari,340000.0
 47,E.47,Sewa casing pipa baja dia. 50 cm,m',55800.0
 48,E.48,Bore Pile Machine,jam,476900.0
-49,E.49,Sepatu pancang beton,buah,124500.0
-50,E.50,Crawler Crane 10 ton + Ladder 14 ton,jam,500000.0
-51,E.51,Driver Hammer,jam,50000.0
-52,E.52,Sepatu Pancang,buah,124500.0
-53,E.53,Driver Hammer 2 ton,jam,50000.0
-54,E.54,Sepatu pancang dia. 30 cm,buah,135000.0
-55,E.55,Sepatu pancang dia. 35 cm,buah,140000.0
-56,E.56,Crawler Crane 20 ton + Ladder 14 ton,jam,550000.0
-57,E.57,Sewa mobil crane,jam,1450000.0
-58,E.58,Kunci momen,hari,20000.0
-59,E.59,Crane,unit hari,3442900.0
-60,E.60,Sewa Pipe Support,buah hari,850.0
-61,E.61,- Scaffolding Pipe brancing 6 m,buah hari,586.6666666666666
-62,E.62,Mesin poles,unit/hari,150000.0
-63,E.63,Sewa Scaffolding,hari,586.6666666666666
-64,E.64,Sewa Gondola,hari,322000.0
-65,E.65,Compressor,jam,92500.0
-66,E.66,Colt T-120 (D); R-Blk. 4; 12 m3,Jam,314110.76
-67,E.67,Fuso (D); R-Blk. 8; 35 m3,Jam,418543.76
-68,E.68,Crane Truck 3 ton; Winch 5 Ton,Jam,430662.86
-69,E.69,Pick Up L300,Jam,268539.71
-70,E.70,Sewa crane kapasitas 1 ton,m3,430000.0
-71,E.71,Anti Rayap tanah,kg,28500.0
-72,E.72,Sewa Mesin Hydroseeding 2000L,hari,350000.0
-73,E.73,Mesin Molen 1m3,hari,300000.0
-74,E.74,Water Truck,hari,1550000.0
-75,E.75,Sprayer Gendong,hari,350000.0
-76,E.76,Mesin Gendong,Jam,150000.0
-77,E.77,Boom Lift,hari,3300000.0
-78,E.78,Tandon Air kap. 2 m3,hari,25000.0
-79,E.79,AMP,jam,3981125.0
-80,E.80,Generator set  135 KVA,jam,410200.0
-81,E.81,Asphalt Finisher,jam,450000.0
-82,E.82,Tandem roller 6-8 ton,jam,469500.0
-83,E.83,P. Tyre Roller,jam,275000.0
-84,E.84,Excavator 95 HP,jam,480000.0
-85,E.85,Excavator,hari,5150000.0
-86,E.86,Sewa Genset,hari,150000.0
-87,E.87,Pompa Sedot,hari,280000.0
+49,E.49,Crawler Crane 10 ton + Ladder 14 ton,jam,500000.0
+50,E.50,Driver Hammer,jam,50000.0
+51,E.51,Driver Hammer 2 ton,jam,50000.0
+52,E.52,Alat Las Listrik 150 A,jam,3125.0
+53,E.53,Alat Las Listrik 250 A,jam,3125.0
+54,E.54,Alat Las Listrik 350 A,jam,3125.0
+55,E.55,Alat Las Listrik 500 A,jam,3125.0
+56,E.56,Alat pancang Hidraulik Pile Driver,jam,487000.0
+57,E.57,Crawler Crane 20 ton + Ladder 14 ton,jam,550000.0
+58,E.58,Alat Las Listrik,jam,3125.0
+59,E.59,Sewa mobil crane,jam,1450000.0
+60,E.60,Kunci momen,hari,20000.0
+61,E.61,Crane,unit hari,3442900.0
+62,E.62,Sewa Pipe Support,buah hari,850.0
+63,E.63,- Scaffolding Pipe brancing 6 m,buah hari,586.6666666666666
+64,E.64,Alat Pancang Mini Pile,hari,250000.0
+65,E.65,Mesin poles,unit/hari,150000.0
+66,E.66,Sewa Scaffolding,hari,586.6666666666666
+67,E.67,Sewa Gondola,hari,322000.0
+68,E.68,Compressor,jam,92500.0
+69,E.69,Colt T-120 (D); R-Blk. 4; 12 m3,Jam,314110.76
+70,E.70,Fuso (D); R-Blk. 8; 35 m3,Jam,418543.76
+71,E.71,Crane Truck 3 ton; Winch 5 Ton,Jam,430662.86
+72,E.72,Pick Up L300,Jam,268539.71
+73,E.73,Sewa crane kapasitas 1 ton,m3,430000.0
+74,E.74,Sewa Mesin Hydroseeding 2000L,hari,350000.0
+75,E.75,Mesin Molen 1m3,hari,300000.0
+76,E.76,Water Truck,hari,1550000.0
+77,E.77,Sprayer Gendong,hari,350000.0
+78,E.78,Mesin Gendong,Jam,150000.0
+79,E.79,Boom Lift,hari,3300000.0
+80,E.80,Tandon Air kap. 2 m3,hari,25000.0
+81,E.81,AMP,jam,3981125.0
+82,E.82,Generator set  135 KVA,jam,410200.0
+83,E.83,Asphalt Finisher,jam,450000.0
+84,E.84,Tandem roller 6-8 ton,jam,469500.0
+85,E.85,P. Tyre Roller,jam,275000.0
+86,E.86,Excavator 95 HP,jam,480000.0
+87,E.87,Excavator,hari,5150000.0
+88,E.88,Sewa Genset,hari,150000.0
+89,E.89,Pompa Sedot,hari,280000.0

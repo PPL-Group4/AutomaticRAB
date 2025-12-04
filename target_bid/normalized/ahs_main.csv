@@ -1,20 +1,20 @@
 id,reference_group_id,code,name,unit_price
-1,,3.6.4.1,"Pemasangan 1 m2 dinding bata ringan tebal 7,5 cm dengan mortar siap pakai",104864.3922
-2,,3.6.4.1.A,"Pemasangan 1 m2 dinding bata ringan tebal 7,5 cm",111908.1422
-3,,3.6.4.1.B,"Pemasangan 1 m2 dinding bata ringan tebal 7,5 cm",109392.5172
-4,,3.6.4.1.C,"Pemasangan 1 m2 dinding bata ringan tebal 7,5 cm",105367.5172
-5,,3.6.4.1.D,"Pemasangan 1 m2 dinding bata ringan tebal 7,5 cm",134045.6422
-6,,3.6.4.2,Pemasangan 1 m2 dinding bata ringan tebal 10 cm dengan mortar siap pakai,123651.0797
-7,,3.6.4.2A,Pemasangan 1 m2 dinding bata ringan tebal 10 cm dengan mortar siap pakai,133039.3922
-8,,3.6.4.2B,Pemasangan 1 m2 dinding bata ringan tebal 10 cm dengan mortar siap pakai,129688.5797
-9,,3.6.4.2C,Pemasangan 1 m2 dinding bata ringan tebal 10 cm dengan mortar siap pakai,127676.0797
-10,,3.6.4.2D,Pemasangan 1 m2 dinding bata ringan tebal 10 cm dengan mortar siap pakai,159201.8922
+1,,3.6.4.1,"Dinding Bata Ringan Tebal 7,5 cm",104864.3922
+2,,3.6.4.1.A,"Dinding Bata Ringan Tebal 7,5 cm",111908.1422
+3,,3.6.4.1.B,"Dinding Bata Ringan Tebal 7,5 cm",109392.5172
+4,,3.6.4.1.C,"Dinding Bata Ringan Tebal 7,5 cm",105367.5172
+5,,3.6.4.1.D,"Dinding Bata Ringan Tebal 7,5 cm",134045.6422
+6,,3.6.4.2,Dinding Bata Ringan Tebal 10 cm,123651.0797
+7,,3.6.4.2A,Dinding Bata Ringan Tebal 10 cm,133039.3922
+8,,3.6.4.2B,Dinding Bata Ringan Tebal 10 cm,129688.5797
+9,,3.6.4.2C,Dinding Bata Ringan Tebal 10 cm,127676.0797
+10,,3.6.4.2D,Dinding Bata Ringan Tebal 10 cm,159201.8922
 11,,1.1.1.1,Pembuatan 1 m’ pagar sementara dari kayu tinggi 2 meter,787397.193
 12,,1.1.1.2,Pembuatan 1 m’ pagar sementara dari seng gelombang rangka kayu tinggi 2 meter,635526.969
 13,,1.1.1.3,Pembuatan 1 m’ pagar sementara dari kawat duri tinggi 2 meter,378239.8895
 14,,1.1.1.4,Pembuatan 1 m’ pagar sementara seng gelombang rangka baja L.40.40.4 tinggi pagar 1.8 meter,428906.5
 15,,1.1.1.5,Pembuatan 1 m2 pagar BRC Galvanis,17431.7
-16,,1.1.1.6,Pemasangan 1 m2 panel beton pracetak 50x50x240 untuk pagar,428436.646
+16,,1.1.1.6,panel beton pracetak 50x50x240 untuk pagar,428436.646
 17,,1.1.2.1,"1 buah papan nama pekerjaan ukuran 0.8x1.2 menggunakan multiflex 18 mm, frame besi siku dan tiang kayu 8/12",1909085.2
 18,,1.1.2.2,"1 buah papan nama pekerjaan ukuran 0.6x08 menggunakan multiplex 10 mm, frame allumunium siku dan tiang kayu 5/7, printing banner plastik",702576.6
 19,,1.1.2.3,"Pembuatan 1 m2 kantor sementara/rumah jaga/gudang semen dan peralatan lantai plesteran, dinding setengah tembok",3460594.5
@@ -32,11 +32,11 @@ id,reference_group_id,code,name,unit_price
 31,,1.1.3.10,Gali dan cabut 1 tunggul pohon tanaman keras ∅ > 30 cm s.d. 50 cm (termasuk pembuangan sisa tunggul tanpa menutup kembali bekas lubang),96679.0
 32,,1.1.3.11,Gali dan cabut 1 tunggul pohon tanaman keras ∅ > 50 cm s.d. 75 cm (termasuk pembuangan sisa tunggul tanpa menutup kembali bekas lubang),149985.0
 33,,1.1.3.12,Gali dan cabut 1 tunggul pohon tanaman keras ∅ > 75 cm (termasuk pembuangan sisa tunggul tanpa menutup kembali bekas lubang),218229.0
-34,,1.1.3.13,Gali dan cabut 1 tunggul pohon tanaman keras ∅ > 5 s.d. 15 cm (termasuk pembuangan sisa tunggul dengan menutup kembali bekas lubang),49599.0
-35,,1.1.3.14,Gali dan cabut 1 tunggul pohon tanaman keras ∅ > 15 cm s.d. 30 cm (termasuk pembuangan sisa tunggul dengan menutup kembali bekas lubang),79145.0
-36,,1.1.3.15,Gali dan cabut 1 tunggul pohon tanaman keras ∅ > 15 cm s.d. 50 cm (termasuk pembuangan sisa tunggul dengan menutup kembali bekas lubang),113289.0
-37,,1.1.3.16,Gali dan cabut 1 tunggul pohon tanaman keras ∅ > 15 cm s.d. 75 cm (termasuk pembuangan sisa tunggul dengan menutup kembali bekas lubang),177705.0
-38,,1.1.3.17,Gali dan cabut 1 tunggul pohon tanaman keras ∅ > 75 cm (termasuk pembuangan sisa tunggul dengan menutup kembali bekas lubang),271920.0
+34,,1.1.3.13,Gali dan cabut 1 tunggul pohon tanaman keras ∅ > 5 s.d. 15 cm (termasuk pembuangan sisa tunggul,49599.0
+35,,1.1.3.14,Gali dan cabut 1 tunggul pohon tanaman keras ∅ > 15 cm s.d. 30 cm (termasuk pembuangan sisa tunggul,79145.0
+36,,1.1.3.15,Gali dan cabut 1 tunggul pohon tanaman keras ∅ > 15 cm s.d. 50 cm (termasuk pembuangan sisa tunggul,113289.0
+37,,1.1.3.16,Gali dan cabut 1 tunggul pohon tanaman keras ∅ > 15 cm s.d. 75 cm (termasuk pembuangan sisa tunggul,177705.0
+38,,1.1.3.17,Gali dan cabut 1 tunggul pohon tanaman keras ∅ > 75 cm (termasuk pembuangan sisa tunggul,271920.0
 39,,1.1.4.1,Pengukuran ulang topografi seluas 1 Ha,3277091.312
 40,,1.1.4.2,Pasangan 1 m' bouwplank,171363.06
 41,,1.1.4.3,"Patok Kayu (kaso5/7) Panjang 0,5 m'",191227.96
@@ -132,28 +132,28 @@ id,reference_group_id,code,name,unit_price
 131,,1.5.7,"1 m2 Pasangan Geomembran, t=1,5 mm, secara semi mekanis",24669.5603
 132,,1.5.8,"1 m2 Pasangan Geosynthetic Clay Liner (GCL), secara semi mekanis",466166.69
 133,,1.6.1,Bongkaran 1 m3 pasangan batu (manual) untuk bangunan gedung,146173.5
-134,,1.6.2,Bongkaran 1 m3 pasangan batu dengan jack hammer untuk bangunan gedung,150095.0
+134,,1.6.2,Bongkaran 1 m3 pasangan batu,150095.0
 135,,1.6.3,Bongkaran 1 m3 beton mutu rendah f’c < 20 MPa secara manual,211090.0
 136,,1.6.4,Bongkaran 1 m3 beton mutu rendah f’c ≥ 20 MPa secara manual,504680.0
-137,,1.6.5,Bongkaran 1 m3 beton mutu rendah f’c < 20 MPa dengan jack hammer,152900.0
-138,,1.6.6,Bongkaran 1 m3 beton mutu sedang 20 MPa ≤ f’c ≤ 40 MPa dengan jack hammer,174900.0
+137,,1.6.5,Bongkaran 1 m3 beton mutu rendah f’c < 20 MPa,152900.0
+138,,1.6.6,Bongkaran 1 m3 beton mutu sedang 20 MPa ≤ f’c ≤ 40 MPa,174900.0
 139,,1.6.7,Bongkaran 1 m3 pasangan bata merah secara manual,39935.5
-140,,1.6.8,Bongkaran 1 m3 pasangan bata merah dengan jack hammer,25575.0
+140,,1.6.8,Bongkaran 1 m3 pasangan bata merah,25575.0
 141,,1.6.9,Bongkaran 1 m3 rangka atap / reng/ kaso struktur kayu dan ditempatkan di pemyimpanan sementara (bongkaran tidak dipakai kembali),13904.0
 142,,1.6.10,Bongkaran 1 m3 kuda-kuda / gording/ balok kayu dan ditempatkan di pemyimpanan sementara (bogkaran dipakai kembali),1858158.555
 143,,1.6.11,Bongkaran 1 m3 kuda-kuda / gording/ balok kayu dan ditempatkan di pemyimpanan sementara (bogkaran tidak dipakai kembali),1690058.92
 144,,1.6.12,Bongkaran 1 m2 plafon termasuk rangka kayu/hollow dan ditempatkan di peyimpanan sementara (bongkaran tidak dipakai kembali),17201.36
 145,,1.6.13,Bongkaran 1 m2 plafon termasuk rangka kayu/hollow dan ditempatkan di peyimpanan sementara (bongkaran dipakai kembali),34406.24
-146,,2.1.1.1,Pemasangan 1 m2 rangka atap pelana baja ringan (canai dingin) profil C75,298694.176
-147,,2.1.1.2,Pemasangan 1 m2 rangka atap jurai/limasan baja ringan (canai dingin) profil C75,306672.476
+146,,2.1.1.1,rangka atap pelana baja ringan (canai dingin) profil C75,298694.176
+147,,2.1.1.2,rangka atap jurai/limasan baja ringan (canai dingin) profil C75,306672.476
 148,,2.1.1.3,"Pemasangan 1 m Kaso Baja Ringan C75 tebal 0,75 mm",24971.1
 149,,2.1.1.4,"Pemasangan 1 m Baja Ringan R.32 tebal 0,45 mm",43325.7
 150,,2.1.2.1,"Pemasangan 1 m3 konstruksi kuda-kuda konvensional, kayu kelas I, II, dan III bentang s.d. 6 meter",17265490.0
 151,,2.1.2.2,"Pemasangan 1 m3 konstruksi kuda-kuda ekspose, kayu kelas I",37610265.0
 152,,2.1.2.3,"Pemasangan 1 m3 konstruksi gordeng, kayu kelas II",16192000.0
-153,,2.1.2.4,"Pemasangan 1 m2 rangka atap genteng keramik, kayu kelas II",227049.68
-154,,2.1.2.5,"Pemasangan 1 m2 rangka atap genteng beton, kayu kelas II",250723.22
-155,,2.1.2.6,"Pemasangan 1 m2 rangka atap sirap, kayu kelas II",114851.0
+153,,2.1.2.4,"rangka atap genteng keramik, kayu kelas II",227049.68
+154,,2.1.2.5,"rangka atap genteng beton, kayu kelas II",250723.22
+155,,2.1.2.6,"rangka atap sirap, kayu kelas II",114851.0
 156,,2.2.1.1.1,"1 kg penulangan slab untuk BjTP atau BjTS dia. < 12 mm, cara manual (untuk bangunan gedung)",18473.95
 157,,2.2.1.1.1a,"1 kg penulangan slab untuk BjTS atau BjTS dia. < 12 mm, cara manual (untuk bangunan gedung)",18754.45
 158,,2.2.1.1.2,"1 kg penulangan slab untuk BjTP dia. ≥ 12 mm, cara semi mekanis (untuk bangunan gedung)",18802.3
@@ -170,14 +170,14 @@ id,reference_group_id,code,name,unit_price
 169,,2.2.1.2.1,Pemasangan 1 m' PVC waterstop lebar 150 mm (untuk bangunan gedung),98807.5
 170,,2.2.1.2.2,Pemasangan 1 m' PVC waterstop lebar 200 mm,122842.5
 171,,2.2.1.2.3,Pemasangan 1 m' PVC waterstop lebar 230-320 mm,174996.8
-172,,2.2.1.3.1,Pemasangan 1 m2 bekisting untuk pondasi telapak (3 kali pakai),254573.0
-173,,2.2.1.3.2,Pemasangan 1 m2 bekisting untuk sloof (3 kali pakai),272173.0
-174,,2.2.1.3.3,Pemasangan 1 m2 bekisting untuk kolom (3 kali pakai),226443.7615
-175,,2.2.1.3.4,Pemasangan 1 m2 bekisting untuk balok (3 kali pakai),238668.6115
-176,,2.2.1.3.5,Pemasangan 1 m2 bekisting untuk plat lantai (3 kali pakai),241284.56
-177,,2.2.1.3.6,Pemasangan 1 m2 bekisting untuk dinding shearwall (3 kali pakai),284467.81
-178,,2.2.1.3.7,Pemasangan 1 m2 bekisting untuk tangga (3 kali pakai),237811.31
-179,,2.2.1.3.8,Pemasangan 1 m2 bekisting jembatan untuk pengecoran beton (3 kali pakai),121041.25
+172,,2.2.1.3.1,bekisting untuk pondasi telapak (3 kali pakai),254573.0
+173,,2.2.1.3.2,bekisting untuk sloof (3 kali pakai),272173.0
+174,,2.2.1.3.3,bekisting untuk kolom (3 kali pakai),226443.7615
+175,,2.2.1.3.4,bekisting untuk balok (3 kali pakai),238668.6115
+176,,2.2.1.3.5,bekisting untuk plat lantai (3 kali pakai),241284.56
+177,,2.2.1.3.6,bekisting untuk dinding shearwall (3 kali pakai),284467.81
+178,,2.2.1.3.7,bekisting untuk tangga (3 kali pakai),237811.31
+179,,2.2.1.3.8,bekisting jembatan untuk pengecoran beton (3 kali pakai),121041.25
 180,,2.2.1.3.9,Pembongkaran 1 m2 bekisting secara biasa pada bangunan gedung (termasuk membersihkan dan membereskan puing-puing),5280.0
 181,,2.2.1.3.10,Pembongkaran 1 m2 bekisting secara hati-hati pada bangunan gedung (untuk beton expose dan/atau pemanfaatan kembali bekisting),7920.0
 182,,2.2.1.4.1,"1 m3 beton mutu rendah f'c 7,5 MPa, slump (100 ± 25) mm, agregat maks 19 mm secara manual",928002.142793
@@ -196,7 +196,7 @@ id,reference_group_id,code,name,unit_price
 195,,2.2.1.5.8,"1 m3 beton mutu sedang f'c 30 MPa, slump (100 ± 25) mm, agregat maks 19 mm secara semi mekanis",1437685.292593
 196,,2.2.1.5.9,"1 m3 beton mutu sedang f'c 31 MPa, slump (100 ± 25) mm, agregat maks 19 mm secara semi mekanis",1450115.292593
 197,,2.2.1.5.10,"1 m3 beton mutu sedang f'c 35 MPa, slump (100 ± 25) mm, agregat maks 19 mm secara semi mekanis",1417775.292593
-198,,2.2.1.5.11,1 m3 beton kedap air dengan aditif secara semi mekanis,1502979.87931
+198,,2.2.1.5.11,1 m3 beton kedap air,1502979.87931
 199,,2.2.1.6.1,Pengecoran 1 m3 menggunakan ready mixed (untuk bangunan gedung),1122101.2
 200,,2.2.1.7.1,"1 m3 beton dicorkan pada tapak setiap tambah jarak 25 m', secara manual",66495.0
 201,,2.2.1.7.2,"1 m3 beton dicorkan pada tapak setiap kenaikan 4 m', secara manual",141680.0
@@ -204,9 +204,9 @@ id,reference_group_id,code,name,unit_price
 203,,2.2.1.7.4,"Pengecoran pakai pompa beton ø 2,5"", 20 KW, 20 bar, T = 18m'",847440.0
 204,,2.2.1.7.5,"Pengecoran pakai pompa beton ∅ 2,5”, 75 KW; 120 bar, T = 50 m’/H= 80 m’",739200.0
 205,,2.2.1.7.6,"Pengecoran pakai pompa beton ∅ 3”,140 KW; 180 bar, T=75 m'/H=150 m'",725120.0
-206,,2.2.1.8.1,Pemadatan 1 m3 beton dengan baja tulangan pada bangunan gedung,26400.0
+206,,2.2.1.8.1,Pemadatan 1 m3 beton,26400.0
 207,,2.2.1.8.2,Pemadatan 1 m3 beton menggunakan vibrator pada bangunan gedung,80960.0
-208,,2.2.1.9.1,Menggenangi 1 m2 permukaan beton dengan air selama 4 hari (untuk bangunan gedung),2964.5
+208,,2.2.1.9.1,Menggenangi 1 m2 permukaan beton,2964.5
 209,,2.2.1.9.2,Menyirami 1 m2 permukaan beton menggunakan media kain terpal selama 4 hari (untuk Bangunan Gedung),15884.0
 210,,2.2.1.9.3,Menyirami 1 m2 permukaan beton menggunakan media karung goni selama 4 hari,18689.0
 211,,2.2.1.10.1,Pembuatan 1 m' kolom praktis beton bertulang (11x11),116740.8
@@ -250,36 +250,36 @@ id,reference_group_id,code,name,unit_price
 249,,2.2.2.3.18,Pengeboran 1 m' lubang bored pile φ 80 cm (mekanis) untuk bangunan gedung,223767.478
 250,,2.2.2.3.19,Pengeboran 1 m' lubang bored pile φ 100 cm (mekanis) untuk bangunan gedung,244429.955
 251,,2.2.2.3.20,Pengeboran 1 m' lubang bored pile φ 120 cm (mekanis) untuk bangunan gedung,303982.525
-252,,2.2.2.4.1,Per m' penetrasi Tiang Beton ∆ 28 cm secara mekanis,69724.765
-253,,2.2.2.4.2,Per m' penetrasi Tiang Beton ∆ 32 cm secara mekanis,74243.565
-254,,2.2.2.4.3,Per m' penetrasi Tiang Beton persegi 20cm x 20 cm secara mekanis,71989.665
-255,,2.2.2.4.4,Per m' penetrasi Tiang Beton persegi 25 cm x 25 cm secara mekanis,78784.365
-256,,2.2.2.4.5,Per m' penetrasi Tiang Beton persegi 30 cm x 30 cm secara mekanis,82898.365
-257,,2.2.2.4.6,Per m' penetrasi Tiang Beton persegi 35 cm x 35 cm secara mekanis,83937.865
-258,,2.2.2.4.7,Per m' penetrasi Tiang Beton persegi 40 cm x 40 cm secara mekanis,90283.765
-259,,2.2.2.4.8,Per m' penetrasi Tiang Beton persegi 45 cm x 45 cm secara mekanis,96870.565
-260,,2.2.2.4.9,Per m' penetrasi Tiang Beton persegi 50 cm x 50 cm secara mekanis,97713.165
-261,,2.2.2.4.10,Per m' penetrasi Spun Pile Diameter 30 cm secara mekanis,76705.2
-262,,2.2.2.4.11,Per m' penetrasi Spun Pile Diameter 35 cm secara mekanis,78442.65
-263,,2.2.2.4.12,Per m' penetrasi Spun Pile Diameter 40 cm secara mekanis,85064.815
-264,,2.2.2.4.13,Per m' penetrasi Spun Pile Diameter 45 cm secara mekanis,91651.615
-265,,2.2.2.4.14,Per m' penetrasi Spun Pile Diameter 50 cm secara mekanis,92570.665
-266,,2.2.2.4.15,Per m' penetrasi Spun Pile Diameter 60 cm secara mekanis,93992.965
-267,,2.2.2.4.16,Per m' Pengelasan Tiang Beton tebal 5 mm,17656.6775
-268,,2.2.2.4.17,Per m' Pengelasan Tiang Beton tebal 6 mm,21125.5055
-269,,2.2.2.4.18,Per m' Pengelasan Tiang Beton tebal 8 mm,33706.3045
-270,,2.2.2.4.19,Per m' Pengelasan Tiang Beton tebal 10 mm,50006.11
-271,,2.2.2.5.1,"Per m' penetrasi turap beton pre-cast 12 x 30 cm , pjg -4 m; berat 100 kg/m'",40712.1
-272,,2.2.2.5.2,"Per m' penetrasi turap beton pre-cast 15 x 40 cm , pjg -4 m; berat 150 kg/m'",52439.2
-273,,2.2.2.5.3,"Per m' penetrasi turap beton pre-cast 22 x 50 cm , pjg -4 m; berat 275 kg/m'",67357.4
-274,,2.2.2.5.4,"Per m' penetrasi turap beton pre-cast 32 x 50 cm , pjg -4 m; berat 400 kg/m'",74041.0
-275,,2.2.2.5.5,"Per m' penetrasi turap beton tulang pre-cast W-400; ebar 1,0 m; pjg -4 m; berat 350 kg/m'",91219.15
-276,,2.2.2.5.6,"Per m' penetrasi turap beton tulang pre-cast W-600; lebar 1,0 m; pjg -4 m; berat 375 kg/m' (untuk bangunan gedung)",98932.9
-277,,2.3.1.1,1 kg Pabrikasi dan Ereksi Baja Profil,33936.265
-278,,2.3.1.2,1 kg Pemasangan angkur,29951.4875
+252,,2.2.2.4.1,Per m' penetrasi Tiang Beton ∆ 28 cm secara mekanis,106398.765
+253,,2.2.2.4.2,Per m' penetrasi Tiang Beton ∆ 32 cm secara mekanis,110917.565
+254,,2.2.2.4.3,Per m' penetrasi Tiang Beton persegi 20cm x 20 cm secara mekanis,117832.165
+255,,2.2.2.4.4,Per m' penetrasi Tiang Beton persegi 25 cm x 25 cm secara mekanis,124626.865
+256,,2.2.2.4.5,Per m' penetrasi Tiang Beton persegi 30 cm x 30 cm secara mekanis,128740.865
+257,,2.2.2.4.6,Per m' penetrasi Tiang Beton persegi 35 cm x 35 cm secara mekanis,129780.365
+258,,2.2.2.4.7,Per m' penetrasi Tiang Beton persegi 40 cm x 40 cm secara mekanis,136126.265
+259,,2.2.2.4.8,Per m' penetrasi Tiang Beton persegi 45 cm x 45 cm secara mekanis,142713.065
+260,,2.2.2.4.9,Per m' penetrasi Tiang Beton persegi 50 cm x 50 cm secara mekanis,143555.665
+261,,2.2.2.4.10,Per m' penetrasi Spun Pile Diameter 30 cm secara mekanis,122547.7
+262,,2.2.2.4.11,Per m' penetrasi Spun Pile Diameter 35 cm secara mekanis,125202.0
+263,,2.2.2.4.12,Per m' penetrasi Spun Pile Diameter 40 cm secara mekanis,130907.315
+264,,2.2.2.4.13,Per m' penetrasi Spun Pile Diameter 45 cm secara mekanis,137494.115
+265,,2.2.2.4.14,Per m' penetrasi Spun Pile Diameter 50 cm secara mekanis,138413.165
+266,,2.2.2.4.15,Per m' penetrasi Spun Pile Diameter 60 cm secara mekanis,139835.465
+267,,2.2.2.4.16,Per m' Pengelasan Tiang Beton tebal 5 mm,17725.77125
+268,,2.2.2.4.17,Per m' Pengelasan Tiang Beton tebal 6 mm,21174.318
+269,,2.2.2.4.18,Per m' Pengelasan Tiang Beton tebal 8 mm,33747.5545
+270,,2.2.2.4.19,Per m' Pengelasan Tiang Beton tebal 10 mm,50039.11
+271,,2.2.2.5.1,"Per m' penetrasi turap beton pre-cast 12 x 30 cm , pjg -4 m; berat 100 kg/m'",63104.36
+272,,2.2.2.5.2,"Per m' penetrasi turap beton pre-cast 15 x 40 cm , pjg -4 m; berat 150 kg/m'",80081.32
+273,,2.2.2.5.3,"Per m' penetrasi turap beton pre-cast 22 x 50 cm , pjg -4 m; berat 275 kg/m'",104427.84
+274,,2.2.2.5.4,"Per m' penetrasi turap beton pre-cast 32 x 50 cm , pjg -4 m; berat 400 kg/m'",112611.4
+275,,2.2.2.5.5,"Per m' penetrasi turap beton tulang pre-cast W-400; ebar 1,0 m; pjg -4 m; berat 350 kg/m'",138735.74
+276,,2.2.2.5.6,"Per m' penetrasi turap beton tulang pre-cast W-600; lebar 1,0 m; pjg -4 m; berat 375 kg/m' (untuk bangunan gedung)",150467.24
+277,,2.3.1.1,1 kg Pabrikasi dan Ereksi Baja Profil,34049.7025
+278,,2.3.1.2,1 kg Pemasangan angkur,30091.05
 279,,2.3.1.3,1 kg Pemasangan baut,30063.55
-280,,2.3.1.4,1 kg pekerjaan baja pelat secara semi mekanis,44474.815
-281,,2.3.1.5,1 kg pekerjaan baja profil siku dengan pengelasan secara semi mekanis,32457.315
+280,,2.3.1.4,1 kg pekerjaan baja pelat secara semi mekanis,44589.28375
+281,,2.3.1.5,1 kg pekerjaan baja profil siku,32571.78375
 282,,2.3.1.6,1 kg pekerjaan baja profil siku tanpa pengelasan secara manual,28093.45
 283,,2.4.1.1,Pembuatan 1 m2 Bekisting untuk pelat Beton Pracetak Komponen Modular Bangunan gedung ( 5kali pakai ),264320.43
 284,,2.4.1.2,Pembuatan 1 m2 Bekisting untuk balok Beton Pracetak ( 10 - 12 kali pakai ),82623.365
@@ -300,53 +300,53 @@ id,reference_group_id,code,name,unit_price
 299,,2.4.5.4,Ereksi 1 buah komponen untuk balok pracetak,283769.456667
 300,,2.4.5.5,Ereksi 1 buah komponen untuk kolom pracetak,386739.503333
 301,,2.4.5.6,Upah 1 tititk pekerjaan Grout pada Joint Beton Pracetak,78281.5
-302,,2.4.5.7,Upah 1 titik joint dengan sling,78859.0
+302,,2.4.5.7,Upah 1 titik joint,78859.0
 303,,2.4.6.1,"Pembuatan 1 m2 lahan produksi tebal 8 cm beton fc' = 14.5 Mpa, slump ( 120 ± 20) mm",98792.32
 304,,2.4.6.2,"Pembuatan 1 m2 lahan produksi tebal 10 cm beton fc' = 14.5 Mpa, slump ( 120 ± 20) mm",123611.4
 305,,2.4.6.3,"Pembuatan 1 m2 lahan produksi tebal 12 cm beton fc' = 14.5 Mpa, slump ( 120 ± 20) mm",148078.48
 306,,2.4.6.4,"Pembuatan 1 m2 lahan produksi tebal 15 cm beton fc' = 14.5 Mpa, slump ( 120 ± 20) mm",185106.35
 307,,2.5.1,Pemasangan 1 kg kabel prategang (prestressed) polos/strand,90398.66
-308,,2.6.2.1,Pemancangan per m' tiang pancang kayu atau dolken dia. 6-8 cm,51697.25
-309,,2.6.2.2,Pemancangan per m' Tiang kayu Gelondongan dia. 18-20 cm,180769.05
+308,,2.6.2.1,Pemancangan per m' tiang pancang kayu atau dolken dia. 6-8 cm,164584.75
+309,,2.6.2.2,Pemancangan per m' Tiang kayu Gelondongan dia. 18-20 cm,270391.55
 310,,2.6.2.3,"1 m2 Turap bambu dari geribig bambu secara manual, JAT < 0,5 m",55582.571
 311,,2.7.1,"Pemasangan 1 M' pipa suling -suling menggunakan pipa PVC dia. 1"" (untuk bangunan gedung)",23330.2476
 312,,2.7.2,"Pemasangan 1 M' pipa suling -suling menggunakan pipa PVC dia. 2"" (untuk bangunan gedung)",46196.4085
-313,,2.7.3,Pemasangan 1 m2 Lapisan Ijuk tebal 10 cm,66000.0
-314,,2.7.4,"Pemasangan 1 m2 finishing siar pasangan batu kali, campuran 1SP : 2PP",74818.7
-315,,2.7.5,"1 m3 bronjong kawat digalvanis, lubang heksagonal 80 x 100 mm, beda tinggi >0 s.d 1 m' berkontak langsung dengan tanah ( kawat dibuat sendiri)",617742.95
-316,,2.7.6,"1 m3 bronjong kawat digalvanis, lubang heksagonal 80 x 100 mm; beda tinggi > 0 s.d 1 m' tidak berkontak langsung dengan tanah (kawat dibuat sendiri)",522702.95
-317,,2.7.7,"1 m3 bronjong kawat digalvanis, lubang heksagonal 80x100mm; beda tinggi >3 s.d 4 m' berkontak langsung dengan tanah (kawat dibuat sendiri)",693561.0
-318,,2.7.8,"1 m3 bronjong kawat digalvanis, lubang heksagonal 80x100mm; beda tinggi >3 s.d 4 m' tidak berkontak langsung dengan tanah (kawat dibuat sendiri)",598521.0
-319,,2.7.9,"1 m3 kawat bronjong kawat digalvanis, lubang heksagonal 100x120mm; beda tinggi >0 s.d 1 m' berkontak langsung dengan tanah (kawat dibuat sendiri)",607222.55
-320,,2.7.10,"1 m3 kawat bronjong kawat digalvanis, lubang heksagonal 100x120mm; beda tinggi > 0 s.d 1 m' berkontak langsung dengan tanah (kawat dibuat sendiri)",512182.55
-321,,2.7.11,"1 m3 kawat bronjong kawat digalvanis, lubang heksagonal 100x120mm; beda tinggi > 3 s.d 4 m' berkontak langsung dengan tanah (kawat dibuat sendiri)",670500.6
-322,,2.7.12,"1 m3 kawat bronjong kawat digalvanis, lubang heksagonal 100x120mm; beda tinggi > 3 s.d 4 m' tidak berkontak langsung dengan tanah (kawat dibuat sendiri)",575460.6
-323,,2.7.13,1 m3 pasangan batu bronjong kawat paprikasi; beda tinggi > 0 s.d 1 m' berkontak langsung dengan tanah,807125.0
-324,,2.7.14,1 m3 pasangan batu bronjong kawat paprikasi; beda tinggi > 0 s.d 1 m' tidak berkontak langsung dengan tanah,712085.0
-325,,2.7.15,1 m3 pasangan batu bronjong kawat paprikasi; beda tinggi > 3 s.4 m' berkontak langsung dengan tanah,870381.05
-326,,2.7.16,1 m3 pasangan batu bronjong kawat paprikasi; beda tinggi > 3 s.4 m' tidak berkontak langsung dengan tanah,775341.05
-327,,3.1.1.1,Pemasangan 1 m2 atap Genteng Palentong Kecil,107456.25
-328,,3.1.1.2,Pemasangan 1 m2 atap genteng kodok glazuur,189956.25
-329,,3.1.1.3,Pemasangan 1 m2 atap genteng palentong besar,100416.25
-330,,3.1.1.4,Pemasangan 1 m2 atap genteng beton,123541.0
+313,,2.7.3,Lapisan Ijuk tebal 10 cm,66000.0
+314,,2.7.4,"finishing siar pasangan batu kali, campuran 1SP : 2PP",74818.7
+315,,2.7.5,"1 m3 bronjong kawat digalvanis, lubang heksagonal 80 x 100 mm, beda tinggi >0 s.d 1 m' berkontak langsung",617742.95
+316,,2.7.6,"1 m3 bronjong kawat digalvanis, lubang heksagonal 80 x 100 mm; beda tinggi > 0 s.d 1 m' tidak berkontak langsung",522702.95
+317,,2.7.7,"1 m3 bronjong kawat digalvanis, lubang heksagonal 80x100mm; beda tinggi >3 s.d 4 m' berkontak langsung",693561.0
+318,,2.7.8,"1 m3 bronjong kawat digalvanis, lubang heksagonal 80x100mm; beda tinggi >3 s.d 4 m' tidak berkontak langsung",598521.0
+319,,2.7.9,"1 m3 kawat bronjong kawat digalvanis, lubang heksagonal 100x120mm; beda tinggi >0 s.d 1 m' berkontak langsung",607222.55
+320,,2.7.10,"1 m3 kawat bronjong kawat digalvanis, lubang heksagonal 100x120mm; beda tinggi > 0 s.d 1 m' berkontak langsung",512182.55
+321,,2.7.11,"1 m3 kawat bronjong kawat digalvanis, lubang heksagonal 100x120mm; beda tinggi > 3 s.d 4 m' berkontak langsung",670500.6
+322,,2.7.12,"1 m3 kawat bronjong kawat digalvanis, lubang heksagonal 100x120mm; beda tinggi > 3 s.d 4 m' tidak berkontak langsung",575460.6
+323,,2.7.13,1 m3 pasangan batu bronjong kawat paprikasi; beda tinggi > 0 s.d 1 m' berkontak langsung,807125.0
+324,,2.7.14,1 m3 pasangan batu bronjong kawat paprikasi; beda tinggi > 0 s.d 1 m' tidak berkontak langsung,712085.0
+325,,2.7.15,1 m3 pasangan batu bronjong kawat paprikasi; beda tinggi > 3 s.4 m' berkontak langsung,870381.05
+326,,2.7.16,1 m3 pasangan batu bronjong kawat paprikasi; beda tinggi > 3 s.4 m' tidak berkontak langsung,775341.05
+327,,3.1.1.1,atap Genteng Palentong Kecil,107456.25
+328,,3.1.1.2,atap genteng kodok glazuur,189956.25
+329,,3.1.1.3,atap genteng palentong besar,100416.25
+330,,3.1.1.4,atap genteng beton,123541.0
 331,,3.1.1.5,Pemasangan 1 m' Nok/bubung genteng palentong kecil,161194.0
 332,,3.1.1.6,Pemasangan 1 m' Nok/bubung genteng kodok glazuur,149644.0
 333,,3.1.1.7,Pemasangan 1 m' Nok/bubung genteng palentong besar,149424.0
 334,,3.1.1.8,Pemasangan 1 m' Nok/bubung genteng beton,152713.0
-335,,3.1.2.1,Pemasangan 1 m2 atap serat semen gelombang 92 cm x 250 cm x 5 mm,94294.97
-336,,3.1.2.2,Pemasangan 1 m2 atap serat semen gelombang 92 cm x 225 cm x 5 mm,101158.97
-337,,3.1.2.3,Pemasangan 1 m2 atap Serat Semen gelombang 92 cm x 200 cm x 5 mm,93027.22
-338,,3.1.2.4,Pemasangan 1 m2 atap Serat Semen gelombang 92 cm x 180 cm x 5 mm,101524.72
-339,,3.1.2.5,Pemasangan 1 m2 atap Serat Semen gelombang 105 cm x 270 cm x 4 mm,71828.02
-340,,3.1.2.6,Pemasangan 1 m2 atap Serat Semen gelombang 105 cm x 300 cm x 5 mm,82962.22
-341,,3.1.2.7,Pemasangan 1 m2 atap Serat Semen gelombang 105 cm x 240 cm x 5 mm,93907.22
-342,,3.1.2.8,Pemasangan 1 m2 atap Serat gelombang 105 cm x 210 cm x 5 mm,101112.22
-343,,3.1.2.9,Pemasangan 1 m2 atap Serat Semen gelombang 105 cm x 150 cm x 5 mm,136587.22
-344,,3.1.2.10,Pemasangan 1 m2 atap Serat Semen gelombang 108 cm x 300 cm x 6 mm,84304.22
-345,,3.1.2.11,Pemasangan 1 m2 atap serat Semen gelombang 108 cm x 270 cm x 6 mm,78388.42
-346,,3.1.2.12,Pemasangan 1 m2 atap Serat Semen gelombang 108 cm x 240 cm x 6 mm,81384.82
-347,,3.1.2.13,Pemasangan 1 m2 atap Serat Semen gelombang 108 cm x 210 cm x 6 mm,81060.32
-348,,3.1.2.14,Pemasangan 1 m2 atap Serat Semen gelombang 108 cm x 180 cm x 6 mm,89298.22
+335,,3.1.2.1,atap serat semen gelombang 92 cm x 250 cm x 5 mm,94294.97
+336,,3.1.2.2,atap serat semen gelombang 92 cm x 225 cm x 5 mm,101158.97
+337,,3.1.2.3,atap Serat Semen gelombang 92 cm x 200 cm x 5 mm,93027.22
+338,,3.1.2.4,atap Serat Semen gelombang 92 cm x 180 cm x 5 mm,101524.72
+339,,3.1.2.5,atap Serat Semen gelombang 105 cm x 270 cm x 4 mm,71828.02
+340,,3.1.2.6,atap Serat Semen gelombang 105 cm x 300 cm x 5 mm,82962.22
+341,,3.1.2.7,atap Serat Semen gelombang 105 cm x 240 cm x 5 mm,93907.22
+342,,3.1.2.8,atap Serat gelombang 105 cm x 210 cm x 5 mm,101112.22
+343,,3.1.2.9,atap Serat Semen gelombang 105 cm x 150 cm x 5 mm,136587.22
+344,,3.1.2.10,atap Serat Semen gelombang 108 cm x 300 cm x 6 mm,84304.22
+345,,3.1.2.11,atap serat Semen gelombang 108 cm x 270 cm x 6 mm,78388.42
+346,,3.1.2.12,atap Serat Semen gelombang 108 cm x 240 cm x 6 mm,81384.82
+347,,3.1.2.13,atap Serat Semen gelombang 108 cm x 210 cm x 6 mm,81060.32
+348,,3.1.2.14,atap Serat Semen gelombang 108 cm x 180 cm x 6 mm,89298.22
 349,,3.1.2.15,Pemasangan 1 m' Nok/bubung setel gelombang 92 cm,389501.75
 350,,3.1.2.16,Pemasangan 1 m' Nok/bubung stel gelombang 105 cm,392801.75
 351,,3.1.2.17,Pemasangan 1 m' Nok/bubung stel gelombang 108 cm,407101.75
@@ -356,141 +356,141 @@ id,reference_group_id,code,name,unit_price
 355,,3.1.2.21,Pemasangan 1 m' Nok/bubung setel rata 92 cm,315801.75
 356,,3.1.2.22,Pemasangan 1 m' ok/bubung setel rata 105 cm,321851.75
 357,,3.1.2.23,Pemasangan 1 m' Nok/bubung setel rata 108 cm,327901.75
-358,,3.1.3.1,Pemasangan 1 m2 atap seng gelombang 105x180 cm,90145.0
-359,,3.1.3.2,Pemasangan 1 m2 atap aluminium gelombang 95x180 cm,305320.62
-360,,3.1.3.3,Pemasangan 1 m2 atap sirap kayu,233073.5
-361,,3.1.3.4,Pemasangan 1 m2 atap fibreglass 90x180 cm,111596.683
-362,,3.1.3.5,Pemasangan 1 m2 atap UPVC,76725.0
-363,,3.1.3.6,Pemasangan 1 m2 atap aspal/bitumen,366487.0
-364,,3.1.3.7,Pemasangan 1 m2 atap metal lembaran,188775.4
-365,,3.1.3.8,"Pemasangan 1 m2 atap metal menerus tebal 0,4 mm",135600.85
-366,,3.1.3.9.1,Pemasangan 1 m2 atap kaca ketebalan 8/10/12 mm,779355.5
+358,,3.1.3.1,atap seng gelombang 105x180 cm,90145.0
+359,,3.1.3.2,atap aluminium gelombang 95x180 cm,305320.62
+360,,3.1.3.3,atap sirap kayu,233073.5
+361,,3.1.3.4,atap fibreglass 90x180 cm,111596.683
+362,,3.1.3.5,atap UPVC,76725.0
+363,,3.1.3.6,atap aspal/bitumen,366487.0
+364,,3.1.3.7,atap metal lembaran,188775.4
+365,,3.1.3.8,"atap metal menerus tebal 0,4 mm",135600.85
+366,,3.1.3.9.1,atap kaca ketebalan 8/10/12 mm,779355.5
 367,,3.1.3.10,Pemasangan 1 m' Nok/bubung atap seng gelombang,54004.5
 368,,3.1.3.11,Pemasangan 1 m' Nok/bubung atap aluminium gelombang,285944.12
 369,,3.1.3.12,Pemasangan 1 m' Nok/bubung atap sirap kayu,92856.5
 370,,3.1.3.13,Pemasangan 1 m' Nok/bubung atap aspal/bitumen,280483.5
 371,,3.1.3.14,Pemasangan 1 m' Nok/bubung genteng metal,88043.45
-372,,3.2.1,Pemasangan 1 m2 lembaran insulasi atap,29546.0
-373,,3.2.2,Pemasangan 1 m2 modul insulasi tebal 8 mm,102993.77
-374,,3.2.3,Pemasangan 1 m2 foam insulasi atap,105011.5
+372,,3.2.1,lembaran insulasi atap,29546.0
+373,,3.2.2,modul insulasi tebal 8 mm,102993.77
+374,,3.2.3,foam insulasi atap,105011.5
 375,,3.3.1,Pemasangan 1 m' talang datar/jurai seng BJLS 28 lebar 90 cm,313296.5
 376,,3.3.2,Pemasangan 1 m' talang ½ lingkaran D-15 cm seng plat BJLS 30,235592.5
 377,,3.3.3,"Pemasangan 1 m' lisplank uk. 3x20 cm, kayu kelas I atau II",216524.0
 378,,3.3.4,"Pemasangan 1 m' lisplank uk. 3x30 cm, kayu kelas I atau II",218614.0
 379,,3.3.5,"Pemasangan 1 m' lisplank non kayu (GRC, serat semen) lebar 30 cm",75779.0
 380,,3.3.6,"Pemasangan 1 m' lisplank non kayu (GRC, serat semen) lebar 20 cm",73469.0
-381,,3.4.1,Pemasangan 1 m2 Waterproofing Membran Bakar,207102.5
+381,,3.4.1,Waterproofing Membran Bakar,207102.5
 382,,3.4.2,Pelapisan 1 M2 Waterproofing Cristalin,124330.8
 383,,3.4.3,Pelapisan 1 M2 Waterproofing Semen Base,143429.55
 384,,3.4.4,Pelapisan 1 M2 Waterproofing Acrylic Base,127386.6
-385,,3.2.1.1,Pemasangan 1 m2 plafon akustik uk. 30x30 cm,117370.0
-386,,3.5.1.2,Pemasangan 1 m2 plafon akustik uk. 30x60 cm,124212.0
-387,,3.5.1.3,Pemasangan 1 m2 plafon akustik uk. 60x120 cm,69201.0
-388,,3.5.1.4,Pemasangan 1 m2 plafon akustik uk. 60x120 cm dengan profil aluminium,256520.0
-389,,3.5.2.1,Pemasangan 1 m2 plafon papan gypsum tebal 9 mm,51980.39
-390,,3.5.2.2,"Pemasangan 1 m2 plafon serat semen/GRC tebal 4 mm, 5 mm, dan 6 mm",76411.5
-391,,3.5.2.3.1,Pemasangan 1 m2 plafon kayu lapis tebal 3 mm,55959.75
-392,,3.5.2.3.2,Pemasangan 1 m2 plafon kayu lapis tebal 4 mm,61116.0
-393,,3.5.2.3.3,Pemasangan 1 m2 plafon kayu lapis tebal 6 mm,64911.0
-394,,3.5.2.4,Pemasangan 1 m2 plafon lambisering kayu tebal 9 mm,315441.5
+385,,3.2.1.1,plafon akustik uk. 30x30 cm,117370.0
+386,,3.5.1.2,plafon akustik uk. 30x60 cm,124212.0
+387,,3.5.1.3,plafon akustik uk. 60x120 cm,69201.0
+388,,3.5.1.4,plafon akustik uk. 60x120 cm,256520.0
+389,,3.5.2.1,plafon papan gypsum tebal 9 mm,51980.39
+390,,3.5.2.2,"plafon serat semen/GRC tebal 4 mm, 5 mm, dan 6 mm",76411.5
+391,,3.5.2.3.1,plafon kayu lapis tebal 3 mm,55959.75
+392,,3.5.2.3.2,plafon kayu lapis tebal 4 mm,61116.0
+393,,3.5.2.3.3,plafon kayu lapis tebal 6 mm,64911.0
+394,,3.5.2.4,plafon lambisering kayu tebal 9 mm,315441.5
 395,,3.5.2.5,Pemasangan 1 m' list plafon kayu profil,13775.74
 396,,3.5.2.6,Pemasangan 1 m' list plafon gypsum,26843.74
-397,,3.5.2.7,Pemasangan 1 m2 plafon aluminium spandrel,415080.9355
-398,,3.5.3.1,"Pemasangan 1 m2 rangka plafon besi hollow 40.40, modul 60x60 cm",133641.75
-399,,3.5.3.2,"Pemasangan 1 m2 Rangka Langit-langit (Plafon) (50x 100) cm, Kayu Kelas II atau III",246359.3
-400,,3.5.3.3,"Pemasangan 1 m2 Rangka Langit-langit (Plafon) (60x 100) cm, Kayu Kelas II atau III",266465.606
-401,,3.6.1.1,"Pemasangan 1 m2 dinding bata merah tebal 1 batu dengan mortar tipe M,fc’ 17,2 MPa (Setara Campuran 1SP : 2PP)",278362.7
-402,,3.6.1.2,"Pemasangan 1 m2 dinding bata merah tebal 1 batu dengan mortar tipe S,fc’ 12,5 MPa (Setara Campuran 1SP : 3PP)",266603.7
-403,,3.6.1.3,"Pemasangan 1 m2 dinding bata merah tebal 1 batu dengan mortar tipe N,fc’ 5,2 MPa (Setara Campuran 1SP : 4PP)",258056.7
-404,,3.6.1.4,"Pemasangan 1 m2 dinding bata merah tebal 1 batu dengan mortar tipe O,fc’ 2,4 MPa (Setara Campuran 1SP : 5PP)",254558.7
-405,,3.6.1.5,Pemasangan 1 m2 dinding bata merah tebal 1 batu campuran 1SP : 6PP,255317.7
-406,,3.6.1.6,"Pemasangan 1 m2 dinding bata merah tebal 1/2 batu dengan mortar tipe M,fc’ 17,2 MPa (Setara Campuran 1SP : 2PP)",134565.2
-407,,3.6.1.7,"Pemasangan 1 m2 dinding bata merah tebal 1/2 batu dengan mortar tipe S,fc’ 12,5 MPa (Setara Campuran 1SP : 3PP)",128620.8
-408,,3.6.1.8,"Pemasangan 1 m2 dinding bata merah tebal 1/2 batu dengan mortar tipe N,fc’ 5,2 MPa (Setara Campuran 1SP : 4PP)",125424.2
-409,,3.6.1.9,"Pemasangan 1 m2 dinding bata merah tebal 1/2 batu dengan mortar tipe O,fc’ 2,4 MPa (Setara Campuran 1SP : 5PP)",123426.6
-410,,3.6.1.10,Pemasangan 1 m2 dinding bata merah tebal 1/2 batu campuran 1SP : 6PP,122691.8
-411,,3.6.2.1,"Pemasangan 1 m2 dinding conblock HB20 dengan mortar tipe S,fc’ 12,5 MPa (Setara Campuran 1SP : 3PP)",508394.7
-412,,3.6.2.2,"Pemasangan 1 m2 dinding conblock HB20 dengan mortar tipe N,fc’ 5,2 MPa (Setara Campuran 1SP : 4PP)",519802.8
-413,,3.6.2.3,"Pemasangan 1 m2 dinding conblock HB15 dengan mortar tipe S,fc’ 12,5 MPa (Setara Campuran 1SP : 3PP)",408510.3
-414,,3.6.2.4,"Pemasangan 1 m2 dinding conblock HB15 dengan mortar tipe N,fc’ 5,2 MPa (Setara Campuran 1SP : 4PP)",411698.1
-415,,3.6.2.5,"Pemasangan 1 m2 dinding conblock HB10 dengan mortar tipe S,fc’ 12,5 MPa (Setara Campuran 1SP : 3PP)",341405.9
-416,,3.6.2.6,"Pemasangan 1 m2 dinding conblock HB10 dengan mortar tipe N,fc’ 5,2 MPa (Setara Campuran 1SP : 4PP)",344333.0
-417,,3.6.3.1,"Pemasangan 1 m2 dinding kerawang (rooster) 12x11x24 dengan mortar tipe S,fc’ 12,5 MPa (Setara Campuran 1SP : 3PP)",672798.5
-418,,3.6.3.2,"Pemasangan 1 m2 dinding kerawang (rooster) 12x11x24 dengan mortar tipe N,fc’ 5,2 MPa (Setara Campuran 1SP : 4PP)",668508.5
-419,,3.6.3.3,"Pemasangan 1 m2 dinding bata berongga ekspose 12x11x24 dengan mortar tipe S,fc’ 12,5 MPa (Setara Campuran 1SP : 3PP)",692202.5
-420,,3.6.3.4,"Pemasangan 1 m2 glass block 20x20 cm, 1PC : 3PP",142488.5
-421,,3.6.3.5,Pemasangan 1 m2 dinding kerawang (rooster) 20x20 (Setara Campuran 1SP : 3PP),503426.0
-422,,3.6.4.1,"Pemasangan 1 m2 dinding bata ringan tebal 7,5 cm dengan mortar siap pakai",120991.585
-423,,3.6.4.2,Pemasangan 1 m2 dinding bata ringan tebal 10 cm dengan mortar siap pakai,146800.115
-424,,3.6.4.3,Pemasangan 1 m2 dinding bata ringan tebal 20 cm dengan mortar siap pakai,208451.87
-425,,3.6.5.1,"Pemasangan 1 m2 dinding batako dengan mortar tipe S,fc’ 12,5 MPa (Setara Campuran 1SP : 3PP)",165674.3
-426,,3.6.5.2,"Pemasangan 1 m2 dinding batako dengan mortar tipe N,fc’ 5,2 MPa (Setara Campuran 1SP : 4PP)",359038.9
-427,,3.6.6.1,"Pemasangan 1 m2 dinding partisi, Gypsumboard t=12mm",471536.45
-428,,3.7.1,Pemasangan 1 m2 plesteran 1SP : 1PP tebal 15 mm,67611.72
-429,,3.7.2,Pemasangan 1 m2 plesteran 1SP : 2PP tebal 15 mm,61271.32
-430,,3.7.3,Pemasangan 1 m2 plesteran 1SP : 3PP tebal 15 mm,58678.18
-431,,3.7.4,Pemasangan 1 m2 plesteran 1SP : 4PP tebal 15 mm,56784.2
-432,,3.7.5,Pemasangan 1 m2 plesteran 1SP : 5PP tebal 15 mm,55879.12
-433,,3.7.6,Pemasangan 1 m2 plesteran 1SP : 6PP tebal 15 mm,55083.38
-434,,3.7.7,Pemasangan 1 m2 plesteran dengan semen instan tebal 10 mm,67745.7
-435,,3.7.8,Pemasangan 1 m2 acian,45248.5
-436,,3.7.9,Pemasangan 1 m2 berapen 1SP : 5PP tebal 15 mm,66950.95
+397,,3.5.2.7,plafon aluminium spandrel,415080.9355
+398,,3.5.3.1,"rangka plafon besi hollow 40.40, modul 60x60 cm",133641.75
+399,,3.5.3.2,"Rangka Langit-langit (Plafon) (50x 100) cm, Kayu Kelas II atau III",246359.3
+400,,3.5.3.3,"Rangka Langit-langit (Plafon) (60x 100) cm, Kayu Kelas II atau III",266465.606
+401,,3.6.1.1,dinding bata merah tebal 1 batu,278362.7
+402,,3.6.1.2,dinding bata merah tebal 1 batu,266603.7
+403,,3.6.1.3,dinding bata merah tebal 1 batu,258056.7
+404,,3.6.1.4,dinding bata merah tebal 1 batu,254558.7
+405,,3.6.1.5,dinding bata merah tebal 1 batu campuran 1SP : 6PP,255317.7
+406,,3.6.1.6,dinding bata merah tebal 1/2 batu,134565.2
+407,,3.6.1.7,dinding bata merah tebal 1/2 batu,128620.8
+408,,3.6.1.8,dinding bata merah tebal 1/2 batu,125424.2
+409,,3.6.1.9,dinding bata merah tebal 1/2 batu,123426.6
+410,,3.6.1.10,dinding bata merah tebal 1/2 batu campuran 1SP : 6PP,122691.8
+411,,3.6.2.1,dinding conblock HB20,508394.7
+412,,3.6.2.2,dinding conblock HB20,519802.8
+413,,3.6.2.3,dinding conblock HB15,408510.3
+414,,3.6.2.4,dinding conblock HB15,411698.1
+415,,3.6.2.5,dinding conblock HB10,341405.9
+416,,3.6.2.6,dinding conblock HB10,344333.0
+417,,3.6.3.1,dinding kerawang (rooster) 12x11x24,672798.5
+418,,3.6.3.2,dinding kerawang (rooster) 12x11x24,668508.5
+419,,3.6.3.3,dinding bata berongga ekspose 12x11x24,692202.5
+420,,3.6.3.4,"glass block 20x20 cm, 1PC : 3PP",142488.5
+421,,3.6.3.5,dinding kerawang (rooster) 20x20 (Setara Campuran 1SP : 3PP),503426.0
+422,,3.6.4.1,"dinding bata ringan tebal 7,5 cm",120991.585
+423,,3.6.4.2,dinding bata ringan tebal 10 cm,146800.115
+424,,3.6.4.3,dinding bata ringan tebal 20 cm,208451.87
+425,,3.6.5.1,dinding batako,165674.3
+426,,3.6.5.2,dinding batako,359038.9
+427,,3.6.6.1,"dinding partisi, Gypsumboard t=12mm",471536.45
+428,,3.7.1,plesteran 1SP : 1PP tebal 15 mm,67611.72
+429,,3.7.2,plesteran 1SP : 2PP tebal 15 mm,61271.32
+430,,3.7.3,plesteran 1SP : 3PP tebal 15 mm,58678.18
+431,,3.7.4,plesteran 1SP : 4PP tebal 15 mm,56784.2
+432,,3.7.5,plesteran 1SP : 5PP tebal 15 mm,55879.12
+433,,3.7.6,plesteran 1SP : 6PP tebal 15 mm,55083.38
+434,,3.7.7,plesteran,67745.7
+435,,3.7.8,acian,45248.5
+436,,3.7.9,berapen 1SP : 5PP tebal 15 mm,66950.95
 437,,3.7.10,Pemasangan 1 m' plesteran skoning 1SP : 3PP lebar 10 cm,57545.95
-438,,3.7.11,"Pemasangan 1 m2 plesteran serbuk batu granit 1SP : 2 granit, tebal 10 mm",252835.0
-439,,3.7.12,"Pemasangan 1 m2 plesteran serbuk batu traso 1SP : 2 traso, tebal 10 mm",269335.0
-440,,3.7.13,Pemasangan 1 m2 kamprotan untuk finishing 1SP : 2PP,34601.6
-441,,3.7.14,Pemasangan 1 m2 finishing siar pasangan bata merah,36410.44
-442,,3.7.15,Pemasangan 1 m2 finishing dinding siar pasangan conblock ekspose,26323.0
+438,,3.7.11,"plesteran serbuk batu granit 1SP : 2 granit, tebal 10 mm",252835.0
+439,,3.7.12,"plesteran serbuk batu traso 1SP : 2 traso, tebal 10 mm",269335.0
+440,,3.7.13,kamprotan untuk finishing 1SP : 2PP,34601.6
+441,,3.7.14,finishing siar pasangan bata merah,36410.44
+442,,3.7.15,finishing dinding siar pasangan conblock ekspose,26323.0
 443,,3.7.16,Pekerjaan 1 m2 Beton Expose,40755.0
 444,,3.8.1,Pengikisan/pengerokan 1 m2 permukaan cat lama (cat minyak),19134.5
 445,,3.8.2,Pencucian 1 m2 permukaan tembok yang pernah dicat,19217.0
 446,,3.8.3,Pengerokan 1 m2 karat pada permukaan baja cara manual,19250.0
 447,,3.8.4,"Pengecatan 1 m2 bidang kayu baru (1 lapis plamir, 1 lapis cat dasar, 2 lapis cat penutup)",47438.05
 448,,3.8.5,"Pengecatan 1 m2 bidang kayu baru (1 lapis plamir, 1 lapis cat dasar, 3 lapis cat penutup)",71093.55
-449,,3.8.6,Pelaburan 1 m2 bidang kayu dengan teak oil,27686.45
-450,,3.8.7,Pelaburan 1 m2 bidang kayu dengan pelitur,63394.54
-451,,3.8.8,Pelaburan 1 m2 bidang kayu dengan residu atau Ter,20185.0
-452,,3.8.9,Pelaburan 1 m2 bidang kayu dengan vernis,56980.0
+449,,3.8.6,Pelaburan 1 m2 bidang kayu,27686.45
+450,,3.8.7,Pelaburan 1 m2 bidang kayu,63394.54
+451,,3.8.8,Pelaburan 1 m2 bidang kayu,20185.0
+452,,3.8.9,Pelaburan 1 m2 bidang kayu,56980.0
 453,,3.8.10.1,"Pengecatan 1 m2 tembok baru Interior( 1 lapis cat dasar, 2 lapis cat penutup)",70173.4
 454,,3.8.10.2,"Pengecatan 1 m2 tembok baru Ekterior (1 lapis cat dasar, 2 lapis cat penutup), eksterior",75981.4
 455,,3.8.11.1,"Pengecatan 1 m2 tembok lama Interior (1 lapis cat dasar, 2 lapis cat penutup)",56371.7
 456,,3.8.11.2,"Pengecatan 1 m2 tembok lama Ekterior (1 lapis cat dasar, 2 lapis cat penutup)",58820.3
-457,,3.8.12,Pelaburan 1 m2 tembok baru dengan kapur padam (kapur pemutih),26520.01
-458,,3.8.13,Pelaburan 1 m2 tembok lama dengan kapur padam (kapur pemutih),16755.75
+457,,3.8.12,Pelaburan 1 m2 tembok baru,26520.01
+458,,3.8.13,Pelaburan 1 m2 tembok lama,16755.75
 459,,3.8.14,Pengecatan 1 m2 permukaan baja galvanis 3 lapis cat terakhir secara semprot,76703.0
 460,,3.8.15,Pengecatan 1 m2 permukaan baja galvanis secara manual sistem 3 lapis,213644.2
-461,,3.8.16,Pengecatan 1 m2 permukaan baja dengan menie besi (Zinc Chromate),44211.2
-462,,3.8.17,Pengecatan 1 m2 permukaan baja dengan menie besi dengan perancah,79570.15
+461,,3.8.16,Pengecatan 1 m2 permukaan baja,44211.2
+462,,3.8.17,Pengecatan 1 m2 permukaan baja,79570.15
 463,,3.8.18,Pengecatan 1 m2 permukaan baja galvanis secara manual sistem 4 lapis,90381.5
 464,,3.8.19,Pengecatan 1 m2 permukaan baja galvanis secara manual sistem 1 lapis cat penutup,36150.4
 465,,3.8.20.1,Pengecatan 1 m2 plafon Interior ( 1 lapis Cat Dasar dan 2 Lapis Cat Penutup),60078.7
 466,,3.8.20.2,Pengecatan 1 m2 plafon eksterior ( 1 lapis Cat Dasar dan 2 Lapis Cat Penutup),59062.3
 467,,3.8.21,Pengecatan 1 m2 cat epoxy tebal 2 mm,92224.0
-468,,3.8.22,Pelituran 1 m2 dengan pelitur melamic,306460.0
-469,,3.9.1,UBIN PC,112486.66
-470,,3.9.1.2,Pemasangan 1 m2 lantai ubin PC abu-abu uk. 30x30 cm (1SP : 2PP),100297.89
-471,,3.9.1.3,Pemasangan 1 m2 lantai ubin PC abu-abu uk. 40x40 cm (1SP : 2PP),92107.84
-472,,3.9.1.4,Pemasangan 1 m2 lantai ubin PC abu-abu uk. 60x60 cm (1SP : 2PP),89913.56
+468,,3.8.22,Pelituran 1 m2,306460.0
+469,,3.9.1,lantai ubin PC abu-abu uk. 20x20 cm (1SP : 2PP),112486.66
+470,,3.9.1.2,lantai ubin PC abu-abu uk. 30x30 cm (1SP : 2PP),100297.89
+471,,3.9.1.3,lantai ubin PC abu-abu uk. 40x40 cm (1SP : 2PP),92107.84
+472,,3.9.1.4,lantai ubin PC abu-abu uk. 60x60 cm (1SP : 2PP),89913.56
 473,,3.9.1.5,Pemasangan 1 m’ plint ubin PC abu-abu uk. 10 s.d. 15x20 cm (1SP : 2PP),20740.17
 474,,3.9.1.6,Pemasangan 1 m’ plint ubin PC abu-abu uk. 10 s.d. 15x30 cm (1SP : 2PP),21803.32
 475,,3.9.1.7,Pemasangan 1 m’ plint ubin PC abu-abu uk. 10 s.d. 15x40 cm (1SP : 2PP),22644.82
 476,,3.9.1.8,Pemasangan 1 m’ plint ubin PC abu-abu uk. 10 s.d. 15x60 cm (1SP : 2PP),22661.87
-477,,3.9.2.1,Pemasangan 1 m2 lantai ubin warna uk. 20x20 cm (1SP : 2PP),125356.66
-478,,3.9.2.2,Pemasangan 1 m2 lantai ubin warna uk. 30x30 cm (1SP : 2PP),127284.96
-479,,3.9.2.3,Pemasangan 1 m2 lantai ubin warna uk. 40x40 cm (1SP : 2PP),115084.86
-480,,3.9.2.4,Pemasangan 1 m2 lantai ubin warna uk. 60x60 cm (1SP : 2PP),109200.96
+477,,3.9.2.1,lantai ubin warna uk. 20x20 cm (1SP : 2PP),125356.66
+478,,3.9.2.2,lantai ubin warna uk. 30x30 cm (1SP : 2PP),127284.96
+479,,3.9.2.3,lantai ubin warna uk. 40x40 cm (1SP : 2PP),115084.86
+480,,3.9.2.4,lantai ubin warna uk. 60x60 cm (1SP : 2PP),109200.96
 481,,3.9.2.5,Pemasangan 1 m' plint ubin warna uk. 10 s.d. 15x20 cm (1SP : 2PP),25240.71
 482,,3.9.2.6,Pemasangan 1 m' plint ubin warna uk. 10 s.d. 15x30 cm (1SP : 2PP),25341.36
 483,,3.9.2.7,Pemasangan 1 m' plint ubin warna uk. 10 s.d. 15x40 cm (1SP : 2PP),27145.36
 484,,3.9.2.8,Pemasangan 1 m' plint ubin warna uk. 10 s.d. 15x60 cm (1SP : 2PP),28124.91
-485,,3.9.3.1,Pemasangan 1 m2 lantai ubin teraso uk. 30x30 cm (1SP : 2PP),377542.11
-486,,3.9.3.2,Pemasangan 1 m2 lantai ubin teraso uk. 40x40 cm (1SP : 2PP),288348.06
-487,,3.9.3.3,"Pemasangan 1 m2 lantai teraso cor di tempat, tebal 3cm",212553.0
+485,,3.9.3.1,lantai ubin teraso uk. 30x30 cm (1SP : 2PP),377542.11
+486,,3.9.3.2,lantai ubin teraso uk. 40x40 cm (1SP : 2PP),288348.06
+487,,3.9.3.3,"lantai teraso cor di tempat, tebal 3cm",212553.0
 488,,3.9.3.4,Pemasangan 1 m' plint ubin teraso uk. 10 s.d. 15x30 cm (1SP : 2PP),33041.36
 489,,3.9.3.5,Pemasangan 1 m' plint ubin teraso uk. 10 s.d. 15x40 cm (1SP : 2PP),35807.86
-490,,3.9.4.1,Pemasangan 1 m2 lantai homogenous tile Polis uk. 30x30 cm (1SP : 2PP),326207.31
-491,,3.9.4.2,Pemasangan 1 m2 lantai homogenous tile polish uk. 40x40 cm (1SP : 2PP),288348.06
-492,,3.9.4.3,Pemasangan 1 m2 lantai homogenous tile Polish uk. 60x60 cm (1SP : 2PP),243966.36
+490,,3.9.4.1,lantai homogenous tile Polis uk. 30x30 cm (1SP : 2PP),326207.31
+491,,3.9.4.2,lantai homogenous tile polish uk. 40x40 cm (1SP : 2PP),288348.06
+492,,3.9.4.3,lantai homogenous tile Polish uk. 60x60 cm (1SP : 2PP),243966.36
 493,,3.9.4.4,Pemasangan 1 m' plint homogenous tile Polish uk. 10 s.d. 15x30 cm (1SP : 2PP),36891.36
 494,,3.9.4.5,Pemasangan 1 m' plint homogenous tile polish uk. 10 s.d. 15x40 cm (1SP : 2PP),38695.36
 495,,3.9.4.6,Pemasangan 1 m' plint homogenous tile polish uk. 10 s.d. 15x60 cm (1SP : 2PP),38712.41
@@ -500,82 +500,82 @@ id,reference_group_id,code,name,unit_price
 499,,3.9.4.10,Pemasangan 1 m' plint homogenous tile unpolish uk. 10 s.d. 15x30 cm (1SP : 2PP),44591.36
 500,,3.9.4.11,Pemasangan 1 m' plint homogenous tile unpolish uk. 10 s.d. 15x40 cm (1SP : 2PP),44470.36
 501,,3.9.4.12,Pemasangan 1 m' plint homogenous tile unpolish uk. 10 s.d. 15x60 cm (1SP : 2PP),44487.41
-502,,3.9.5.1,Pemasangan 1 m2 lantai ubin granit uk. 30x30 cm (1SP : 2PP),251771.85
-503,,3.9.5.2,Pemasangan 1 m2 lantai ubin granit uk. 40x40 cm (1SP : 2PP),216155.06
-504,,3.9.5.3,Pemasangan 1 m2 lantai ubin granit uk. 60x60 cm (1SP : 2PP),179792.36
+502,,3.9.5.1,lantai ubin granit uk. 30x30 cm (1SP : 2PP),251771.85
+503,,3.9.5.2,lantai ubin granit uk. 40x40 cm (1SP : 2PP),216155.06
+504,,3.9.5.3,lantai ubin granit uk. 60x60 cm (1SP : 2PP),179792.36
 505,,3.9.5.4,Pemasangan 1 m' plint ubin granit uk. 10 s.d. 15x30 cm (1SP : 2PP),40741.36
 506,,3.9.5.5,Pemasangan 1 m' plint ubin granit uk. 10 s.d. 15x40 cm (1SP : 2PP),41582.86
 507,,3.9.5.6,Pemasangan 1 m' plint ubin granit uk. 10 s.d. 15x60 cm (1SP : 2PP),38712.41
-508,,3.9.6.1,Pemasangan 1 m2 lantai ubin teralux marmer uk. 30x30 cm (1SP : 2PP),647049.81
-509,,3.9.6.2,Pemasangan 1 m2 lantai ubin teralux marmer uk. 40x40 cm (1SP : 2PP),504927.06
-510,,3.9.6.3,Pemasangan 1 m2 lantai ubin teralux marmer uk. 60x60 cm (1SP : 2PP),308140.36
+508,,3.9.6.1,lantai ubin teralux marmer uk. 30x30 cm (1SP : 2PP),647049.81
+509,,3.9.6.2,lantai ubin teralux marmer uk. 40x40 cm (1SP : 2PP),504927.06
+510,,3.9.6.3,lantai ubin teralux marmer uk. 60x60 cm (1SP : 2PP),308140.36
 511,,3.9.6.4,Pemasangan 1 m' plint ubin teralux kerang uk. 10 s.d. 15x30 cm (1SP : 2PP),25341.36
 512,,3.9.6.5,Pemasangan 1 m' plint ubin teralux kerang uk. 10 s.d. 15x40 cm (1SP : 2PP),27145.36
 513,,3.9.6.6,Pemasangan 1 m' plint ubin teralux kerang uk. 10 s.d. 15x60 cm (1SP : 2PP),27162.41
 514,,3.9.6.7,Pemasangan 1 m' plint ubin teralux marmer uk. 10 s.d. 15x30 cm (1SP : 2PP),27266.36
 515,,3.9.6.8,Pemasangan 1 m' plint ubin teralux marmer uk. 10 s.d. 15x40 cm (1SP : 2PP),27145.36
 516,,3.9.6.9,Pemasangan 1 m' plint ubin teralux marmer uk. 10 s.d. 15x60 cm (1SP : 2PP),27162.41
-517,,3.9.7.1,Pemasangan 1 m2 lantai keramik artistik uk. 8x8 cm (1SP : 2PP),288698.96
-518,,3.9.7.2,Pemasangan 1 m2 lantai keramik artistik uk. 10x10 cm (1SP : 2PP),281479.66
-519,,3.9.7.3,Pemasangan 1 m2 lantai keramik artistik uk. 20x20 cm (1SP : 2PP),240417.76
-520,,3.9.7.4,Pemasangan 1 m2 lantai keramik artistik uk. 30x30 cm (1SP : 2PP),221168.86
-521,,3.9.7.5,Pemasangan 1 m2 lantai keramik artistik uk. 40x40 cm (1SP : 2PP),211544.96
+517,,3.9.7.1,lantai keramik artistik uk. 8x8 cm (1SP : 2PP),288698.96
+518,,3.9.7.2,lantai keramik artistik uk. 10x10 cm (1SP : 2PP),281479.66
+519,,3.9.7.3,lantai keramik artistik uk. 20x20 cm (1SP : 2PP),240417.76
+520,,3.9.7.4,lantai keramik artistik uk. 30x30 cm (1SP : 2PP),221168.86
+521,,3.9.7.5,lantai keramik artistik uk. 40x40 cm (1SP : 2PP),211544.96
 522,,3.9.7.6,Pemasangan 1 m' plint internal cove artistik uk. 5x5x20 cm (1SP : 2PP),256169.76
-523,,3.9.8.1,Pemasangan 1 m2 lantai keramik uk. 20x20 cm (1SP : 2PP),131131.66
-524,,3.9.8.2,Pemasangan 1 m2 lantai keramik uk. 30x30 cm (1SP : 2PP),120868.11
-525,,3.9.8.3,Pemasangan 1 m2 lantai keramik uk. 40x40 cm (1SP : 2PP),130245.39
-526,,3.9.8.4.1,Pemasangan 1 m2 lantai keramik uk. 30x30 cm untuk Variasi/Border (1SP : 2PP),294915.06
-527,,3.9.8.4.2,Pemasangan 1 m2 lantai keramik uk. 40x40 cm untuk Variasi/Border (1SP : 2PP),302056.59
+523,,3.9.8.1,lantai keramik uk. 20x20 cm (1SP : 2PP),131131.66
+524,,3.9.8.2,lantai keramik uk. 30x30 cm (1SP : 2PP),120868.11
+525,,3.9.8.3,lantai keramik uk. 40x40 cm (1SP : 2PP),130245.39
+526,,3.9.8.4.1,lantai keramik uk. 30x30 cm untuk Variasi/Border (1SP : 2PP),294915.06
+527,,3.9.8.4.2,lantai keramik uk. 40x40 cm untuk Variasi/Border (1SP : 2PP),302056.59
 528,,3.9.8.5,Pemasangan 1 m' plint keramik uk. 10 s.d. 15x20 cm (1SP : 2PP),28128.21
 529,,3.9.8.6,Pemasangan 1 m' plint keramik uk. 10 s.d. 15x30 cm (1SP : 2PP),29191.36
 530,,3.9.8.7,Pemasangan 1 m' plint keramik uk. 10 s.d. 15x40 cm (1SP : 2PP),30032.86
 531,,3.9.8.8,Pemasangan 1 m' plint keramik uk. 10 s.d. 15x60 cm (1SP : 2PP),29087.41
 532,,3.9.8.9,Pemasangan 1 m' Step Nosing Keramik 10cm x 60 cm (1SP:2PP),73362.41
-533,,3.9.9.1,Pemasangan 1 m2 lantai marmer uk. 100x100 cm,1101410.42
-534,,3.9.9.2,Pemasangan 1 m2 lantai karpet,131191.5
-535,,3.9.9.3,Pemasangan 1 m2 underlayer (pelapis bawah karpet),75955.0
-536,,3.9.9.4,Pemasangan 1 m2 lantai parquet kayu solid,507083.5
-537,,9.9.9.5,Pemasangan 1 m2 lantai engineering wood,383960.5
+533,,3.9.9.1,lantai marmer uk. 100x100 cm,1101410.42
+534,,3.9.9.2,lantai karpet,131191.5
+535,,3.9.9.3,underlayer (pelapis bawah karpet),75955.0
+536,,3.9.9.4,lantai parquet kayu solid,507083.5
+537,,9.9.9.5,lantai engineering wood,383960.5
 538,,3.9.9.6,Pemasangan 1 m' plint kayu tebal 2 cm lebar 10 cm,122984.95
-539,,3.9.9.7,Pemasangan 1 m2 lantai vinyl uk. 30x30 cm,158911.5
+539,,3.9.9.7,lantai vinyl uk. 30x30 cm,158911.5
 540,,3.9.9.8,Pemasangan 1 m' plint vinyl uk. 15x30 cm,52844.0
-541,,3.9.9.9,Pemasangan 1 m2 floor hardener,63030.0
-542,,3.9.9.10,Pemasangan 1 m2 lantai UPVC decking,1531101.0
+541,,3.9.9.9,floor hardener,63030.0
+542,,3.9.9.10,lantai UPVC decking,1531101.0
 543,,3.9.9.11,"Pemolesan 1 m2 lantai ubin teraso, granit, marmer",84357.9
-544,,3.9.9.12,Pemasangan 1 m2 Lantai Keramik Tactile Ukuran 30x30 cm ( 1SP:2PP),542152.71
-545,,3.9.9.13,Pemasangan 1 m2 Lantai Keramik Tactile Ukuran 40x40 cm ( 1SP:2PP),356931.41
-546,,3.10.1.1,Pemasangan 1 m2 dinding keramik artistik uk. 10x20 cm (1SP : 2PP),322064.6
-547,,3.10.1.2,Pemasangan 1 m2 dinding keramik artistik uk. 5x20 cm (1SP : 2PP),459151.0
-548,,3.10.1.3,Pemasangan 1 m2 dinding keramik uk. 10x20 cm (1SP : 2PP),258186.5
-549,,3.10.1.4,Pemasangan 1 m2 dinding keramik uk. 20x20 cm (1SP : 2PP),202479.2
-550,,3.10.2.1,Pemasangan 1 m2 dinding homogeneous tile Polish uk. 30x30 cm (1SP : 2PP),504207.0
-551,,3.10.2.2,Pemasangan 1 m2 dinding homogeneous tile Polish uk. 40x40 cm (1SP : 2PP),417961.5
-552,,3.10.2.3,Pemasangan 1 m2 dinding homogeneous tile polish uk. 60x60 cm (1SP : 2PP),212454.0
-553,,3.10.2.4,Pemasangan 1 m2 dinding homogeneous tile Unpolish uk. 30x30 cm (1SP : 2PP),504207.0
-554,,3.10.2.5,Pemasangan 1 m2 dinding homogeneous tile Unpolish uk. 40x40 cm (1SP : 2PP),417961.5
-555,,3.10.2.6,Pemasangan 1 m2 dinding homogeneous tile Unpolish uk. 60x60 cm (1SP : 2PP),212454.0
-556,,3.10.3.1,Pemasangan 1 m2 dinding porselen uk. 11x11 cm (1SP : 2PP),321948.0
-557,,3.10.3.2,Pemasangan 1 m2 dinding porselen uk. 10x20 cm (1SP : 2PP),341676.5
-558,,3.10.3.3,Pemasangan 1 m2 dinding porselen uk. 20x20 cm (1SP : 2PP),201656.95
-559,,3.10.4.1,Pemasangan 1 m2 dinding bata pelapis uk. 3x7x24 cm,425311.7
-560,,3.10.4.2,Pemasangan 1 m2 dinding batu paras,320842.5
-561,,3.10.4.3,Pemasangan 1 m2 dinding batu tempel hitam,316728.5
-562,,3.10.5.1,Pemasangan 1 m2 wallpaper lebar 50 cm,120367.5
-563,,3.10.5.2,"Pemasangan 1 m2 dinding pemisah plywood rangkap, rangka kayu kelas II",552649.9
-564,,3.10.5.3,Pemasangan 1 m2 dinding lambisering dari papan kayu kelas I,608204.85
-565,,3.10.5.4,Pemasangan 1 m2 dinding lambrisering dari plywood (Kayu Lapis) ukuran 120x240cm,2814080.5
-566,,3.10.5.5,"Pemasangan 1 m2 dinding bilik, rangka kayu kelas III atau IV",128991.5
+544,,3.9.9.12,Lantai Keramik Tactile Ukuran 30x30 cm ( 1SP:2PP),542152.71
+545,,3.9.9.13,Lantai Keramik Tactile Ukuran 40x40 cm ( 1SP:2PP),356931.41
+546,,3.10.1.1,dinding keramik artistik uk. 10x20 cm (1SP : 2PP),322064.6
+547,,3.10.1.2,dinding keramik artistik uk. 5x20 cm (1SP : 2PP),459151.0
+548,,3.10.1.3,dinding keramik uk. 10x20 cm (1SP : 2PP),258186.5
+549,,3.10.1.4,dinding keramik uk. 20x20 cm (1SP : 2PP),202479.2
+550,,3.10.2.1,dinding homogeneous tile Polish uk. 30x30 cm (1SP : 2PP),504207.0
+551,,3.10.2.2,dinding homogeneous tile Polish uk. 40x40 cm (1SP : 2PP),417961.5
+552,,3.10.2.3,dinding homogeneous tile polish uk. 60x60 cm (1SP : 2PP),212454.0
+553,,3.10.2.4,dinding homogeneous tile Unpolish uk. 30x30 cm (1SP : 2PP),504207.0
+554,,3.10.2.5,dinding homogeneous tile Unpolish uk. 40x40 cm (1SP : 2PP),417961.5
+555,,3.10.2.6,dinding homogeneous tile Unpolish uk. 60x60 cm (1SP : 2PP),212454.0
+556,,3.10.3.1,dinding porselen uk. 11x11 cm (1SP : 2PP),321948.0
+557,,3.10.3.2,dinding porselen uk. 10x20 cm (1SP : 2PP),341676.5
+558,,3.10.3.3,dinding porselen uk. 20x20 cm (1SP : 2PP),201656.95
+559,,3.10.4.1,dinding bata pelapis uk. 3x7x24 cm,425311.7
+560,,3.10.4.2,dinding batu paras,320842.5
+561,,3.10.4.3,dinding batu tempel hitam,316728.5
+562,,3.10.5.1,wallpaper lebar 50 cm,120367.5
+563,,3.10.5.2,"dinding pemisah plywood rangkap, rangka kayu kelas II",552649.9
+564,,3.10.5.3,dinding lambisering dari papan kayu kelas I,608204.85
+565,,3.10.5.4,dinding lambrisering dari plywood (Kayu Lapis) ukuran 120x240cm,2814080.5
+566,,3.10.5.5,"dinding bilik, rangka kayu kelas III atau IV",128991.5
 567,,3.10.5.6,Pemasangan kering 1 m2 dinding marmer 100x100 cm tebal 2 cm,1548363.1779
 568,,3.10.5.7,Pemasangan basah 1 m2 dinding marmer 100x100 cm tebal 2 cm,1318643.7
-569,,3.10.6.1,"Pemasangan 1 m2 rangka besi hollow galvanis 40x40 mm, modul 60x120 cm, untuk partisi",67955.25
-570,,3.10.6.2,Pemasangan 1 m2 rangka dinding pemisah 60x120 cm kayu kelas II atau III,714037.5
-571,,3.10.6.3,Pemasangan 1 m2 Rangka Besi Hollow Galvanis 20x40 mm,90263.25
-572,,3.11.1.1,Pemasangan 1 m2 rolling door besi,587314.68125
-573,,3.11.1.2,Pemasangan 1 m2 rolling door alumunium,680971.5
-574,,3.11.1.3,Pemasangan 1 m2 pintu lipat PVC,841170.0
-575,,3.11.1.4,Pemasangan 1 m2 pintu aluminium strip lebar 8 cm,1457500.0
-576,,3.11.1.5,Pemasangan 1 m2 pintu kaca Tebal 6 mm rangka aluminium,242040.7
-577,,3.11.1.6,Pemasangan 1 m2 jendela kacaTebal 6 mm rangka aluminium,242040.7
+569,,3.10.6.1,"rangka besi hollow galvanis 40x40 mm, modul 60x120 cm, untuk partisi",67955.25
+570,,3.10.6.2,rangka dinding pemisah 60x120 cm kayu kelas II atau III,714037.5
+571,,3.10.6.3,Rangka Besi Hollow Galvanis 20x40 mm,90263.25
+572,,3.11.1.1,rolling door besi,587314.68125
+573,,3.11.1.2,rolling door alumunium,680971.5
+574,,3.11.1.3,pintu lipat PVC,841170.0
+575,,3.11.1.4,pintu aluminium strip lebar 8 cm,1457500.0
+576,,3.11.1.5,pintu kaca Tebal 6 mm rangka aluminium,242040.7
+577,,3.11.1.6,jendela kacaTebal 6 mm rangka aluminium,242040.7
 578,,3.11.1.7,"Pembuatan dan pemasangan 1 m2 pintu klamp standar, kayu kelas II",737843.7
 579,,3.11.1.8,"Pembuatan dan pemasangan 1 m2 pintu klamp sederhana, kayu kelas III",586987.5
 580,,3.11.1.9,"Pembuatan 1 m2 pintu dan jendela kaca, kayu kelas I atau II",495865.7
@@ -586,11 +586,11 @@ id,reference_group_id,code,name,unit_price
 585,,3.11.1.14,Pembuatan dan pemasangan 1 buah pintu panel kayu lapis timbal di tengah (khusus RS/Laboratorium/R.Radiologi),11812174.0
 586,,3.11.1.15,"Pembuatan dan pemasangan 1 m2 pintu besi pelat baja tebal 2 mm rangkap, rangka baja siku",1407892.75
 587,,3.11.1.16,Pemasangan 1 buah pintu besi tahan api,9266331.25
-588,,3.11.1.17,Pemasangan 1 m2 pintu engineering wood,1458930.0
-589,,3.11.1.18,Pemasangan 1 buah Pintu uPVC lebar 80 cm lengkap dengan aksesoris,1196928.15
-590,,3.11.1.19,Pemasangan 1 buah Pintu uPVC lebar 70 cm lengkap dengan aksesoris,852518.15
-591,,3.11.2.1,Pemasangan 1 m2 Jendela Kaca Tebal 5 mm Nako Aluminium,369710.0
-592,,3.11.2.2,Pemasangan 1 m2 jendela Kaca Tebal 5 mm nako dan tralis,408210.0
+588,,3.11.1.17,pintu engineering wood,1458930.0
+589,,3.11.1.18,Pemasangan 1 buah Pintu uPVC lebar 80 cm lengkap,1196928.15
+590,,3.11.1.19,Pemasangan 1 buah Pintu uPVC lebar 70 cm lengkap,852518.15
+591,,3.11.2.1,Jendela Kaca Tebal 5 mm Nako Aluminium,369710.0
+592,,3.11.2.2,jendela Kaca Tebal 5 mm nako dan tralis,408210.0
 593,,3.11.2.3,"Pemasangan 1 buah jendela kaca Upvc 2 daun ukuran 1,15 x 1,30 m",2499051.5
 594,,3.11.2.4,"Pemasangan 1 buah Jendela Kaca Upvc 1 daun ukuran 0,79 x 1,30 m",2224568.5
 595,,3.11.3.1,Pemasangan 1 m' kusen aluminium,175583.1
@@ -612,9 +612,9 @@ id,reference_group_id,code,name,unit_price
 611,,3.11.4.9,Pemasangan 1 buah Door Stop,83985.0
 612,,3.11.4.10,Pemasangan 1 buah Rel Pintu Dorong,385660.0
 613,,3.11.4.11,Pemasangan 1 buah Venetions Blinds dan Vertical Blinds,257636.5
-614,,3.11.4.12,Pemasangan 1 m2 Teralis Besi Strip,197892.2
-615,,3.11.4.13,Pemasangan 1 m2 Kawat Nyamuk Rangka Besi,192989.2525
-616,,3.11.4.13.1,Pemasangan 1 m2 Kawat Nyamuk Rangka Kayu Kelas II,99744.15
+614,,3.11.4.12,Teralis Besi Strip,197892.2
+615,,3.11.4.13,Kawat Nyamuk Rangka Besi,192989.2525
+616,,3.11.4.13.1,Kawat Nyamuk Rangka Kayu Kelas II,99744.15
 617,,3.11.4.14,Pemasangan 1 Buah Kunci Slot (Grendel) untuk Jedela,55924.0
 618,,3.11.4.15,Pemasangan 1 buah engsel jendela kupu-kupu,65571.0
 619,,3.11.4.16,Pemasangan 1 buah engsel angin,78364.0
@@ -624,36 +624,36 @@ id,reference_group_id,code,name,unit_price
 623,,3.11.4.20,Pemasangan 1 buah grendel,46062.5
 624,,3.11.4.21,Pemasangan 1 buah grendel tanam,209343.75
 625,,3.11.4.22,Pemasangan 1 buah Handle Jendela,75042.0
-626,,3.12.1,Pemasangan 1 m2 sunscreen alumunium,577764.0
-627,,3.12.2,Pemasangan 1 m2 kaca polos tebal 3 mm,176583.0
-628,,3.12.3,Pemasangan 1 m2 kaca polos tebal 5 mm,270963.0
-629,,3.12.4,Pemasangan 1 m2 kaca polos tebal 6 mm,320116.5
-630,,3.12.5,Pemasangan 1 m2 kaca polos tebal 8 mm,310004.2
-631,,3.12.6,Pemasangan 1 m2 kaca buram tebal 12 mm,435382.2
-632,,3.12.7,Pemasangan 1 m2 kaca cermin tebal 5 mm,268994.0
-633,,3.12.8,Pemasangan 1 m2 kaca cermin tebal 8 mm,996792.5
-634,,3.12.9,Pemasangan 1 m2 kaca wireglass tebal 5 mm,204770.5
-635,,3.12.10,Pemasangan 1 m2 kaca patri tebal 5 mm,1872706.0
-636,,3.12.11,Pemasangan 1 m2 kaca laminated tebal 16 mm (8 mm double),1673026.63
-637,,3.12.12,Pemasangan 1 m2 kaca laminated tebal 16 mm (8 mm double) dengan aluminium frame,1857641.83
-638,,3.12.13,Pemasangan 1 m2 kaca tempered tebal 12 mm,771807.63
-639,,3.12.14,Pemasangan 1 m2 kaca laminated tebal 12 mm dengan aluminium frame,1329641.83
+626,,3.12.1,sunscreen alumunium,577764.0
+627,,3.12.2,kaca polos tebal 3 mm,176583.0
+628,,3.12.3,kaca polos tebal 5 mm,270963.0
+629,,3.12.4,kaca polos tebal 6 mm,320116.5
+630,,3.12.5,kaca polos tebal 8 mm,310004.2
+631,,3.12.6,kaca buram tebal 12 mm,435382.2
+632,,3.12.7,kaca cermin tebal 5 mm,268994.0
+633,,3.12.8,kaca cermin tebal 8 mm,996792.5
+634,,3.12.9,kaca wireglass tebal 5 mm,204770.5
+635,,3.12.10,kaca patri tebal 5 mm,1872706.0
+636,,3.12.11,kaca laminated tebal 16 mm (8 mm double),1673026.63
+637,,3.12.12,kaca laminated tebal 16 mm (8 mm double),1857641.83
+638,,3.12.13,kaca tempered tebal 12 mm,771807.63
+639,,3.12.14,kaca laminated tebal 12 mm,1329641.83
 640,,3.13.1,Pemasangan 1 m’ Shalimar Aluminium,88844.25
-641,,3.13.2,Pemasangan 1 m2 profil jalusi aluminium,740544.75
-642,,3.13.3,Pengelasan 1 m’ dengan las listrik,16853.375
+641,,3.13.2,profil jalusi aluminium,740544.75
+642,,3.13.3,Pengelasan 1 m’,16853.375
 643,,3.13.4,Pembuatan dan pemasangan 1 m' railing besi pengaman tinggi 1.2 m,488500.375
 644,,3.13.5,Pembuatan dan pemasangan 1 m' railing tangga/ramp dan hand rail tinggi 0.85 m dan 0.65 m,301338.125
 645,,3.13.6,Pemasangan 1 buah Tangga Service tinggi 4 meter,1998249.0
 646,,3.14.1,"Pembuatan 1 m2 Plywood Rangkap, Rangka Expose Kayu Kelas I",924260.7
 647,,3.14.2,"Pembuatan 1 m2 Plywood Lapis Formika, Rangka Expose Kayu Kelas Ii",696780.7
 648,,3.15.1,Pemasangan 1 buah jendela ornamen GRC,728417.25
-649,,3.16.1.1,Pemasangan 1 buah Logo PU plat besi finish cat uk. 80x80 cm dengan scaffolding,931685.333333
-650,,3.16.1.2,Pemasangan Logo PU Pelat Besi Finish Cat ukuran 80x80 cm dengan gendola,22426690.0
+649,,3.16.1.1,Pemasangan 1 buah Logo PU plat besi finish cat uk. 80x80 cm,931685.333333
+650,,3.16.1.2,Pemasangan Logo PU Pelat Besi Finish Cat ukuran 80x80 cm,22426690.0
 651,,3.16.2,Pemasangan Signage Plat Baja Menggunakan Tiang,1731224.0
 652,,3.16.2.1,Pemasangan Signage Plat Baja pada Dinding,1679601.0
-653,,3.16.3,Pemasangan Signage dengan Acrylic,169180.0
-654,,3.16.4,Pemasangan 1 m2 signage dengan cutting,123249.5
-655,,3.16.5,Pemasangan 1 m2 Marka dengan Cat Thermoplast,138275.555
+653,,3.16.3,Pemasangan Signage,169180.0
+654,,3.16.4,signage,123249.5
+655,,3.16.5,Marka,138275.555
 656,,3.16.6,Pemasangan 1 buah Logo PU Akrilik ukuran 40x40 cm,455757.5
 657,,3.16.7,Pemasangan 1 buah Nomor Rumah Akrilik ukuran 15x30 cm,76257.5
 658,,3.18.1.1,Pemasangan 1 buah wastafel,643786.0
@@ -661,7 +661,7 @@ id,reference_group_id,code,name,unit_price
 660,,3.18.2.2,Pemasangan 1 Buah Bak Cuci Piring Teraso,1152239.0
 661,,3.18.3.1,Pemasangan 1 buah closet duduk/monoblock,2015640.0
 662,,3.18.3.2,Pemasangan 1 buah closet jongkok,428142.352
-663,,3.18.3.3,Pemasangan 1 m2 kubikel toilet,2279711.5
+663,,3.18.3.3,kubikel toilet,2279711.5
 664,,3.18.4.1,Pemasangan 1 buah urinoir,810161.0
 665,,3.18.4.2,Pemasangan 1 buah partisi urinoir,1011232.75
 666,,3.18.5.1,"Pemasangan 1 buah bak mandi teraso vol. 0,3 m3",1722875.0
@@ -914,21 +914,21 @@ id,reference_group_id,code,name,unit_price
 913,,4.1.9.1,"Pengolahan Tanah bertekstur liat 40,01%-60,00% atau tanah Sandy per m3",75124.5
 914,,4.1.9.2,"Pengolahan Tanah bertekstur liat 60,01%-100,00% atau tanah Sandy Loam per m3",116952.0
 915,,4.1.9.3,"Pengolahan Tanah bertekstur liat 60,01%-100,00% atau tanah Loam to Clay Loam per m3",75702.0
-916,,4.1.10.1,Peyiraman untuk 1 hari ( dengan selang plastik 3/4 ich) untuk 1 buah pohon/palem,3315.4
-917,,4.1.10.2,Peyiraman untuk 1 m2 Semak/Penutup tanah untuk 1 hari ( dengan selang plastik 3/4 ich),1863.4
-918,,4.1.10.3,Peyiraman untuk 1 m2 Rumput untuk 1 hari ( dengan selang plastik 3/4 ich),2552.0
-919,,4.1.10.4,Peyiraman untuk 1 m2 Semak/Penutup Tanah untuk 1 hari ( dengan Sprinkler) *Sistem Sprinkler tersedia,1847.56
-920,,4.1.10.5,Peyiraman untuk 1 m2 Rumput untuk 1 hari ( dengan Sprinkler) *Sistem Sprinkler tersedia,2452.56
-921,,4.1.11.1,Penyiraman untuk 1 hari (dengan Selang Plastik 3/4 inch) untuk 1 buah pohon/palem di tanah tidak subur di lahan datar dan tidak memiliki jaringa air yang baik,7192.9
-922,,4.1.11.2,Penyiraman untuk 1 Hari (dengan Selang Plastik 3/4 inch) untuk 1 m2 Semak/Penutup Tanah di Tanah Tidak Subur di Lahan Datar dan Tidak Memiliki Jaringan Air Yang Baik,4570.5
-923,,4.1.11.3,Penyiraman untuk 1 Hari (dengan Selang Plastik 3/4 inch) untuk 1 m2 Rumput di Tanah Tidak Subur di Lahan Datar dan Tidak Memiliki Jaringan Air Yang Baik,5780.5
-924,,4.1.11.4,Penyiraman untuk 1 Hari (dengan Selang Plastik 3/4 inch) untuk 1 m2 Rumput di Tanah Tidak Subur di Lahan Datar dan Tidak Memiliki Jaringan Air Yang Baik,4515.06
-925,,4.1.11.5,Penyiraman untuk 1 Hari (dengan Sprinkler*) untuk 1 m2 Rumput di Tanah Tidak Subur di Lahan Datar dan Tidak Memiliki Jaringan Air Yang Baik,5725.06
-926,,4.1.11.6,Penyiraman untuk 1 Hari (dengan Selang Plastik 3/4 inch) untuk 1 Buah Pohon/Palem di Tanah Tidak Subur di Lahan Datar dan Memiliki Jaringan Air Yang Baik,7192.9
-927,,4.1.11.7,Penyiraman untuk 1 Hari (dengan Selang Plastik 3/4 inch) untuk 1 m2 Semak/Penutup Tanah di Tanah Tidak Subur di Lahan Datar dan Memiliki Jaringan Air Yang Baik,3718.0
-928,,4.1.11.8,Penyiraman untuk 1 Hari (dengan Selang Plastik 3/4 inch) untuk 1 m2 Rumput di Tanah Tidak Subur di Lahan Datar dan Memiliki Jaringan Air Yang Baik,4928.0
-929,,4.1.11.9,Penyiraman untuk 1 Hari (dengan Sprinkler*) untuk 1 m2 Semak/Penutup Tanah di Tanah Tidak Subur di Lahan Datar dan Memiliki Jaringan Air Yang Baik,3662.56
-930,,4.1.11.10,Penyiraman untuk 1 Hari (dengan Sprinkler*) untuk 1 m2 Rumput di Tanah Tidak Subur di Lahan Datar dan Memiliki Jaringan Air Yang Baik,4872.56
+916,,4.1.10.1,Peyiraman untuk 1 hari (,3315.4
+917,,4.1.10.2,Peyiraman untuk 1 m2 Semak/Penutup tanah untuk 1 hari (,1863.4
+918,,4.1.10.3,Peyiraman untuk 1 m2 Rumput untuk 1 hari (,2552.0
+919,,4.1.10.4,Peyiraman untuk 1 m2 Semak/Penutup Tanah untuk 1 hari (,1847.56
+920,,4.1.10.5,Peyiraman untuk 1 m2 Rumput untuk 1 hari (,2452.56
+921,,4.1.11.1,Penyiraman untuk 1 hari (,7192.9
+922,,4.1.11.2,Penyiraman untuk 1 Hari (,4570.5
+923,,4.1.11.3,Penyiraman untuk 1 Hari (,5780.5
+924,,4.1.11.4,Penyiraman untuk 1 Hari (,4515.06
+925,,4.1.11.5,Penyiraman untuk 1 Hari (,5725.06
+926,,4.1.11.6,Penyiraman untuk 1 Hari (,7192.9
+927,,4.1.11.7,Penyiraman untuk 1 Hari (,3718.0
+928,,4.1.11.8,Penyiraman untuk 1 Hari (,4928.0
+929,,4.1.11.9,Penyiraman untuk 1 Hari (,3662.56
+930,,4.1.11.10,Penyiraman untuk 1 Hari (,4872.56
 931,,4.1.12.1,Penyiraman untuk 1 Hari di Tanah Subur di Kelerengan Tanah 1:2 (13° - 26.5°) per m2,3092.1
 932,,4.1.12.2,Penyiraman untuk 1 Hari di Tanah Subur di Kelerengan Tanah 1:2 (26.5°- 45°) per m2,3113.0
 933,,4.1.12.3,Penyiraman untuk 1 Hari di Tanah Subur di Kelerengan Tanah 1:0.5 (45° - 63°) per m2,3195.5
@@ -938,8 +938,8 @@ id,reference_group_id,code,name,unit_price
 937,,4.1.13.4,Penyiraman untuk 1 Hari di Tanah Tidak Subur di Kelerengan Tanah 1:2 (13° - 26.5°) per m2 untuk Sumber Air Tersedia Lokasi Pekerjaan,6117.1
 938,,4.1.13.5,Penyiraman untuk 1 Hari di Tanah Tidak Subur di Kelerengan Tanah 1:1 (26.5° - 45°) per m2 untuk Sumber Air Tersedia Lokasi Pekerjaan,6138.0
 939,,4.1.13.6,Penyiraman untuk 1 Hari di Tanah Tidak Subur di Kelerengan Tanah 1:0.5 (45° - 63°) per m2 untuk Sumber Air Tersedia Lokasi Pekerjaan,6220.5
-940,,4.2.1.1,Penyiraman 1m2 Area Tanam untuk 1 hari (dengan Selang Plastik 3/4 inch),3073.4
-941,,4.2.1.2,Penyiraman 1 m2 Area Tanam untuk 1 hari (dengan Sprinkler) *Sistem Sprinkler Tersedia,3057.56
+940,,4.2.1.1,Penyiraman 1m2 Area Tanam untuk 1 hari (,3073.4
+941,,4.2.1.2,Penyiraman 1 m2 Area Tanam untuk 1 hari (,3057.56
 942,,4.2.2.1,Pemupukan Pupuk Organik (1 kali) untuk 1 Buah Pohon/Palem,3950.1275
 943,,4.2.2.2,Pemupukan Pupuk Organik (1 kali) untuk 1 m2 Semak/Penutup Tanah/Rumput,742.115
 944,,4.2.3.1,Pemupukan Pupuk Anorganik Padat (1 kali) untuk 1 Buah Pohon/Palem,4425.6025
@@ -951,17 +951,17 @@ id,reference_group_id,code,name,unit_price
 950,,4.2.4.2,"Pemangkasan 1 Buah Pohon Kecil (Dia. Tajuk < 5 m, Tinggi 3-6m) Termasuk Pengangkutan Keluar Area Tanam",15708.6875
 951,,4.2.4.3,Pemangkasan 1 Buah Pohon Besar (Dia. Tajuk > 10 m) Termasuk Pengangkutan Keluar Area Tanam,32322.8125
 952,,4.2.4.3a,"Pemangkasan 1 Buah Palem Sedang/Besar, Termasuk Pengangkutan Keluar Area Tanam",17875.0
-953,,4.2.4.4,Pemangkasan 1 m2 Semak dengan Gunting Pangkas,2580.875
-954,,4.2.4.4a,Pemangkasan 1 m2 Penutup Tanah dengan Gunting Pangkas,1650.0
-955,,4.2.4.5,Pemangkasan 1 m2 Rumput dengan Mesin Gendong,1439.9
-956,,4.2.4.6,Pemangkasan 1 m2 Rumput dengan Mesin Dorong,48.565
-957,,4.2.5.1,Penyemprotan Pestisida (Insektisida/Fungisida) dengan Sprayer Gendong 1 Kali untuk 1 Buah Pohon/Palem,4132.15
-958,,4.2.5.2,Penyemprotan Pestisida (Fungisida /Insektisida) dengan Sprayer Gendong 1 Kali untuk 1 m2 Semak,1411.795
-959,,4.2.5.3,Penyemprotan Pestisida (Fungisida /Insektisida) dengan Sprayer Gendong 1 Kali untuk 1 m2 Penutup Tanah/Rumput,1264.615
+953,,4.2.4.4,Pemangkasan 1 m2 Semak,2580.875
+954,,4.2.4.4a,Pemangkasan 1 m2 Penutup Tanah,1650.0
+955,,4.2.4.5,Pemangkasan 1 m2 Rumput,1439.9
+956,,4.2.4.6,Pemangkasan 1 m2 Rumput,48.565
+957,,4.2.5.1,Penyemprotan Pestisida (Insektisida/Fungisida),4132.15
+958,,4.2.5.2,Penyemprotan Pestisida (Fungisida /Insektisida),1411.795
+959,,4.2.5.3,Penyemprotan Pestisida (Fungisida /Insektisida),1264.615
 960,,4.2.6.1,Pembersihan (Penyapuan) 1 m2 Area Tanam,31.24
 961,,4.2.7.1,Pencabutan Gulma (Intensitas Gulma di Atas 50%) 1 m2 Rumput,2728.0
 962,,4.2.7.2,Pencabutan Gulma (Intensitas Gulma di Atas 20%) 1 m2 Rumput,1650.0
-963,,4.3.1,Pembuatan dan pemasangan 1 buah Tong Sampah Kaleng 2 Tabung dengan Rangka Hollow 30x60,454652.495
+963,,4.3.1,Pembuatan dan pemasangan 1 buah Tong Sampah Kaleng 2 Tabung,454652.495
 964,,5.1.1.1.1,Pemasangan 1 m' kabel NYY 1 x 4 mm²,19497.5
 965,,5.1.1.1.2,Pemasangan 1 m' kabel NYY 1 x 6 mm²,25190.0
 966,,5.1.1.1.3,Pemasangan 1 m' kabel NYY 1 x 10 mm²,32780.0
@@ -982,7 +982,7 @@ id,reference_group_id,code,name,unit_price
 981,,5.1.1.1.18,"Pemasangan 1 m' kabel NYY 2 x 1,5 mm²",25190.0
 982,,5.1.1.1.19,"Pemasangan 1 m' kabel NYY 2 x 2,5 mm²",30958.4
 983,,5.1.1.1.20,Pemasangan 1 m' kabel NYY 2 x 4 mm²,39105.0
-984,,5.1.1.1,Kabel NYY,54285.0
+984,,5.1.1.1,Pemasangan 1 m' kabel NYY 2 x 6 mm²,54285.0
 985,,5.1.1.1.22,Pemasangan 1 m' kabel NYY 2 x 10 mm²,82747.5
 986,,5.1.1.1.23,Pemasangan 1 m' kabel NYY 2 x 16 mm²,126390.0
 987,,5.1.1.1.24,"Pemasangan 1 m' kabel NYY 3 x 1,5 mm²",28985.0
@@ -1261,8 +1261,8 @@ id,reference_group_id,code,name,unit_price
 1260,,5.1.6.2,Pemasangan 1 unit kWh Meter Token 3 Phase,3705234.5
 1261,,5.1.6.3,Pemasangan 1 unit Softwer Sistem Offile / online untuk kWh Meter Swakelola Prabayar,2577454.0
 1262,,5.1.6.4,"Pemasangan 1 Unit PC Server termasuk OS Windows Server, monitor, keyboard dan Mouse",39421954.0
-1263,,5.1.8.1,"Pemasangan 1 set pembumian sistem elektrikal dengan batang tembaga dia.5/8""",14885706.0
-1264,,5.1.8.2,"Pemasangan 1 set pembumian sistem elektrikal dengan batang tembaga dia.3/4""",18390306.0
+1263,,5.1.8.1,Pemasangan 1 set pembumian sistem elektrikal,14885706.0
+1264,,5.1.8.2,Pemasangan 1 set pembumian sistem elektrikal,18390306.0
 1265,,5.2.1,Pemasangan 1 unit Air Terminal @1.000 mm,2057341.0
 1266,,5.2.2,Pemasangan 1 unit Base Air Terminal,791197.0
 1267,,5.2.3,Pemasangan 1 Unit DC Clip Non Metalic Clamp,96536.0
@@ -1317,20 +1317,20 @@ id,reference_group_id,code,name,unit_price
 1316,,5.3.1.27,Pemasangan 1 Unit Fitting + 40 Watt Lampu Pijar,80344.0
 1317,,5.3.1.28,Pemasangan 1 Unit Lampu TL 18 Watt ( Balk),72182.0
 1318,,5.3.1.29,Pemasangan 1 Unit Lampu TLED 18 Watt ( Balk),84282.0
-1319,,5.3.1,Pemasangan Lampu dan Armatur,78232.0
-1320,,5.3.1,Pemasangan Lampu dan Armatur,138732.0
-1321,,5.3.1,Pemasangan Lampu dan Armatur,683878.8
-1322,,5.3.1,Pemasangan Lampu dan Armatur,3340048.8
-1323,,5.3.1,Pemasangan Lampu dan Armatur,159662.8
-1324,,5.3.1,Pemasangan Lampu dan Armatur,1281013.8
-1325,,5.3.1,Pemasangan Lampu dan Armatur,1018663.8
-1326,,5.3.1,Pemasangan Lampu dan Armatur,288527.8
-1327,,5.3.1,Pemasangan Lampu dan Armatur,340073.8
-1328,,5.3.1,Pemasangan Lampu dan Armatur,1756909.0
-1329,,5.3.1,Pemasangan Lampu dan Armatur,207883.5
-1330,,5.3.1,Pemasangan Lampu dan Armatur,139777.0
-1331,,5.3.1,Pemasangan Lampu dan Armatur,28281.0
-1332,,5.3.1,Pemasangan Lampu dan Armatur,1980566.5
+1319,,5.3.1,Pemasangan 1 Unit Lampu TL 36 Watt ( Balk),78232.0
+1320,,5.3.1,Pemasangan 1 Unit Lampu TL ED 36 Watt ( Balk),138732.0
+1321,,5.3.1,Pemasangan 1 titik Instalasi Lampu Luar/Taman (,683878.8
+1322,,5.3.1,Pemasangan 1 titik Instalasi Lampu Luar/Taman (,3340048.8
+1323,,5.3.1,Pemasangan 1 titik Instalasi Lampu Luar/Taman (,159662.8
+1324,,5.3.1,Pemasangan 1 titik Instalasi Lampu PJU (,1281013.8
+1325,,5.3.1,Pemasangan 1 titik Instalasi Lampu PJU (,1018663.8
+1326,,5.3.1,Pemasangan 1 titik Instalasi Lampu PJU Tiang 7 m (,288527.8
+1327,,5.3.1,Pemasangan 1 titik Instalasi Lampu PJU Tiang 9 m (,340073.8
+1328,,5.3.1,"Pemasangan 1 Unit Sport Floodlight LED, Min 180000 Lumen, Max. 1340 W, 5700K, min. CRI 80, min. IP 66 c/w DMX Led Driver & Customized Bracklet ( Field of Play)",1756909.0
+1329,,5.3.1,Pemasangan 1 buah Junction Box IP Rated,207883.5
+1330,,5.3.1,Setting & Aiming 1 titik Lampu Field Of Play (FOP) Eksisting,139777.0
+1331,,5.3.1,Pemasangan 1 m' Kabel Fiber Optic Dual Core Single Mode + Pipa HDPE Conduit 20 mm,28281.0
+1332,,5.3.1,"Pemasangan 1 buah DMX LED Controller , 1 Universe",1980566.5
 1333,,5.3.2.1,Pemasangan 1 Unit Sensor Cahaya,97284.0
 1334,,5.3.2.2,Pemasangan 1 Unit Sensor Gerak,106843.0
 1335,,5.4.1.1,Pemasangan 1 Unit MCP-FA (Semi Addressable 1 Loop),34427486.5
@@ -1338,7 +1338,7 @@ id,reference_group_id,code,name,unit_price
 1337,,5.4.1.3,Pemasangan 1 Unit Alarm Printer,3014632.5
 1338,,5.4.1.4,Pemasangan 1 Unit Report Printer,2321632.5
 1339,,5.4.1.5,Pemasangan 1 Unit Announciator,2961832.5
-1340,,5.4.1.6,Pemasangan 1 Unit Terminal Box Fire Alarm (Lengkap dengan Modul),741482.5
+1340,,5.4.1.6,Pemasangan 1 Unit Terminal Box Fire Alarm (Lengkap,741482.5
 1341,,5.4.1.7,Pemasangan 1 Unit Some Detector Addressable,940890.5
 1342,,5.4.1.8,Pemasangan 1 Unit Rate of Rise Detector Addressable,436155.5
 1343,,5.4.1.9,Pemasangan 1 Unit Fix Heat Detector Addressable,407280.5
@@ -1379,7 +1379,7 @@ id,reference_group_id,code,name,unit_price
 1378,,5.4.2.2,Pemasangan 1 Unit Wirig Mangement,180147.0
 1379,,5.4.2.3,Pemasangan 1 Unit PoE Switch HUB,644369.0
 1380,,5.4.2.4,Pemasangan 1 Unit Network Video Recorder (NVR) Kapasitas 32 Chanel + 8TB Hardisk,8837554.0
-1381,,5.4.2.5,Pemasangan 1 Unit RAK HUB 12 U ( Lengkap dengan Power Outlet),1049642.0
+1381,,5.4.2.5,Pemasangan 1 Unit RAK HUB 12 U ( Lengkap,1049642.0
 1382,,5.4.2.6,"Pemasangan 1 Unit LCD Monitor 32""",2899226.0
 1383,,5.4.2.7,"Pemasangan 1 Unit LCD Monitor 50""",4341012.5
 1384,,5.4.2.8,Pemasangan 1 Unit Keyboard + Mouse,416790.0
@@ -1407,8 +1407,8 @@ id,reference_group_id,code,name,unit_price
 1406,,5.4.3.19,Pemasangan 1 titik Instalasi Ceiling Speaker,252239.9
 1407,,5.4.4.1,Pemasangan 1 Unit MDF 2 x 8 pair,205315.0
 1408,,5.4.4.2,Pemasangan 1 Unit MDF 2 x 10 pair,235565.0
-1409,,5.4.4.3,Pemasangan 1 Unit PABX Kap: 1 Line 10 Extension ( Lengkap dengan Pemprograman),1475391.5
-1410,,5.4.4.4,Pemasangan 1 Unit PABX Kap: 1 Line 8 Extension ( Lengkap dengan Pemprograman),1218239.0
+1409,,5.4.4.3,Pemasangan 1 Unit PABX Kap: 1 Line 10 Extension ( Lengkap,1475391.5
+1410,,5.4.4.4,Pemasangan 1 Unit PABX Kap: 1 Line 8 Extension ( Lengkap,1218239.0
 1411,,5.4.4.5,Pemasangan 1 Unit Terminal Box Telepon,342815.0
 1412,,5.4.4.6,Pemasangan 1 Unit Outlet Telepon,161744.0
 1413,,5.4.4.7,Pemasangan 1 Unit Instalasi Outlet Telepon,429444.4
@@ -1488,9 +1488,9 @@ id,reference_group_id,code,name,unit_price
 1487,,5.5.2.46,"Pemasangan 1 Tititk Kabel Kontrol Fan NYM 3 x 2,5 mm2",274769.0
 1488,,5.5.2.47,Pemasangan 1 Unit Proppeller Fan ; 370 CMF,515889.0
 1489,,5.5.2.48,Pemasangan 1 Unit Proppeller Fan ; 1200 CMF,6006044.0
-1490,,5.5.3.1,"Pemasangan 1 m2 BJLS 50, 60, 70, 80, 100 ( Tanpa Isolasi )",577120.5
-1491,,5.5.3.6,"Pemasangan 1 m2 BJLS 50, 60, 70, 80, 100 ( Isolasi Luar )",597091.0
-1492,,5.5.3.11,"Pemasangan 1 m2 BJLS (50, 60, 70, 80, 100 ( Isolasi Luar Dalam ))",608069.0
+1490,,5.5.3.1,"BJLS 50, 60, 70, 80, 100 ( Tanpa Isolasi )",577120.5
+1491,,5.5.3.6,"BJLS 50, 60, 70, 80, 100 ( Isolasi Luar )",597091.0
+1492,,5.5.3.11,"BJLS (50, 60, 70, 80, 100 ( Isolasi Luar Dalam ))",608069.0
 1493,,5.5.4.1,"Pemasangan 1 m Pipa Tembaga B280 Dia. 6,4 mm (1/4"")",99598.62
 1494,,5.5.4.2,"Pemasangan 1 m Pipa Tembaga B280 Dia. 9,5 mm (3/8"")",247746.62
 1495,,5.5.4.3,"Pemasangan 1 m Pipa Tembaga B280 Dia. 12,7 mm (1/2"")",142493.12
@@ -1593,11 +1593,11 @@ id,reference_group_id,code,name,unit_price
 1592,,6.2.3.1,"Pemasangan 1 unit grease trap portable fiberglass, kap. 30 Liter",1232616.0
 1593,,6.2.3.2,"Pemasangan 1 unit grease trap portable stainless, kap. 30 Liter",1796366.0
 1594,,6.2.3.3,"Pemasangan 1 unit grease trap central fiberglass, kap. 5 m3",22987085.0
-1595,,6.2.4.1,"Pemasangan 1 buah Sumur Resapan Air Limbah diameter 80 cm, t=100 cm ( dengan tutup Beton)",1150821.98
+1595,,6.2.4.1,"Pemasangan 1 buah Sumur Resapan Air Limbah diameter 80 cm, t=100 cm (",1150821.98
 1596,,6.2.1.8,"Pemasangan 1 buah Sumur Resapan Air Limbah diameter 80 cm, t=100 cm ( tanpa tutup Beton)",1353335.06
-1597,,6.3.1,Filter,561633.6
-1598,,6.3.2,Pemasangan 1 buah bak kontrol pas. bata 45x45 cm tinggi 50 cm dengan tutup beton,829946.7
-1599,,6.3.3,Pemasangan 1 buah bak kontrol pas. bata 60x60 cm tinggi 65 cm dengan tutup beton,992780.91
+1597,,6.3.1,Pemasangan 1 buah bak kontrol pas. bata 30x30 cm tinggi 35 cm,561633.6
+1598,,6.3.2,Pemasangan 1 buah bak kontrol pas. bata 45x45 cm tinggi 50 cm,829946.7
+1599,,6.3.3,Pemasangan 1 buah bak kontrol pas. bata 60x60 cm tinggi 65 cm,992780.91
 1600,,6.4.1.1,"Pemasangan 1 m pipa PVC AW, DN. 1/2"" (15 mm)",20438.0
 1601,,6.4.1.2,"Pemasangan 1 m pipa PVC AW, DN. 3/4"" (20 mm)",24843.5
 1602,,6.4.1.3,"Pemasangan 1 m pipa PVC AW, DN. 1"" (25 mm)",31768.0
@@ -1782,7 +1782,7 @@ id,reference_group_id,code,name,unit_price
 1781,,6.5.6.1,"Pemasangan 1 buah Foot Velve, Dia 1/2"" ( 15 mm)",49123.25
 1782,,6.5.6.2,"Pemasangan 1 buah Foot Velve, Dia 3/4"" ( 20 mm)",120758.0
 1783,,6.5.6.3,"Pemasangan 1 buah Floater Velve, Dia 1"" ( 25 mm)",518210.0
-1784,,6.5.5.4,"Pemasangan 1 buah Floater Velve Dia. 1-1/4 "" (32 mm)",232298.0
+1784,,6.5.5.4,"Pemasangan 1 buah Foot Velve, Dia. 1-1/4 "" (32 mm)",232298.0
 1785,,6.5.5.5,"Pemasangan 1 buah Floater Velve, Dia. 1-1/2 "" (40 mm)",321354.0
 1786,,6.5.6.6,"Pemasangan 1 buah Foot Velve, Dia. 2 "" (50 mm)",505989.0
 1787,,6.5.6.7,"Pemasangan 1 buah Foot Velve, Dia. 2-1/2 "" (65 mm)",549021.0
@@ -1900,16 +1900,16 @@ id,reference_group_id,code,name,unit_price
 1899,,6.5.24.2,"Pemasangan 1 buah DOP PVC dia. 4"" (100 mm)",49428.5
 1900,,6.5.24.3,"Pemasangan 1 buah DOP PVC dia. 6"" (150 mm)",73870.5
 1901,,6.6.1.1,"Pembuatan 1 buah sumur Resapan Air Hujan diameter 80 cm, t=100 cm",505518.97
-1902,,7.1.1.1,Pemasangan 1 m2 Paving Block (Blok Beton) Natural Tebal 6 cm fc'20 Mpa dan Pengunci Uskup untuk Jalan Lingkungan (Jalan Lokal) Secara Manual,146808.2
-1903,,7.1.1.2,Pemasangan 1 m2 Paving Block (Blok Beton) Natural Tebal 6 cm fc'25 Mpa dan Pengunci Uskup untuk Jalan Lakses/Penghubug (Jalan Kolektor) Secara Manual,160668.2
-1904,,7.1.1.3,Pemasangan 1 m2 Paving Block (Blok Beton) Natural Tebal 6 cm fc'20 Mpa dan Pengunci Uskup untuk Jalan Lingkungan (Jalan Lokal) Secara semi mekanis,131174.45
-1905,,7.1.1.4,Pemasangan 1 m2 Paving Block (Blok Beton) Natural Tebal 6 cm fc'25 Mpa dan Pengunci Uskup untuk Jalan Lingkungan (Jalan Lokal) Secara semi mekanis,145034.45
-1906,,7.1.1.5,Pemasangan 1 m2 Paving Block (Blok Beton) Natural Tebal 8 cm fc'20 Mpa dan Pengunci Topi Uskup untuk Jalan Lingkungan (Jalan Lokal) Secara manual,179123.12
-1907,,7.1.1.6,Pemasangan 1 m2 Paving Block (Blok Beton) Natural Tebal 8 cm fc'25 Mpa dan Pengunci Topi Uskup untuk Jalan akses/penghubung (Jalan kolektor) Secara manual,192983.12
-1908,,7.1.1.7,Pemasangan 1 m2 Paving Block (Blok Beton) Natural Tebal 8 cm fc'20 Mpa dan Pengunci Topi Uskup untuk Jalan Lingkungan (Jalan Lokal) Secara semi mekanis,175796.72
-1909,,7.1.1.8,Pemasangan 1 m2 Paving Block (Blok Beton) Natural Tebal 8 cm fc'25 Mpa dan Pengunci Topi Uskup untuk Jalan Akses/Penghubung (Jalan Kolektor) Secara semi mekanis,177776.72
-1910,,7.1.2.1,"Pemasangan 1 m' Kanstin, Tebal 10x20x40 cm dengan kupingan untuk jalan Lingkungan (Jalan Lokal)",86226.074
-1911,,7.1.2.2,"Pemasangan 1 m' Kanstin, Tebal 15x40x460 cm dengan kupingan untuk jalan Akses/penghubung (Jalan Kolektor)",183537.464
+1902,,7.1.1.1,Paving Block (Blok Beton) Natural Tebal 6 cm fc'20 Mpa dan Pengunci Uskup untuk Jalan Lingkungan (Jalan Lokal) Secara Manual,146808.2
+1903,,7.1.1.2,Paving Block (Blok Beton) Natural Tebal 6 cm fc'25 Mpa dan Pengunci Uskup untuk Jalan Lakses/Penghubug (Jalan Kolektor) Secara Manual,160668.2
+1904,,7.1.1.3,Paving Block (Blok Beton) Natural Tebal 6 cm fc'20 Mpa dan Pengunci Uskup untuk Jalan Lingkungan (Jalan Lokal) Secara semi mekanis,131174.45
+1905,,7.1.1.4,Paving Block (Blok Beton) Natural Tebal 6 cm fc'25 Mpa dan Pengunci Uskup untuk Jalan Lingkungan (Jalan Lokal) Secara semi mekanis,145034.45
+1906,,7.1.1.5,Paving Block (Blok Beton) Natural Tebal 8 cm fc'20 Mpa dan Pengunci Topi Uskup untuk Jalan Lingkungan (Jalan Lokal) Secara manual,179123.12
+1907,,7.1.1.6,Paving Block (Blok Beton) Natural Tebal 8 cm fc'25 Mpa dan Pengunci Topi Uskup untuk Jalan akses/penghubung (Jalan kolektor) Secara manual,192983.12
+1908,,7.1.1.7,Paving Block (Blok Beton) Natural Tebal 8 cm fc'20 Mpa dan Pengunci Topi Uskup untuk Jalan Lingkungan (Jalan Lokal) Secara semi mekanis,175796.72
+1909,,7.1.1.8,Paving Block (Blok Beton) Natural Tebal 8 cm fc'25 Mpa dan Pengunci Topi Uskup untuk Jalan Akses/Penghubung (Jalan Kolektor) Secara semi mekanis,177776.72
+1910,,7.1.2.1,"Pemasangan 1 m' Kanstin, Tebal 10x20x40 cm",86226.074
+1911,,7.1.2.2,"Pemasangan 1 m' Kanstin, Tebal 15x40x460 cm",183537.464
 1912,,7.1.2.3,"Pemasangan 1 m' Kanstin, Tebal 10x20x40 cm tanpa kupingan untuk jalan Lingkungan (Jalan Lokal)",84339.893
 1913,,7.1.2.4,"Pemasangan 1 m' Kanstin, Tebal 15x40x460 cm Tanpa kupingan untuk jalan Akses/penghubung (Jalan Kolektor)",181809.441
 1914,,7.2.1.1,1 m3 Beton Kurus fc 10 Mpa untuk Jalan Lingkungan (Jalan Lokal) Semi Mekanis,1790224.507176
@@ -1922,60 +1922,60 @@ id,reference_group_id,code,name,unit_price
 1921,,7.2.2.4,"1 m3 Perkerasan Beton Sc 3,8 Mpa (Setara Fc 30 Mpa) untuk Jalan Akses/Penghubung (Jalan Jalan Kolektor) Ready Mixed",2488786.488113
 1922,,7.3.1,1 Ton Pekerjaan Lapisan Antara (AC-BC),1572465.63375
 1923,,7.3.2,1 Ton Pekerjaan Lapisan Aus (AC-WC),1819013.41875
-1924,,8.1.1.1,1 m' Saluran U-Ditch 30x30x120 cm dengan lantai kerja fc 10 Mpa,445551.7
-1925,,8.1.1.2,1 m Saluran U-Ditch 30x40x120 cm dengan lantai kerja fc 10 Mpa,492960.05
-1926,,8.1.1.3,1 m Saluran U-Ditch 40x40x120 cm dengan lantai kerja fc 10 Mpa,561216.92
-1927,,8.1.1.4,1 m Saluran U-Ditch 50x50x120 cm dengan lantai kerja fc 10 Mpa,599796.12
-1928,,8.1.1.5,1 m Saluran U-Ditch 40x60x120 cm dengan lantai kerja fc 10 Mpa,639480.27
-1929,,8.1.1.6,1 m Saluran U-Ditch 50x50x120 cm dengan lantai kerja fc 10 Mpa,685541.692
-1930,,8.1.1.7,1 m Saluran U-Ditch 50x60x120 cm dengan lantai kerja fc 10 Mpa,807549.842
-1931,,8.1.1.8,1 m Saluran U-Ditch 50x70x120 cm dengan lantai kerja fc 10 Mpa,835282.492
-1932,,8.1.1.9,1 m Saluran U-Ditch 60x60x120 cm dengan lantai kerja fc 10 Mpa,898014.722
-1933,,8.1.1.10,1 m Saluran U-Ditch 60x70x120 cm dengan lantai kerja fc 10 Mpa,916720.222
-1934,,8.1.1.11,1 m Saluran U-Ditch 60x80x120 cm dengan lantai kerja fc 10 Mpa,948715.922
-1935,,8.1.1.12,1 m Saluran U-Ditch 80x60x120 cm dengan lantai kerja fc 10 Mpa,995979.38
-1936,,8.1.1.13,1 m Saluran U-Ditch 80x80x120 cm dengan lantai kerja fc 10 Mpa,1115410.032
-1937,,8.1.1.14,1 m Saluran U-Ditch 80x100x120 cm dengan lantai kerja fc 10 Mpa,1160604.632
-1938,,8.1.1.15,1 m Saluran U-Ditch 100x100x120 cm dengan lantai kerja fc 10 Mpa,1224461.084
-1939,,8.1.1.16,1 m Saluran U-Ditch 100x120x120 cm dengan lantai kerja fc 10 Mpa,1253327.834
-1940,,8.1.1.17,1 m Saluran U-Ditch 120x120x120 cm dengan lantai kerja fc 10 Mpa,1373106.592
-1941,,8.1.1.18,1 m Saluran U-Ditch 120x140x120 cm dengan lantai kerja fc 10 Mpa,1404156.842
-1942,,8.1.1.19,1 m Saluran U-Ditch 140x140x120 cm dengan lantai kerja fc 10 Mpa,1546088.1942
-1943,,8.1.1.20,1 m Saluran U-Ditch 150x100x120 cm dengan lantai kerja fc 10 Mpa,1495345.016
-1944,,8.1.1.21,1 m Saluran U-Ditch 150x150x120 cm dengan lantai kerja fc 10 Mpa,1606240.218
-1945,,8.1.1.22,1 m Saluran U-Ditch 150x170x120 cm dengan lantai kerja fc 10 Mpa,1626602.868
-1946,,8.1.1.23,1 m Saluran U-Ditch 160x160x120 cm dengan lantai kerja fc 10 Mpa,1672105.952
-1947,,8.1.1.24,1 m Saluran U-Ditch 160x180x120 cm dengan lantai kerja fc 10 Mpa,1708385.756
-1948,,8.1.1.25,1 m Saluran U-Ditch 180x180x120 cm dengan lantai kerja fc 10 Mpa,1761896.95
-1949,,8.1.1.26,1 m Saluran U-Ditch 180x200x120 cm dengan lantai kerja fc 10 Mpa,1798360.85
-1950,,8.1.1.27,1 m Saluran U-Ditch 200x200x120 cm dengan lantai kerja fc 10 Mpa,1970532.96
-1951,,8.1.2.1,"1 m Saluran U-Ditch 30x30x120 cm dengan lantai kerja fc 7,5 Mpa",437081.7
-1952,,8.1.2.2,"1 m Saluran U-Ditch 30x40x120 cm dengan lantai kerja fc 7,5 Mpa",484490.05
-1953,,8.1.2.3,"1 m Saluran U-Ditch 40x40x120 cm dengan lantai kerja fc 7,5 Mpa",550205.92
-1954,,8.1.2.4,"1 m Saluran U-Ditch 40x50x120 cm dengan lantai kerja fc 7,5 Mpa",588785.12
-1955,,8.1.2.5,"1 m Saluran U-Ditch 40x60x120 cm dengan lantai kerja fc 7,5 Mpa",628469.27
-1956,,8.1.2.6,"1 m Saluran U-Ditch 50x50x120 cm dengan lantai kerja fc 7,5 Mpa",672159.092
-1957,,8.1.2.7,"1 m Saluran U-Ditch 50x60x120 cm dengan lantai kerja fc 7,5 Mpa",794365.242
-1958,,8.1.2.8,"1 m Saluran U-Ditch 50x70x120 cm dengan lantai kerja fc 7,5 Mpa",821899.892
-1959,,8.1.2.9,"1 m Saluran U-Ditch 60x60x120 cm dengan lantai kerja fc 7,5 Mpa",882938.122
-1960,,8.1.2.10,"1 m Saluran U-Ditch 60x70x120 cm dengan lantai kerja fc 7,5 Mpa",901643.622
-1961,,8.1.2.11,"1 m Saluran U-Ditch 60x80x120 cm dengan lantai kerja fc 7,5 Mpa",933639.322
-1962,,8.1.2.12,"1 m Saluran U-Ditch 80x60x120 cm dengan lantai kerja fc 7,5 Mpa",977345.38
-1963,,8.1.2.13,"1 m Saluran U-Ditch 80x80x120 cm dengan lantai kerja fc 7,5 Mpa",1096945.432
-1964,,8.1.2.14,"1 m Saluran U-Ditch 80x100x120 cm dengan lantai kerja fc 7,5 Mpa",1142140.032
-1965,,8.1.2.15,"1 m Saluran U-Ditch 100x100x120 cm dengan lantai kerja fc 7,5 Mpa",1201930.884
-1966,,8.1.2.16,"1 m Saluran U-Ditch 100x120x120 cm dengan lantai kerja fc 7,5 Mpa",1230797.634
-1967,,8.1.2.17,"1 m Saluran U-Ditch 120x120x120 cm dengan lantai kerja fc 7,5 Mpa",1347018.992
-1968,,8.1.2.18,"1 m Saluran U-Ditch 120x140x120 cm dengan lantai kerja fc 7,5 Mpa",1378069.242
-1969,,8.1.2.19,"1 m Saluran U-Ditch 140x140x120 cm dengan lantai kerja fc 7,5 Mpa",1515621.096
-1970,,8.1.2.20,"1 m Saluran U-Ditch 150x100x120 cm dengan lantai kerja fc 7,5 Mpa",1462820.216
-1971,,8.1.2.21,"1 m Saluran U-Ditch 150x150x120 cm dengan lantai kerja fc 7,5 Mpa",1573884.818
-1972,,8.1.2.22,"1 m Saluran U-Ditch 150x170x120 cm dengan lantai kerja fc 7,5 Mpa",1594247.468
-1973,,8.1.2.23,"1 m Saluran U-Ditch 160x160x120 cm dengan lantai kerja fc 7,5 Mpa",1638395.352
-1974,,8.1.2.24,"1 m Saluran U-Ditch 160x180x120 cm dengan lantai kerja fc 7,5 Mpa",1675013.956
-1975,,8.1.2.25,"1 m Saluran U-Ditch 180x180x120 cm dengan lantai kerja fc 7,5 Mpa",1723781.95
-1976,,8.1.2.26,"1 m Saluran U-Ditch 180x200x120 cm dengan lantai kerja fc 7,5 Mpa",1760245.85
-1977,,8.1.2.27,"1 m Saluran U-Ditch 200x200x120 cm dengan lantai kerja fc 7,5 Mpa",1912089.96
+1924,,8.1.1.1,1 m' Saluran U-Ditch 30x30x120 cm,445551.7
+1925,,8.1.1.2,1 m Saluran U-Ditch 30x40x120 cm,492960.05
+1926,,8.1.1.3,1 m Saluran U-Ditch 40x40x120 cm,561216.92
+1927,,8.1.1.4,1 m Saluran U-Ditch 50x50x120 cm,599796.12
+1928,,8.1.1.5,1 m Saluran U-Ditch 40x60x120 cm,639480.27
+1929,,8.1.1.6,1 m Saluran U-Ditch 50x50x120 cm,685541.692
+1930,,8.1.1.7,1 m Saluran U-Ditch 50x60x120 cm,807549.842
+1931,,8.1.1.8,1 m Saluran U-Ditch 50x70x120 cm,835282.492
+1932,,8.1.1.9,1 m Saluran U-Ditch 60x60x120 cm,898014.722
+1933,,8.1.1.10,1 m Saluran U-Ditch 60x70x120 cm,916720.222
+1934,,8.1.1.11,1 m Saluran U-Ditch 60x80x120 cm,948715.922
+1935,,8.1.1.12,1 m Saluran U-Ditch 80x60x120 cm,995979.38
+1936,,8.1.1.13,1 m Saluran U-Ditch 80x80x120 cm,1115410.032
+1937,,8.1.1.14,1 m Saluran U-Ditch 80x100x120 cm,1160604.632
+1938,,8.1.1.15,1 m Saluran U-Ditch 100x100x120 cm,1224461.084
+1939,,8.1.1.16,1 m Saluran U-Ditch 100x120x120 cm,1253327.834
+1940,,8.1.1.17,1 m Saluran U-Ditch 120x120x120 cm,1373106.592
+1941,,8.1.1.18,1 m Saluran U-Ditch 120x140x120 cm,1404156.842
+1942,,8.1.1.19,1 m Saluran U-Ditch 140x140x120 cm,1546088.1942
+1943,,8.1.1.20,1 m Saluran U-Ditch 150x100x120 cm,1495345.016
+1944,,8.1.1.21,1 m Saluran U-Ditch 150x150x120 cm,1606240.218
+1945,,8.1.1.22,1 m Saluran U-Ditch 150x170x120 cm,1626602.868
+1946,,8.1.1.23,1 m Saluran U-Ditch 160x160x120 cm,1672105.952
+1947,,8.1.1.24,1 m Saluran U-Ditch 160x180x120 cm,1708385.756
+1948,,8.1.1.25,1 m Saluran U-Ditch 180x180x120 cm,1761896.95
+1949,,8.1.1.26,1 m Saluran U-Ditch 180x200x120 cm,1798360.85
+1950,,8.1.1.27,1 m Saluran U-Ditch 200x200x120 cm,1970532.96
+1951,,8.1.2.1,1 m Saluran U-Ditch 30x30x120 cm,437081.7
+1952,,8.1.2.2,1 m Saluran U-Ditch 30x40x120 cm,484490.05
+1953,,8.1.2.3,1 m Saluran U-Ditch 40x40x120 cm,550205.92
+1954,,8.1.2.4,1 m Saluran U-Ditch 40x50x120 cm,588785.12
+1955,,8.1.2.5,1 m Saluran U-Ditch 40x60x120 cm,628469.27
+1956,,8.1.2.6,1 m Saluran U-Ditch 50x50x120 cm,672159.092
+1957,,8.1.2.7,1 m Saluran U-Ditch 50x60x120 cm,794365.242
+1958,,8.1.2.8,1 m Saluran U-Ditch 50x70x120 cm,821899.892
+1959,,8.1.2.9,1 m Saluran U-Ditch 60x60x120 cm,882938.122
+1960,,8.1.2.10,1 m Saluran U-Ditch 60x70x120 cm,901643.622
+1961,,8.1.2.11,1 m Saluran U-Ditch 60x80x120 cm,933639.322
+1962,,8.1.2.12,1 m Saluran U-Ditch 80x60x120 cm,977345.38
+1963,,8.1.2.13,1 m Saluran U-Ditch 80x80x120 cm,1096945.432
+1964,,8.1.2.14,1 m Saluran U-Ditch 80x100x120 cm,1142140.032
+1965,,8.1.2.15,1 m Saluran U-Ditch 100x100x120 cm,1201930.884
+1966,,8.1.2.16,1 m Saluran U-Ditch 100x120x120 cm,1230797.634
+1967,,8.1.2.17,1 m Saluran U-Ditch 120x120x120 cm,1347018.992
+1968,,8.1.2.18,1 m Saluran U-Ditch 120x140x120 cm,1378069.242
+1969,,8.1.2.19,1 m Saluran U-Ditch 140x140x120 cm,1515621.096
+1970,,8.1.2.20,1 m Saluran U-Ditch 150x100x120 cm,1462820.216
+1971,,8.1.2.21,1 m Saluran U-Ditch 150x150x120 cm,1573884.818
+1972,,8.1.2.22,1 m Saluran U-Ditch 150x170x120 cm,1594247.468
+1973,,8.1.2.23,1 m Saluran U-Ditch 160x160x120 cm,1638395.352
+1974,,8.1.2.24,1 m Saluran U-Ditch 160x180x120 cm,1675013.956
+1975,,8.1.2.25,1 m Saluran U-Ditch 180x180x120 cm,1723781.95
+1976,,8.1.2.26,1 m Saluran U-Ditch 180x200x120 cm,1760245.85
+1977,,8.1.2.27,1 m Saluran U-Ditch 200x200x120 cm,1912089.96
 1978,,8.1.3.1,1 m' Tutup U-Ditch 39x60x6 (Tipe LD) untuk 30x30x120 cm,138353.05
 1979,,8.1.3.2,1 m' Tutup U-Ditch 51x60x7 (Tipe LD) untuk 40x40x120 cm,199283.15
 1980,,8.1.3.3,"1 m' Tutup U-Ditch 62x60x7,5 (Tipe LD) untuk 50x50x120 cm",246712.4
@@ -1999,22 +1999,22 @@ id,reference_group_id,code,name,unit_price
 1998,,8.2.10,1 m' Buis Beton D 60-100 cm,379631.289928
 1999,,8.2.11,1 m' Buis Beton D 80-100 cm,696858.651544
 2000,,8.2.12,1 m' Buis Beton D 100-100 cm,750885.005068
-2001,,8.3.1.1,1 m' Box Culvert 40x40x100 dengan lantai kerja fc 10 Mpa,1216485.204
-2002,,8.3.1.2,1 m' Box Culvert 50x50x100 dengan lantai kerja fc 10 Mpa,1773008.38
-2003,,8.3.1.3,1 m' Box Culvert 60x60x100 dengan lantai kerja fc 10 Mpa,2248234.802
-2004,,8.3.1.4,1 m' Box Culvert 80x80x100 dengan lantai kerja fc 10 Mpa,3615744.55
-2005,,8.3.1.5,1 m' Box Culvert 100x100x100 dengan lantai kerja fc 10 Mpa,4452025.71
-2006,,8.3.1,Saluran Box Culvert dengan lantai kerja 10 Mpa,5209175.048
-2007,,8.3.1.7,1 m' Box Culvert 200x200x100 dengan lantai kerja fc 10 Mpa,6010388.89
-2008,,8.3.1,Saluran Box Culvert dengan lantai kerja 10 Mpa,7019480.6
-2009,,8.3.2.1,"1 m' Box Culvert 40x40x100 dengan lantai kerja fc 7,5 Mpa",1435394.004
-2010,,8.3.2.2,"1 m' Box Culvert 50x50x100 dengan lantai kerja fc 7,5 Mpa",1758609.38
-2011,,8.3.2.3,"1 m' Box Culvert 60x60x100 dengan lantai kerja fc 7,5 Mpa",1807964.202
-2012,,8.3.2.4,"1 m' Box Culvert 80x80x100 dengan lantai kerja fc 7,5 Mpa",3594569.55
-2013,,8.3.2.5,"1 m' Box Culvert 100x100x100 dengan lantai kerja fc 7,5 Mpa",4427462.71
-2014,,8.3.2.6,"1 m' Box Culvert 150x150x100 dengan lantai kerja fc 7,5 Mpa",5175125.648
-2015,,8.3.2.7,"1 m' Box Culvert 200x200x100 dengan lantai kerja fc 7,5 Mpa",5967191.89
-2016,,8.3.2.8,"1 m' Box Culvert 300x300x100 dengan lantai kerja fc 7,5 Mpa",6955955.6
+2001,,8.3.1.1,1 m' Box Culvert 40x40x100,1216485.204
+2002,,8.3.1.2,1 m' Box Culvert 50x50x100,1773008.38
+2003,,8.3.1.3,1 m' Box Culvert 60x60x100,2248234.802
+2004,,8.3.1.4,1 m' Box Culvert 80x80x100,3615744.55
+2005,,8.3.1.5,1 m' Box Culvert 100x100x100,4452025.71
+2006,,8.3.1,1 m' Box Culvert 150x150x100,5209175.048
+2007,,8.3.1.7,1 m' Box Culvert 200x200x100,6010388.89
+2008,,8.3.1,1 m' Box Culvert 300x300x100,7019480.6
+2009,,8.3.2.1,1 m' Box Culvert 40x40x100,1435394.004
+2010,,8.3.2.2,1 m' Box Culvert 50x50x100,1758609.38
+2011,,8.3.2.3,1 m' Box Culvert 60x60x100,1807964.202
+2012,,8.3.2.4,1 m' Box Culvert 80x80x100,3594569.55
+2013,,8.3.2.5,1 m' Box Culvert 100x100x100,4427462.71
+2014,,8.3.2.6,1 m' Box Culvert 150x150x100,5175125.648
+2015,,8.3.2.7,1 m' Box Culvert 200x200x100,5967191.89
+2016,,8.3.2.8,1 m' Box Culvert 300x300x100,6955955.6
 2017,,9.1.1.1,"Pemasangan 1 m Pipa PVC, DN. 2-1/2"" (65 mm)",33709.5
 2018,,9.1.1.2,"Pemasangan 1 m Pipa PVC, DN. 3"" (80 mm)",51716.5
 2019,,9.1.1.3,"Pemasangan 1 m Pipa PVC, DN. 4"" (100 mm)",66423.5
@@ -2267,8 +2267,8 @@ id,reference_group_id,code,name,unit_price
 2266,,9.7.3.22,"Pemasangan 1 Buah Tee Ø 5"" (125 mm)",78688.5
 2267,,9.7.3.23,"Pemasangan 1 Buah Tee Ø 12"" (300 mm)",350911.0
 2268,,9.7.3.24,"Pemasangan 1 Buah Tee Ø 16"" (400 mm)",419496.0
-2269,,10.1.1,Pembuatan 1 buah cetakan Panel P1 RISHA (Asumsi 400 Kali Pakai ),1566614.159
-2270,,10.1.2,Pembuatan 1 buah cetakan Panel P2 RISHA (Asumsi 400 Kali Pakai ),1380520.339
+2269,,10.1.1,Pembuatan 1 buah cetakan Panel P1 RISHA (Asumsi 400 Kali Pakai ),1566728.62775
+2270,,10.1.2,Pembuatan 1 buah cetakan Panel P2 RISHA (Asumsi 400 Kali Pakai ),1380634.80775
 2271,,10.1.3,Pembuatan 1 buah cetakan Panel P3 RISHA (Asumsi 400 Kali Pakai ),758435.25175
 2272,,10.1.4,Pasangan dan Membuka Cetakan 1 buah Komponen P1 RISHA,14068.56
 2273,,10.1.5,Pasangan dan Membuka Cetakan 1 buah Komponen P2 RISHA,13625.04

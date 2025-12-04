@@ -47,23 +47,14 @@
     if (!currentJobId) return;
 
     try {
-      // Fetch both notifications and price deviations in parallel
-      const [notificationsData, deviationsData] = await Promise.all([
-        fetchNotifications(currentJobId),
-        fetchPriceDeviations(currentJobId)
-      ]);
-
-      // Display results
-      displayNotifications(notificationsData);
-      displayPriceDeviations(deviationsData);
+      // Only show cost weight recommendation, no notifications
       updateCostWeightRecommendation();
 
-      // Show "no warnings" if everything is clear
-      const hasWarnings = 
-        (notificationsData && notificationsData.items_not_in_ahsp > 0) ||
-        (deviationsData && deviationsData.deviations_found > 0);
-      
-      document.getElementById('noWarningsSection').style.display = hasWarnings ? 'none' : 'block';
+      // Check if cost weight recommendation is showing
+      const costWeightSection = document.getElementById('costWeightRecommendation');
+      const hasRecommendation = costWeightSection && costWeightSection.style.display !== 'none';
+
+      document.getElementById('noWarningsSection').style.display = hasRecommendation ? 'none' : 'block';
 
     } catch (error) {
       console.error('Error fetching recommendations:', error);
@@ -127,9 +118,6 @@
     });
 
     section.style.display = 'block';
-    
-    // Add inline warnings to table rows
-    addInlineNotificationWarnings(data.notifications);
   }
 
   /**
@@ -189,6 +177,11 @@
     const section = document.getElementById('costWeightRecommendation');
     const textElement = document.getElementById('costWeightRecommendationText');
     
+    if (!section || !textElement) {
+      console.warn('Cost weight recommendation elements not found');
+      return;
+    }
+
     // Get data from cost weight chart if available
     const chartBox = document.getElementById('costWeightChartBox');
     if (!chartBox || chartBox.style.display === 'none') {
@@ -196,32 +189,51 @@
       return;
     }
 
-    // Get the highest cost item from the chart
+    // Get the highest cost item from the chart legend
     const legendContainer = document.getElementById('costWeightLegend');
-    if (legendContainer && legendContainer.children.length > 1) {
-      const firstItem = legendContainer.children[1]; // Skip the h6 header
-      if (firstItem) {
-        const itemName = firstItem.querySelector('div[style*="font-weight: 600"]');
-        const itemInfo = firstItem.querySelector('div[style*="font-size: 0.75rem"]');
-        
-        if (itemName && itemInfo) {
-          const name = itemName.textContent;
-          const infoText = itemInfo.textContent;
-          const percentMatch = infoText.match(/\(([\d.]+)%\)/);
-          
-          if (percentMatch) {
-            const percentage = percentMatch[1];
-            textElement.innerHTML = `
-              <strong>${escapeHtml(name)}</strong> menyumbang <strong>${percentage}%</strong> dari total biaya. 
-              Pertimbangkan untuk mengevaluasi harga material untuk pekerjaan ini guna memastikan efisiensi biaya.
-            `;
-            section.style.display = 'block';
-            return;
-          }
+    if (!legendContainer || legendContainer.children.length < 2) {
+      section.style.display = 'none';
+      return;
+    }
+
+    // Get first item after the header (h6)
+    const firstItem = legendContainer.children[1];
+    if (!firstItem) {
+      console.log('No first item found in legend');
+      section.style.display = 'none';
+      return;
+    }
+
+    // Extract item name and percentage from legend item structure
+    // Structure: div > (color box div) + (content div > name div + info div)
+    const contentDiv = firstItem.querySelector('div:nth-child(2)');
+    console.log('Content div:', contentDiv);
+
+    if (contentDiv) {
+      const nameDiv = contentDiv.querySelector('div:first-child');
+      const infoDiv = contentDiv.querySelector('div:last-child');
+      console.log('Name div:', nameDiv, 'Info div:', infoDiv);
+
+      if (nameDiv && infoDiv) {
+        const name = nameDiv.textContent.trim();
+        const infoText = infoDiv.textContent.trim();
+        console.log('Name:', name, 'Info:', infoText);
+        const percentMatch = infoText.match(/\(([\d.]+)%\)/);
+
+        if (percentMatch && name) {
+          const percentage = percentMatch[1];
+          textElement.innerHTML = `
+            <strong>${escapeHtml(name)}</strong> menyumbang <strong>${percentage}%</strong> dari total biaya.
+            Pertimbangkan untuk mengevaluasi harga material untuk pekerjaan ini guna memastikan efisiensi biaya.
+          `;
+          console.log('Recommendation set successfully');
+          section.style.display = 'block';
+          return;
         }
       }
     }
 
+    console.log('Failed to extract recommendation data');
     section.style.display = 'none';
   }
 

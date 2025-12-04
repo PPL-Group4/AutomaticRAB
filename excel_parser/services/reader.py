@@ -9,6 +9,7 @@ import string
 from django.core.files.uploadedfile import UploadedFile
 from excel_parser.models import Project, RabEntry
 from .job_matcher import match_description
+from excel_parser.services.cache import cache_parse_decimal
 
 import logging
 logger = logging.getLogger("excel_parser")
@@ -227,8 +228,8 @@ def _parse_rows(cache: List[List], colmap: Dict[str, int]) -> List[ParsedRow]:
             volume=volume_result,
             unit=unit_val,
             analysis_code=str(cell("analysis_code") or "").strip(),
-            price=parse_decimal(cell("price")),
-            total_price=parse_decimal(cell("total_price")),
+            price = cache_parse_decimal(cell("price")),
+            total_price=cache_parse_decimal(cell("total_price")),
             is_section=is_section,
             index_kind=index_kind,
             section_letter=current_letter,
@@ -316,9 +317,13 @@ def preview_file(file: UploadedFile):
                     "match": {"code": code, "confidence": 1.0}
                 }
             else:
-                match_info = match_description(row.description)
+                from excel_parser.services.cache import cache_match_description
+                match_info = cache_match_description(row.description)
+
         else:
-            match_info = match_description(row.description)
+            from excel_parser.services.cache import cache_match_description
+            match_info = cache_match_description(row.description)
+
             if not isinstance(match_info, dict):  # defensive guard for unexpected returns
                 match_info = {"status": "error", "match": None, "error": "Unexpected match result"}
 

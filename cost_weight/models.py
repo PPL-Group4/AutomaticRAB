@@ -33,6 +33,12 @@ class TestItem(models.Model):
     quantity = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("1"))
     unit_price = models.DecimalField(max_digits=18, decimal_places=2, default=Decimal("0"))
 
+    # AHSP matching fields - cached from job matching service
+    ahsp_code = models.CharField(max_length=50, null=True, blank=True, help_text="Matched AHSP code")
+    ahsp_unit_price = models.DecimalField(max_digits=18, decimal_places=2, null=True, blank=True, help_text="Reference price from AHSP")
+    ahsp_match_confidence = models.FloatField(null=True, blank=True, help_text="Match confidence score (0.0-1.0)")
+    in_ahsp = models.BooleanField(default=False, help_text="Whether item was found in AHSP database")
+
     class Meta:
         db_table = "cw_items"
 

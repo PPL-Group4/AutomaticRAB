@@ -1,9 +1,6 @@
 from django.http import JsonResponse, Http404
 from django.views.decorators.http import require_GET
 from cost_weight.models import TestJob
-from efficiency_recommendations.services.ahsp_availability_checker import (
-    check_items_in_ahsp
-)
 from efficiency_recommendations.services.notification_generator import (
     generate_notifications
 )
@@ -47,25 +44,26 @@ def get_job_notifications(request, job_id):
     items_queryset = job.items.all()
 
     # Convert queryset to list of dicts for service layer
-    items = [
+    # Use ahsp_code to determine if item is in AHSP (NO expensive matching needed!)
+    items_with_status = [
         {
             'name': item.name,
             'cost': item.cost,
             'weight_pct': item.weight_pct,
             'quantity': item.quantity,
-            'unit_price': item.unit_price
+            'unit_price': item.unit_price,
+            'in_ahsp': bool(item.ahsp_code and item.ahsp_code.strip())  # If code exists, it's in AHSP
         }
         for item in items_queryset
     ]
 
-    # Check AHSP availability (adds 'in_ahsp' field to each item)
-    items_with_status = check_items_in_ahsp(items)
+    print(f"\n[FAST CHECK] Checked {len(items_with_status)} items using ahsp_code field (no matching calls!)")
 
     # Generate notifications for items not in AHSP
     notifications = generate_notifications(items_with_status)
 
     # Aggregate/indicator fields
-    total_items = len(items)
+    total_items = len(items_with_status)
     warning_count = len(notifications)
     indicator = build_indicator(total_items, warning_count)
 
@@ -88,43 +86,56 @@ def get_job_notifications(request, job_id):
 
     return JsonResponse(response_data)
 
-def _build_warning_indicator(total_items: int, warning_count: int):
-    if total_items <= 0:
-        ratio = 0.0
-    else:
-        ratio = float(Decimal(warning_count) / Decimal(total_items))
 
-    if warning_count == 0:
-        return {
-            "has_warnings": False,
-            "warning_count": 0,
-            "warning_ratio": 0.0,
-            "indicator": {
-                "level": "NONE",
-                "badge_color": "#D1D5DB",   # gray-300
-                "icon": "check-circle",
-                "label": "No warnings"
+def _get_item_with_reference_price(item):
+    """Get item data with AHSP reference price if available."""
+    # Skip items with no unit price
+    if not item.unit_price or item.unit_price <= 0:
+        return None
+
+    try:
+        # Try to find AHSP reference price using MatchingService
+        match_result = MatchingService.perform_best_match(item.name)
+
+        # Extract reference price from match result
+        reference_price = None
+
+        if match_result:
+            # Handle different response formats
+            if isinstance(match_result, dict):
+                reference_price = match_result.get('unit_price')
+            elif isinstance(match_result, list) and len(match_result) > 0:
+                # Get first match
+                first_match = match_result[0]
+                if isinstance(first_match, dict):
+                    reference_price = first_match.get('unit_price')
+
+        # Only add if we found a reference price
+        if reference_price and Decimal(str(reference_price)) > 0:
+            return {
+                'name': item.name,
+                'actual_price': item.unit_price,
+                'reference_price': Decimal(str(reference_price))
             }
-        }
 
-    if ratio > 0.5:
-        level = "CRITICAL"; color = "#DC2626"; icon = "x-octagon"
-    elif ratio > 0.2:
-        level = "WARN";     color = "#F59E0B"; icon = "alert-triangle"
-    else:
-        level = "INFO";     color = "#2563EB"; icon = "info"
+    except Exception:
+        # Skip items that cause errors
+        pass
 
-    return {
-        "has_warnings": True,
-        "warning_count": warning_count,
-        "warning_ratio": ratio,
-        "indicator": {
-            "level": level,
-            "badge_color": color,
-            "icon": icon,
-            "label": f"{warning_count} warnings"
-        }
-    }
+    return None
+
+
+def _serialize_deviation(deviation):
+    """Convert Decimal values to float for JSON serialization."""
+    serialized = deviation.copy()
+    decimal_fields = ['deviation_percentage', 'actual_price', 'reference_price']
+
+    for field in decimal_fields:
+        if field in serialized:
+            serialized[field] = float(serialized[field])
+
+    return serialized
+
 
 @require_GET
 def get_price_deviations(request, job_id):
@@ -143,40 +154,10 @@ def get_price_deviations(request, job_id):
 
     # Get items with AHSP reference prices
     items_with_prices = []
-
     for item in job.items.all():
-        # Skip items with no unit price
-        if not item.unit_price or item.unit_price <= 0:
-            continue
-
-        try:
-            # Try to find AHSP reference price using MatchingService
-            match_result = MatchingService.perform_best_match(item.name)
-
-            # Extract reference price from match result
-            reference_price = None
-
-            if match_result:
-                # Handle different response formats
-                if isinstance(match_result, dict):
-                    reference_price = match_result.get('unit_price')
-                elif isinstance(match_result, list) and len(match_result) > 0:
-                    # Get first match
-                    first_match = match_result[0]
-                    if isinstance(first_match, dict):
-                        reference_price = first_match.get('unit_price')
-
-            # Only add if we found a reference price
-            if reference_price and Decimal(str(reference_price)) > 0:
-                items_with_prices.append({
-                    'name': item.name,
-                    'actual_price': item.unit_price,
-                    'reference_price': Decimal(str(reference_price))
-                })
-
-        except Exception as e:
-            # Skip items that cause errors
-            continue
+        item_data = _get_item_with_reference_price(item)
+        if item_data:
+            items_with_prices.append(item_data)
 
     # Detect deviations (threshold: 10%)
     deviations = detect_price_deviations(
@@ -185,23 +166,7 @@ def get_price_deviations(request, job_id):
     )
 
     # Serialize Decimal values for JSON response
-    serialized_deviations = []
-    for dev in deviations:
-        serialized_dev = dev.copy()
-        # Convert Decimal to float for JSON serialization
-        if 'deviation_percentage' in serialized_dev:
-            serialized_dev['deviation_percentage'] = float(
-                serialized_dev['deviation_percentage']
-            )
-        if 'actual_price' in serialized_dev:
-            serialized_dev['actual_price'] = float(
-                serialized_dev['actual_price']
-            )
-        if 'reference_price' in serialized_dev:
-            serialized_dev['reference_price'] = float(
-                serialized_dev['reference_price']
-            )
-        serialized_deviations.append(serialized_dev)
+    serialized_deviations = [_serialize_deviation(dev) for dev in deviations]
 
     return JsonResponse({
         'job_id': job_id,

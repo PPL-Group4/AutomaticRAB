@@ -3,7 +3,59 @@
 
 {% block content %}
 <style>
-    .warning-chip {
+  .rab-breakdown-card {
+    background: white;
+    border: 1px solid #ddd;
+    padding: 20px 25px;
+    border-radius: 8px;
+    margin-bottom: 30px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  }
+
+  /* Group header A / B / C */
+  .rab-section-header {
+    background: #f0f6fb;
+    font-weight: bold;
+    padding: 8px 14px;
+    border-left: 4px solid #00365a;
+    margin-top: 18px;
+    margin-bottom: 10px;
+  }
+
+  /* Table */
+  .rab-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 15px;
+  }
+
+  .rab-table th {
+    background: #00365a !important;
+    color: white;
+    text-align: center;
+    padding: 8px;
+    border: 1px solid #ccc;
+    font-weight: 600;
+  }
+
+  .rab-table td:not(:nth-child(4)) {
+    color: #000 !important;
+  }
+
+  .rab-table td {
+    border: 1px solid #ddd;
+    padding: 6px 10px;
+    vertical-align: middle;
+  }
+
+  .rab-table tbody tr:nth-child(even) {
+    background: #fafafa;
+  }
+
+  .text-end { text-align: right !important; }
+  .text-center { text-align: center !important; }
+
+  .warning-chip {
     display: inline-flex;
     align-items: center;
     gap: .4rem;
@@ -53,9 +105,67 @@
     min-width: 100px;
     text-align: justify;     /* keeps prices neatly aligned */
   }
+
+  /* Target Bid Table Styling */
+  .target-bid-table thead {
+    background-color: #00365a !important; /* Navy matching Terapkan Target Bid button */
+  }
+
+  .target-bid-table thead tr {
+    background-color: #00365a !important;
+  }
+
+  .target-bid-table thead th {
+    color: #ffffff !important; /* White text on navy */
+    font-weight: 600;
+    background-color: #00365a !important;
+  }
+
+  /* Main Tables: Price Deviations & Grand Total Styling */
+  table thead.table-light {
+    background-color: #d0e7ff !important;
+  }
+
+  /* Font color for table cells (except brand) */
+  #priceDeviationTable tbody td,
+  #rabTables tbody td {
+    color: #6c757d; /* text-muted equivalent */
+  }
+
+  /* Brand column stays in primary blue */
+  #priceDeviationTable tbody td span.text-primary,
+  #rabTables tbody td span.text-primary {
+    color: #0d6efd !important;
+  }
+
+  .target-bid-table tbody td {
+    color: #1e293b;
+  }
+
+  .target-bid-table tbody td .text-primary {
+    color: #0d6efd !important;
+  }
+
+  /* Target Bid Apply Button */
+  #applyTargetBidButton {
+    background-color: #00365a !important;
+    border-color: #00365a !important;
+  }
+
+  #applyTargetBidButton:hover {
+    background-color: #002744 !important;
+    border-color: #002744 !important;
+  }
+
+  #view-breakdown-btn:hover {
+    background: #f0f6fb !important;   
+    color: #00365a !important;       
+    border-color: #00365a !important;
+  }
+
 </style>
 <div class="section-box position-relative">
-  <h5 class="section-title">RAB Preview</h5>
+  <h5 class="section-title">RAB Calculator Preview</h5>
 
   <div class="row g-3 mb-3">
     <div class="col-lg-6">
@@ -78,6 +188,15 @@
         <small class="text-muted">Format didukung: .pdf</small>
       </form>
     </div>
+  </div>
+
+  <div class="btn-group mb-3" role="group" aria-label="View toggle">
+    <button type="button" class="btn btn-primary active" id="rab-preview-tab" style="background:#00365a; border:1px solid #00365a;">
+      RAB Preview
+    </button>
+    <button type="button" class="btn btn-outline-primary" id="view-breakdown-btn" style="border-color:#00365a; color:#00365a;">
+      Uraian Harga
+    </button>
   </div>
 
   <div id="errorContainer"></div>
@@ -144,9 +263,38 @@
     </div>
   </div>
 
-  {% include "efficiency_recommendations/recommendations_panel.html" %}
+  <!-- Efficiency Recommendations -->
+  <div class="card mt-4 p-3 shadow-sm" id="efficiencyRecommendationsPanel" style="display:none;">
+    <h5 class="mb-3">💡 Rekomendasi Efisiensi</h5>
 
-  <a href="#" class="btn btn-outline-primary mt-3">+ Tambah Kategori Pekerjaan / Pilih Referensi RAB</a>
+    <!-- Cost Weight Recommendation -->
+    <div id="costWeightRecommendation" class="mb-4" style="display:none;">
+      <div class="alert alert-info mb-0" role="alert">
+        <div class="d-flex align-items-start gap-2">
+          <i class="bi bi-info-circle-fill fs-5"></i>
+          <div class="flex-grow-1">
+            <p class="mb-0" id="costWeightRecommendationText"></p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Items Not in AHSP Database - HIDDEN -->
+    <div id="notInDatabaseSection" class="mb-4" style="display:none !important;"></div>
+
+    <!-- No Warnings State -->
+    <div id="noWarningsSection" style="display:none;">
+      <div class="alert alert-success mb-0" role="alert">
+        <div class="d-flex align-items-center gap-2">
+          <i class="bi bi-check-circle-fill fs-5"></i>
+          <div>
+            <h6 class="alert-heading mb-1">✓ Semua Oke!</h6>
+            <p class="mb-0">Tidak ada peringatan atau rekomendasi saat ini.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 {% endblock %}
 
@@ -166,6 +314,7 @@
   const PDF_UPLOAD_ENDPOINT = "{% url 'pdf_parser:rab_converted_pdf' %}";
   const OPTIMIZE_AHS_ENDPOINT_TEMPLATE = "{% url 'optimize_ahs_materials_view' '__AHS_CODE__' %}";
   const OPTIMIZE_AHS_PLACEHOLDER = "__AHS_CODE__";
+  const BREAKDOWN_OVERRIDES_KEY = "matched_breakdown_overrides";
   const suggestionCache = new Map();
   const dropdownRequestState = new WeakMap();
   const MANUAL_SUGGESTION_LIMIT = 12;
@@ -173,6 +322,13 @@
   const SAFE_ROW_KEY_PATTERN = /^[A-Za-z0-9._:-]{1,128}$/;
   const SAFE_NUMERIC_PATTERN = /^-?\d{0,12}(?:[.,]\d{0,4})?$/;
   const UNSAFE_CODE_PATTERN = /[<>]/;
+  let cachedBreakdownOverrides = null;
+  const RAB_PREVIEW_STATE_KEY = "rab_preview_state_v1";
+  const RAB_PREVIEW_STATE_VERSION = 1;
+  let lastRenderedRows = null;
+  let lastRenderOptions = {};
+  let persistPreviewStateTimeout = null;
+  let isRestoringPreviewState = false;
 
   function escapeHtml(input) {
     if (input === null || input === undefined) {
@@ -219,6 +375,285 @@
     }
     const fixed = Number(value).toFixed(6);
     return fixed.replace(/\.0+$/, "").replace(/(\.\d*?[1-9])0+$/, "$1").replace(/\.$/, "");
+  }
+
+  function sanitizePreviewOptions(options = {}) {
+    if (!options || typeof options !== "object") {
+      return {};
+    }
+    const sanitized = {};
+    if (typeof options.sourceType === "string") {
+      sanitized.sourceType = options.sourceType;
+    }
+    const jobIdValue = options.jobId ?? options.job_id;
+    if (jobIdValue !== undefined && jobIdValue !== null && jobIdValue !== "") {
+      sanitized.jobId = jobIdValue;
+    }
+    if (typeof options.sourceLabel === "string") {
+      sanitized.sourceLabel = options.sourceLabel;
+    }
+    return sanitized;
+  }
+
+  function previewStateReplacer(key, value) {
+    if (value instanceof Map || value instanceof Set) {
+      return undefined;
+    }
+    if (typeof value === "function") {
+      return undefined;
+    }
+    return value;
+  }
+
+  function collectRowAdjustments() {
+    const adjustments = {};
+    const rows = document.querySelectorAll("#rabTables tr[data-row-key]");
+    rows.forEach(row => {
+      const key = row.dataset.rowKey;
+      if (!key) {
+        return;
+      }
+      const priceInput = row.querySelector(".price-input");
+      const volumeInput = row.querySelector(".volume-input");
+      const totalCell = row.querySelector(".total-cell");
+      const analysisCell = row.querySelector(".analysis-code-cell");
+
+      const payload = {};
+      if (volumeInput && volumeInput.value !== "") {
+        payload.volume = volumeInput.value;
+      }
+      if (priceInput && priceInput.value !== "") {
+        payload.unit_price = priceInput.value;
+      }
+      if (priceInput) {
+        if (priceInput.dataset.origin) {
+          payload.price_origin = priceInput.dataset.origin;
+        }
+        if (priceInput.dataset.referencePrice !== undefined) {
+          payload.reference_price = priceInput.dataset.referencePrice;
+        }
+        if (priceInput.dataset.manualConfirmed !== undefined) {
+          payload.manual_confirmed = priceInput.dataset.manualConfirmed;
+        }
+      }
+      if (totalCell) {
+        const numericTotal = parseCurrencyNumber(totalCell.textContent);
+        if (Number.isFinite(numericTotal)) {
+          payload.total = numericTotal;
+        }
+      }
+      if (analysisCell) {
+        const text = analysisCell.textContent ? analysisCell.textContent.trim() : "";
+        if (text) {
+          payload.analysis_code = text;
+        }
+      }
+
+      if (Object.keys(payload).length) {
+        adjustments[key] = payload;
+      }
+    });
+    return adjustments;
+  }
+
+  function buildPreviewStatePayload() {
+    if (!Array.isArray(lastRenderedRows) || !lastRenderedRows.length) {
+      return null;
+    }
+    return {
+      version: RAB_PREVIEW_STATE_VERSION,
+      rows: lastRenderedRows,
+      options: sanitizePreviewOptions(lastRenderOptions),
+      adjustments: collectRowAdjustments(),
+      savedAt: Date.now(),
+    };
+  }
+
+  function persistRabPreviewStateImmediate() {
+    if (typeof localStorage === "undefined") {
+      return;
+    }
+    const payload = buildPreviewStatePayload();
+    if (!payload) {
+      clearPersistedPreviewState();
+      return;
+    }
+    try {
+      const serialized = JSON.stringify(payload, previewStateReplacer);
+      localStorage.setItem(RAB_PREVIEW_STATE_KEY, serialized);
+    } catch (error) {
+      console.warn("Failed to persist RAB preview state", error);
+    }
+  }
+
+  function schedulePersistPreviewState(delay = 350) {
+    if (isRestoringPreviewState) {
+      return;
+    }
+    if (persistPreviewStateTimeout) {
+      clearTimeout(persistPreviewStateTimeout);
+    }
+    persistPreviewStateTimeout = setTimeout(() => {
+      persistPreviewStateImmediate();
+      persistPreviewStateTimeout = null;
+    }, delay);
+  }
+
+  function clearPersistedPreviewState() {
+    if (typeof localStorage === "undefined") {
+      return;
+    }
+    try {
+      localStorage.removeItem(RAB_PREVIEW_STATE_KEY);
+    } catch (error) {
+      console.warn("Failed to clear RAB preview state", error);
+    }
+  }
+
+  function resetPreviewStateForNewParse() {
+    if (persistPreviewStateTimeout) {
+      clearTimeout(persistPreviewStateTimeout);
+      persistPreviewStateTimeout = null;
+    }
+    lastRenderedRows = null;
+    lastRenderOptions = {};
+    clearPersistedPreviewState();
+    // Clear breakdown overrides and matched codes when parsing a new file
+    if (typeof localStorage !== "undefined") {
+      try {
+        localStorage.removeItem(BREAKDOWN_OVERRIDES_KEY);
+        localStorage.removeItem("matched_ahs_codes");
+        cachedBreakdownOverrides = null;
+      } catch (error) {
+        console.warn("Failed to clear breakdown overrides", error);
+      }
+    }
+  }
+
+  function applyStoredAdjustments(adjustments) {
+    if (!adjustments || typeof adjustments !== "object") {
+      return;
+    }
+    Object.entries(adjustments).forEach(([rowKey, data]) => {
+      if (!rowKey || !data) {
+        return;
+      }
+      const row = document.querySelector(`#rabTables tr[data-row-key="${rowKey}"]`);
+      if (!row) {
+        return;
+      }
+      const priceInput = row.querySelector(".price-input");
+      const volumeInput = row.querySelector(".volume-input");
+      const totalCell = row.querySelector(".total-cell");
+      const analysisCell = row.querySelector(".analysis-code-cell");
+
+      if (volumeInput && Object.prototype.hasOwnProperty.call(data, "volume")) {
+        volumeInput.value = data.volume;
+      }
+
+      if (priceInput && Object.prototype.hasOwnProperty.call(data, "unit_price")) {
+        priceInput.value = data.unit_price;
+      }
+
+      if (priceInput && Object.prototype.hasOwnProperty.call(data, "price_origin")) {
+        updatePriceOriginUI(priceInput, data.price_origin, { skipTooltipRefresh: true });
+      }
+
+      if (priceInput && Object.prototype.hasOwnProperty.call(data, "reference_price")) {
+        priceInput.dataset.referencePrice = data.reference_price;
+      }
+
+      if (priceInput && Object.prototype.hasOwnProperty.call(data, "manual_confirmed")) {
+        priceInput.dataset.manualConfirmed = data.manual_confirmed;
+      }
+
+      if (priceInput) {
+        priceInput.dataset.previousValue = priceInput.value;
+      }
+
+      if (analysisCell && Object.prototype.hasOwnProperty.call(data, "analysis_code")) {
+        analysisCell.textContent = data.analysis_code;
+      }
+
+      if (totalCell) {
+        let totalValue = null;
+        if (Object.prototype.hasOwnProperty.call(data, "total")) {
+          totalValue = Number(data.total);
+        }
+        if (!Number.isFinite(totalValue)) {
+          const numericVolume = volumeInput ? parseCurrencyNumber(volumeInput.value) : 0;
+          const numericPrice = priceInput ? parseCurrencyNumber(priceInput.value) : 0;
+          totalValue = numericVolume * numericPrice;
+        }
+        if (Number.isFinite(totalValue)) {
+          totalCell.textContent = "Rp. " + totalValue.toLocaleString("id-ID", {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          });
+        }
+      }
+
+      updatePriceWarningForRow(row);
+    });
+    updateGrandTotalFromRows();
+  }
+
+  function restoreRabPreviewState() {
+    if (typeof localStorage === "undefined") {
+      return false;
+    }
+    const container = document.getElementById("rabTables");
+    if (container && container.children.length) {
+      return false;
+    }
+    let payload = null;
+    try {
+      const raw = localStorage.getItem(RAB_PREVIEW_STATE_KEY);
+      if (!raw) {
+        return false;
+      }
+      payload = JSON.parse(raw);
+    } catch (error) {
+      console.warn("Failed to parse persisted RAB preview state", error);
+      clearPersistedPreviewState();
+      return false;
+    }
+
+    if (!payload || payload.version !== RAB_PREVIEW_STATE_VERSION || !Array.isArray(payload.rows) || !payload.rows.length) {
+      clearPersistedPreviewState();
+      return false;
+    }
+
+    const options = sanitizePreviewOptions(payload.options || {});
+
+    try {
+      isRestoringPreviewState = true;
+      renderTables(payload.rows, options);
+    } catch (error) {
+      console.warn("Failed to restore RAB preview state", error);
+      isRestoringPreviewState = false;
+      clearPersistedPreviewState();
+      return false;
+    }
+
+    isRestoringPreviewState = false;
+
+    if (payload.adjustments && typeof payload.adjustments === "object") {
+      applyStoredAdjustments(payload.adjustments);
+    }
+
+    schedulePersistPreviewState();
+    return true;
+  }
+
+  if (typeof window !== "undefined") {
+    window.addEventListener("beforeunload", () => {
+      if (persistPreviewStateTimeout) {
+        clearTimeout(persistPreviewStateTimeout);
+        persistPreviewStateTimeout = null;
+      }
+      persistRabPreviewStateImmediate();
+    });
   }
 
 
@@ -444,13 +879,34 @@
     const direction = afterTotal >= targetNominal ? "lebih tinggi" : "lebih rendah";
     const metCount = appliedCodes.filter(item => item.metTarget).length;
 
-    let failureNote = "";
-    if (failedCodes.length) {
-      const reported = failedCodes.slice(0, 3).map(entry => entry.code).join(", ");
-      const suffix = failedCodes.length > 3 ? ", ..." : "";
-      failureNote = `<div class="small text-muted">Gagal memproses: ${reported}${suffix}.</div>`;
-    }
+    // Build summary header
+    const successCount = appliedCodes.length;
+    const failedCount = failedCodes.length;
+    const totalProcessed = successCount + failedCount;
+    const summaryHeader = `<strong>${totalProcessed} kode AHSP diproses</strong>, ${successCount} berhasil${failedCount > 0 ? `, <span class="text-danger">${failedCount} gagal</span>` : ''}`;
 
+    // Build failed codes list
+    let failedCodesHtml = "";
+
+    // Build overview table
+    const overviewTable = `
+      <table class="table table-sm table-bordered mb-3 target-bid-table">
+        <thead>
+          <tr style="background-color: #00365a !important;">
+            <th style="color: white;">Total Awal</th>
+            <th style="color: white;">Target</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>${formatCurrencyId(beforeTotal)}</td>
+            <td>${targetMode === "percentage" ? `${targetNumeric}% (${formatCurrencyId(targetNominal)})` : formatCurrencyId(targetNominal)}</td>
+          </tr>
+        </tbody>
+      </table>
+    `;
+
+    // Build material adjustments table
     const adjustmentSummaries = appliedCodes
       .map(item => ({
         code: item.code,
@@ -458,56 +914,78 @@
       }))
       .filter(entry => entry.adjustments.length);
 
-    const adjustmentHtml = adjustmentSummaries.length
-      ? `
+    let materialsTableHtml = "";
+    if (adjustmentSummaries.length) {
+      const materialRows = [];
+
+      adjustmentSummaries.forEach(entry => {
+        entry.adjustments.forEach(material => {
+          materialRows.push({
+            code: entry.code || "-",
+            name: material.name || "-",
+            brand: material.brand || "Brand tidak tersedia",
+            priceBefore: material.originalUnitPrice || 0,
+            priceAfter: material.newUnitPrice || 0,
+          });
+        });
+      });
+
+      materialsTableHtml = `
         <div class="mt-3">
-          <div class="fw-semibold mb-2">Rincian penyesuaian material:</div>
-          ${adjustmentSummaries
-            .map(entry => {
-              const listItems = entry.adjustments
-                .map(material => {
-                  const nameText = escapeHtml(material.name || "-");
-                  const unitText = material.unit ? ` (${escapeHtml(material.unit)})` : "";
-                  const brandLabel = material.brand
-                    ? escapeHtml(material.brand)
-                    : "Brand tidak tersedia";
-                  const newPriceLabel = formatCurrencyRp(material.newUnitPrice, { fallback: null });
-                  const originalPriceLabel = formatCurrencyRp(material.originalUnitPrice, { fallback: null });
-                  let priceSnippet = "";
-                  if (newPriceLabel) {
-                    priceSnippet = `${newPriceLabel}`;
-                    if (originalPriceLabel && originalPriceLabel !== newPriceLabel) {
-                      priceSnippet += ` (dari ${originalPriceLabel})`;
-                    }
-                  }
-                  const extraInfo = priceSnippet ? `, ${priceSnippet}` : "";
-                  return `<li class="mb-1">` +
-                    `<strong>${nameText}</strong>${unitText} — brand <span class="text-primary">${brandLabel}</span>${extraInfo}</li>`;
-                })
-                .join("");
-              return `
-                <div class="mb-2">
-                  <div class="text-muted small">AHS ${escapeHtml(entry.code || "(tanpa kode)")}</div>
-                  <ul class="mb-0 ps-3">${listItems}</ul>
-                </div>
-              `;
-            })
-            .join("")
-          }
+          <h6 class="fw-semibold mb-2">Rincian Penyesuaian Material</h6>
+          <div class="table-responsive">
+            <table class="table table-sm table-striped table-bordered target-bid-table">
+              <thead>
+                <tr style="background-color: #00365a !important;">
+                  <th style="color: white;">Kode</th>
+                  <th style="color: white;">Nama</th>
+                  <th style="color: white;">Brand</th>
+                  <th class="text-end" style="color: white;">Harga Sebelum</th>
+                  <th class="text-end" style="color: white;">Harga Sesudah</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${materialRows.map(row => `
+                  <tr>
+                    <td>${escapeHtml(row.code)}</td>
+                    <td>${escapeHtml(row.name)}</td>
+                    <td><span class="text-primary">${escapeHtml(row.brand)}</span></td>
+                    <td class="text-end">${formatCurrencyRp(row.priceBefore, { fallback: '-' })}</td>
+                    <td class="text-end">${formatCurrencyRp(row.priceAfter, { fallback: '-' })}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
         </div>
-      `
-      : "";
+      `;
+    }
+
+    // Build footer table
+    const footerTable = `
+      <table class="table table-sm table-bordered mb-0 mt-3 target-bid-table">
+        <thead>
+          <tr style="background-color: #00365a !important;">
+            <th style="color: white;">Selisih Terhadap Target</th>
+            <th style="color: white;">Total Sekarang</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>${formatCurrencyId(gap)} (${direction})</td>
+            <td><strong>${formatCurrencyId(afterTotal)}</strong></td>
+          </tr>
+        </tbody>
+      </table>
+    `;
 
     summary.innerHTML = `
       <div class="alert alert-info mb-0">
-        <div><strong>${appliedCodes.length}</strong> kode AHSP diproses.${failedCodes.length ? ` <span class="text-danger">${failedCodes.length} kode gagal.</span>` : ""}</div>
-        <div>Total awal: ${formatCurrencyId(beforeTotal)} → Total sekarang: ${formatCurrencyId(afterTotal)}.</div>
-        <div>Target: ${targetMode === "percentage" ? `${targetNumeric}% (${formatCurrencyId(targetNominal)})` : formatCurrencyId(targetNominal)}.</div>
-        <div>Selisih terhadap target: ${formatCurrencyId(gap)} (${direction}).</div>
-        ${metCount ? `<div>${metCount} kode sudah memenuhi target unitnya.</div>` : ""}
-        ${failureNote}
+        ${overviewTable}
+        ${materialsTableHtml}
+        ${footerTable}
+        ${metCount ? `<div class="mt-2 small text-muted">${metCount} kode sudah memenuhi target unitnya.</div>` : ""}
       </div>
-      ${adjustmentHtml}
     `;
   }
 
@@ -674,6 +1152,7 @@
       if (priceInput) {
         priceInput.value = normalized;
         priceInput.dataset.referencePrice = String(normalized);
+        priceInput.dataset.baseAutoPrice = String(normalized);
         priceInput.dataset.previousValue = priceInput.value;
         priceInput.dataset.manualConfirmed = "false";
         updatePriceOriginUI(priceInput, "auto");
@@ -690,6 +1169,10 @@
 
       updatePriceWarningForRow(row);
     });
+
+    if (!isRestoringPreviewState) {
+      schedulePersistPreviewState();
+    }
   }
 
   async function requestOptimizedAhs(code, payload) {
@@ -736,6 +1219,84 @@
     });
 
     return map;
+  }
+
+  function refreshBreakdownOverridesCache() {
+    if (typeof localStorage === "undefined") {
+      cachedBreakdownOverrides = {};
+      return cachedBreakdownOverrides;
+    }
+    try {
+      const raw = localStorage.getItem(BREAKDOWN_OVERRIDES_KEY);
+      if (!raw) {
+        cachedBreakdownOverrides = {};
+        return cachedBreakdownOverrides;
+      }
+      const parsed = JSON.parse(raw);
+      cachedBreakdownOverrides = parsed && typeof parsed === "object" ? parsed : {};
+    } catch (error) {
+      console.warn("Failed to parse breakdown overrides", error);
+      cachedBreakdownOverrides = {};
+    }
+    return cachedBreakdownOverrides;
+  }
+
+  function getBreakdownOverridesCache() {
+    if (cachedBreakdownOverrides === null) {
+      return refreshBreakdownOverridesCache();
+    }
+    return cachedBreakdownOverrides;
+  }
+
+  function getBreakdownOverrideForCode(rawCode) {
+    if (!rawCode) {
+      return null;
+    }
+    const canonical = canonicalizeFrontendCode(rawCode);
+    if (!canonical) {
+      return null;
+    }
+    const overrides = getBreakdownOverridesCache();
+    const override = overrides[canonical];
+    if (!override) {
+      return null;
+    }
+    const unitPrice = parseCurrencyNumber(override.unit_price);
+    if (!Number.isFinite(unitPrice) || unitPrice < 0) {
+      return null;
+    }
+    return { unit_price: unitPrice };
+  }
+
+  function applyBreakdownOverrides({ skipGrandTotalUpdate = false } = {}) {
+    const overrides = refreshBreakdownOverridesCache();
+    if (!overrides || !Object.keys(overrides).length) {
+      return;
+    }
+
+    const groups = collectRowsByAnalysisCode();
+    if (!groups.size) {
+      return;
+    }
+
+    let applied = false;
+
+    for (const [canonical, info] of groups.entries()) {
+      const override = overrides[canonical];
+      if (!override) {
+        continue;
+      }
+      const unitValue = parseCurrencyNumber(override.unit_price);
+      if (!Number.isFinite(unitValue) || unitValue < 0) {
+        continue;
+      }
+      applyOptimizedUnitPrice(info.rows, unitValue);
+      applied = true;
+    }
+
+    if (applied && !skipGrandTotalUpdate) {
+      updateGrandTotalFromRows();
+    }
   }
 
   async function applyTargetBid() {
@@ -836,14 +1397,6 @@
       updateGrandTotalFromRows();
       afterTotal = calculateGrandTotalFromRows();
 
-      if (window.EfficiencyRecommendations && typeof currentTestJobId !== "undefined" && currentTestJobId) {
-        try {
-          window.EfficiencyRecommendations.refresh();
-        } catch (refreshErr) {
-          console.warn("Failed to refresh efficiency recommendations after target bid.", refreshErr);
-        }
-      }
-
       renderTargetBidSummary({
         appliedCodes,
         failedCodes,
@@ -857,6 +1410,7 @@
       showError("Terjadi kesalahan saat menerapkan target bid: " + (err.message || err));
     } finally {
       setTargetBidBusy(false);
+      schedulePersistPreviewState();
     }
   }
 
@@ -902,6 +1456,7 @@
 
         const rows = data.rows || data.excel_standard || data.excel_apendo;
         if (rows) {
+          resetPreviewStateForNewParse();
           renderTables(rows, { sourceType: "excel", jobId: data.job_id });
           fileInput.value = "";
         } else {
@@ -933,6 +1488,7 @@
         hideLoading();
 
         if (Array.isArray(data.rows) && data.rows.length) {
+          resetPreviewStateForNewParse();
           renderTables(data.rows, { sourceType: "pdf", jobId: data.job_id });
           fileInput.value = "";
         } else {
@@ -950,51 +1506,93 @@
     const container = document.getElementById("rabTables");
     container.innerHTML = "";
 
+    lastRenderedRows = Array.isArray(rows) ? rows : null;
+    lastRenderOptions = sanitizePreviewOptions(options);
+
     resetTargetBidSummary();
     setTargetBidVisibility(false);
 
     if (!Array.isArray(rows) || !rows.length) {
       document.getElementById("grandTotalBox").style.display = "none";
+      lastRenderedRows = null;
+      clearPersistedPreviewState();
       showError("Tidak ada baris yang dapat ditampilkan");
       return;
     }
 
     const hasSections = rows.some(row => row && row.is_section);
-    if (hasSections) {
-      renderSectionedTables(rows, container);
-    } else {
-      renderFlatTable(rows, container);
+
+    try {
+      if (hasSections) {
+        renderSectionedTables(rows, container);
+      } else {
+        renderFlatTable(rows, container);
+      }
+    } catch (error) {
+      console.error("Error rendering tables:", error);
     }
 
+    // Always show these even if table rendering has errors
     document.getElementById("grandTotalBox").style.display = "block";
     setTargetBidVisibility(true);
     updateGrandTotalFromRows();
+    applyBreakdownOverrides();
+
+    if (!isRestoringPreviewState) {
+      schedulePersistPreviewState();
+    }
   }
 
   function renderSectionedTables(rows, container) {
     let total = 0;
     let currentTable = null;
+    let currentWrapper = null;
     let tbody = null;
     let bujakCounter = 0;
-    const matchPromises = []; 
 
     rows.forEach((row, rowIndex) => {
+      if (row.number !== undefined && row.number !== null) {
+        let num = row.number;
+
+        // if number is numeric → convert to string
+        if (typeof num === "number") {
+            // remove trailing .0 or .000
+            num = String(num).replace(/\.0+$/, "");
+        } else {
+            // if it's a string that looks like  "4.0"
+            num = String(num).replace(/\.0+$/, "");
+        }
+
+        row.number = num;
+      }
       const skipKeywords = ["PAJAK", "JUMLAH SETELAH PAJAK", "DIBULATKAN", "TERBILANG"];
       if (row.description && skipKeywords.some(k => row.description.toUpperCase().includes(k))) {
         return;
       }
 
+      // ===========================
+      // NEW: Start a new BUJAK card
+      // ===========================
       if (row.is_section && row.section_type === "CATEGORY" && row.number === "A") {
         bujakCounter++;
-        const header = document.createElement("div");
-        header.classList.add("alert", "alert-warning", "fw-bold", "mt-3");
-        header.innerText = `BUJAK ${bujakCounter}`;
-        container.appendChild(header);
 
-        const table = document.createElement("table");
-        table.classList.add("table", "table-bordered", "table-sm", "align-middle", "mb-4");
-        table.innerHTML = `
-          <thead class="table-light">
+        // Create card wrapper
+        currentWrapper = document.createElement("div");
+        currentWrapper.classList.add("rab-breakdown-card");
+        container.appendChild(currentWrapper);
+
+        // Add BUJAK label
+        const header = document.createElement("div");
+        header.classList.add("alert", "alert-warning", "fw-bold", "mb-3");
+        header.textContent = `BUJAK ${bujakCounter}`;
+        currentWrapper.appendChild(header);
+
+        // Create new table
+        currentTable = document.createElement("table");
+        currentTable.classList.add("rab-table");
+
+        currentTable.innerHTML = `
+          <thead>
             <tr>
               <th>No.</th>
               <th>Uraian Pekerjaan</th>
@@ -1003,86 +1601,62 @@
               <th>Hasil AHSP</th>
               <th>Volume</th>
               <th>SAT</th>
-              <th>Harga Satuan (Rp.)</th>
+              <th>Harga Satuan (Rp)</th>
               <th>Jumlah</th>
             </tr>
           </thead>
         `;
-        const newBody = document.createElement("tbody");
-        table.appendChild(newBody);
-        container.appendChild(table);
 
-        currentTable = table;
-        tbody = newBody;
+        tbody = document.createElement("tbody");
+        currentTable.appendChild(tbody);
+        currentWrapper.appendChild(currentTable);
       }
 
-      if (!currentTable || !tbody) {
-        return;
+      if (!currentTable || !tbody) return;
+
+      // =====================================
+      // NEW: Render GROUP HEADER (A/B/C)
+      // =====================================
+      if (row.is_section && (row.section_type === "CATEGORY" || row.section_type === "SECTION")) {
+          const tr = document.createElement("tr");
+
+          const td = document.createElement("td");
+          td.colSpan = 9;
+          td.style.padding = "0";
+
+          // Header DIV styled like your sample
+          const header = document.createElement("div");
+          header.classList.add("rab-section-header");
+
+          const number = row.number ? `${row.number}. ` : "";
+          header.textContent = `${number}${row.description || ""}`;
+
+          td.appendChild(header);
+          tr.appendChild(td);
+
+          tbody.appendChild(tr);
+          return;
       }
 
-      if (row.is_section && row.section_type === "CATEGORY") {
-        const tr = document.createElement("tr");
-        const numberCell = document.createElement("td");
-        numberCell.textContent = row.number || "";
-        tr.appendChild(numberCell);
+      if (row.is_section) return;
 
-        const titleCell = document.createElement("td");
-        titleCell.colSpan = 8;
-        const strong = document.createElement("strong");
-        strong.textContent = row.description || "";
-        titleCell.appendChild(strong);
-        tr.appendChild(titleCell);
-
-        tbody.appendChild(tr);
-        return;
-      }
-
-      if (row.is_section && row.section_type === "SECTION") {
-        const tr = document.createElement("tr");
-        const numberCell = document.createElement("td");
-        numberCell.textContent = row.number || "";
-        tr.appendChild(numberCell);
-
-        const titleCell = document.createElement("td");
-        titleCell.colSpan = 8;
-        const emphasis = document.createElement("em");
-        emphasis.textContent = row.description || "";
-        titleCell.appendChild(emphasis);
-        tr.appendChild(titleCell);
-
-        tbody.appendChild(tr);
-        return;
-      }
-
-      if (row.is_section) {
-        return;
-      }
-
+      // =============================
+      // Normal data rows
+      // =============================
       const tr = buildDataRow(row, rowIndex);
       tbody.appendChild(tr);
+
       total += parseCurrencyNumber(row.total_price);
 
-      matchPromises.push((async () => {
-        const matchCell = tr.querySelector("td:nth-child(5)");
-        const analysisCell = tr.querySelector(".analysis-code-cell");
-        const statusCell = tr.querySelector("td:nth-child(4)");
-
-        try {
-          const results = await fetchAndStoreSuggestions(row, row.description || "");
-          populateMatchCell(matchCell, row, analysisCell, statusCell);
-        } catch (err) {
-          console.warn("Match fetch failed for row:", row.description, err);
-        }
-      })());
-    });
-
-    Promise.all(matchPromises).then(() => {
-      console.log("✅ All sectioned table matches complete");
+      const matchCell = tr.querySelector("td:nth-child(5)");
+      const analysisCell = tr.querySelector(".analysis-code-cell");
+      const statusCell = tr.querySelector("td:nth-child(4)");
+      populateMatchCell(matchCell, row, analysisCell, statusCell);
     });
 
     updateGrandTotal(total);
   }
-  
+
   function renderFlatTable(rows, container) {
     let total = 0;
 
@@ -1133,29 +1707,15 @@
       total += parseCurrencyNumber(row.total_price);
     });
 
-    const matchPromises = rows.map(async (row, rowIndex) => {
-      if (row.is_section || row.job_match_status === "skipped") return;
-
-      const tr = table.querySelector(
-        `tr[data-row-key="${sanitizeRowKey(row.row_key || row.rowKey, `row-${rowIndex}`)}"]`
-      );
-      if (!tr) return;
-
+    // ✅ Just populate matches from backend - no async fetching
+    rows.forEach((row, rowIndex) => {
+      const tr = tbody.rows[rowIndex];
       const matchCell = tr.querySelector("td:nth-child(5)");
       const analysisCell = tr.querySelector(".analysis-code-cell");
       const statusCell = tr.querySelector("td:nth-child(4)");
-
-      try {
-        const results = await fetchAndStoreSuggestions(row, row.description || "");
-        populateMatchCell(matchCell, row, analysisCell, statusCell);
-      } catch (err) {
-        console.warn("Match fetch failed for row:", row.description, err);
-      }
+      populateMatchCell(matchCell, row, analysisCell, statusCell);
     });
 
-    Promise.all(matchPromises).then(() => {
-      console.log("✅ All matching complete");
-    });
 
     updateGrandTotal(total);
   }
@@ -1402,6 +1962,7 @@
 
     // Update grand total immediately
     updateGrandTotalFromRows();
+    schedulePersistPreviewState();
 
     // Debounce backend recomputation: wait 800ms after last keystroke
     if (backendRecomputeTimeout) {
@@ -1448,6 +2009,7 @@
           }
           // Update grand total but don't reset pie chart timer
           updateGrandTotalFromRows(false);
+          schedulePersistPreviewState();
         }
       } catch (err) {
         console.warn("Fetch error:", err);
@@ -1633,6 +2195,11 @@
       });
       legendContainer.appendChild(legendItem);
     });
+
+    // Update efficiency recommendations after chart is rendered
+    if (typeof EfficiencyRecommendations !== 'undefined') {
+      EfficiencyRecommendations.refresh();
+    }
   }
 
   function numberToWords(number) {
@@ -1691,56 +2258,6 @@
     const selectableMatches = matches.filter(m => m && m.code);
     const fallbackMessages = matches.filter(m => !m || !m.code);
 
-    // === ALTERNATIVES / UNIT MISMATCH CASE ===
-    if (row.unit_mismatch === true) {
-      statusCell.textContent = "Not found (no same-unit match)";
-      statusCell.classList.remove("text-success");
-      statusCell.classList.add("text-danger");
-
-      analysisCell.textContent = "";
-
-      const tr = analysisCell.closest("tr");
-      if (tr) {
-        const priceInput = tr.querySelector(".price-input");
-        if (priceInput) {
-          priceInput.value = "0";
-          priceInput.dataset.referencePrice = "";
-          priceInput.dataset.manualConfirmed = "true";
-          updatePriceOriginUI(priceInput, "manual");
-        }
-      }
-
-      const alternatives = row.job_match;
-      if (Array.isArray(alternatives) && alternatives.length) {
-        const helper = document.createElement("div");
-        helper.className = "fw-semibold small mb-2 text-warning";
-        helper.textContent =
-          "Sugesti dengan unit berbeda";
-        cell.appendChild(helper);
-
-        alternatives.forEach(match => {
-          const button = document.createElement("button");
-          button.type = "button";
-          button.className =
-            "btn btn-sm btn-outline-warning w-100 text-start match-option mb-1";
-          const label = buildMatchLabel(match);
-          button.dataset.label = label;
-          if (match.code) button.dataset.code = match.code;
-          button.textContent = label;
-          button.addEventListener("click", () =>
-            handleMatchSelection(match, row, analysisCell, statusCell, cell, button)
-          );
-          cell.appendChild(button);
-        });
-      }
-
-      renderManualInput(cell, row, analysisCell, statusCell, "", {
-        noticeClass: selectableMatches.length ? "text-muted small mb-2" : "text-warning small mb-2"
-      });
-
-      return;
-    }
-
     // === FOUND CASES ===
     if (selectableMatches.length === 1) {
       // ✅ Automatically match the single result
@@ -1753,7 +2270,7 @@
       statusCell.classList.add("text-success");
 
       const span = document.createElement("span");
-      span.className = "text-success fw-semibold";
+      span.className = "text-success fw-semibold auto-match-code";
       span.textContent = buildMatchLabel(match);
       cell.appendChild(span);
 
@@ -1762,53 +2279,29 @@
     }
 
     else if (selectableMatches.length > 1) {
-      // ✅ Automatically pick the one with highest confidence
       const bestMatch = getBestConfidenceMatch(selectableMatches);
+
+      // Auto-select best match
       if (bestMatch) {
         row.job_match_selected = bestMatch;
-        row.analysis_code = bestMatch.code;
-        analysisCell.textContent = bestMatch.code;
+        row.analysis_code = bestMatch.code || "";
+        updateRowLookup(row, [bestMatch]);
+
+        analysisCell.textContent = row.analysis_code;
         statusCell.textContent = "Dipilih (Auto)";
-        statusCell.classList.remove("text-danger");
         statusCell.classList.add("text-success");
 
-        const span = document.createElement("span");
-        span.className = "text-success fw-semibold";
-        span.textContent = buildMatchLabel(bestMatch);
-        cell.appendChild(span);
+        const matchLabel = document.createElement("span");
+        matchLabel.className = "text-success fw-bold";
+        matchLabel.textContent = buildMatchLabel(bestMatch);
+        cell.appendChild(matchLabel);
 
+        // Fetch price for best match
         const tr = analysisCell.closest("tr");
-        if (tr) setTimeout(() => setPriceForRow(bestMatch, tr), 0);
-      }
-
-      // Still render all available buttons for manual re-selection
-      const helper = document.createElement("div");
-      helper.className = "fw-semibold small mb-2 text-dark";
-      helper.textContent = "Sugesti lain:";
-      cell.appendChild(helper);
-
-      selectableMatches.forEach(match => {
-        const button = document.createElement("button");
-        button.type = "button";
-        button.className =
-          "btn btn-sm btn-outline-primary w-100 text-start match-option mb-1";
-        const label = buildMatchLabel(match);
-        button.dataset.label = label;
-        if (match.code) button.dataset.code = match.code;
-        button.textContent = label;
-
-        // Mark the automatically selected one visually
-        if (bestMatch && match.code === bestMatch.code) {
-          button.classList.remove("btn-outline-primary");
-          button.classList.add("btn-success");
-          button.textContent = `Dipilih: ${button.dataset.label}`;
+        if (tr) {
+          setPriceForRow(bestMatch, tr);
         }
-
-        button.addEventListener("click", () =>
-          handleMatchSelection(match, row, analysisCell, statusCell, cell, button)
-        );
-        cell.appendChild(button);
-      });
+      }
     }
 
     else {
@@ -1873,6 +2366,8 @@
     if (tr) {
       await setPriceForRow(match, tr);
     }
+
+    schedulePersistPreviewState();
   }
 
   function renderManualInput(cell, row, analysisCell, statusCell, label, options = {}) {
@@ -1883,8 +2378,8 @@
 
     const input = document.createElement("input");
     input.type = "text";
-    input.className = "form-control";
-    input.placeholder = "Masukkan kode AHSP secara manual";
+    input.className = "form-control manual-input";
+    input.placeholder = "Masukkan kode atau pilih sugesti";
     input.value = "";
     input.autocomplete = "off";
 
@@ -1900,6 +2395,8 @@
     const button = document.createElement("button");
     button.type = "button";
     button.className = "btn btn-primary";
+    button.style.backgroundColor = "#00365a";
+    button.style.borderColor = "#00365a";
     button.textContent = "Gunakan";
 
     const warnIfUnsafeCode = (value) => {
@@ -1917,51 +2414,63 @@
     };
 
     const applyManual = async () => {
-      const value = input.value.trim();
-      if (!value) {
-        input.focus();
-        return;
-      }
+  const value = input.value.trim();
+  if (!value) {
+    input.focus();
+    return;
+  }
 
-      if (warnIfUnsafeCode(value)) {
-        input.focus();
-        return;
-      }
+  if (warnIfUnsafeCode(value)) {
+    input.focus();
+    return;
+  }
 
-      const matched = findMatchByCode(row, value);
-      row.analysis_code = value;
-      row.job_match_selected = matched ? { ...matched, match_status: "Manual" } : {
-        code: value,
-        match_status: "Manual",
-      };
-      row.job_match_status = "manual";
-      updateRowLookup(row, matched ? [matched] : []);
+  const matched = findMatchByCode(row, value);
+  row.analysis_code = value;
+  row.job_match_selected = matched ? { ...matched, match_status: "Manual" } : {
+    code: value,
+    match_status: "Manual",
+  };
+  row.job_match_status = "manual";
+  updateRowLookup(row, matched ? [matched] : []);
 
-      // updateNotice("Masukkan kode AHSP secara manual");
+  analysisCell.textContent = value;
+  statusCell.textContent = "Manual";
+  statusCell.classList.add("text-success");
 
-      analysisCell.textContent = value;
-      statusCell.textContent = "Manual";
-      statusCell.classList.add("text-success");
+  // Update all match option buttons
+  cell.querySelectorAll("button.match-option").forEach(btn => {
+    btn.classList.remove("btn-success");
+    btn.classList.add("btn-outline-primary");
+    if (btn.dataset.label) {
+      btn.textContent = btn.dataset.label;
+    }
+  });
 
-      cell.querySelectorAll("button.match-option").forEach(btn => {
-        btn.classList.remove("btn-success");
-        btn.classList.add("btn-outline-primary");
-        if (btn.dataset.label) {
-          btn.textContent = btn.dataset.label;
-        }
-      });
+  // ✅ UPDATE: Also update the green match label if it exists
+  const existingMatchLabel = cell.querySelector(".text-success.fw-semibold, .text-success.fw-bold");
+  if (existingMatchLabel) {
+    if (matched) {
+      existingMatchLabel.textContent = buildMatchLabel(matched);
+    } else {
+      existingMatchLabel.textContent = `${value} – Manual`;
+    }
+  }
 
-      button.classList.remove("btn-primary");
-      button.classList.add("btn-success");
-      button.textContent = "Dipakai";
-      dropdown.style.display = "none";
+  button.classList.remove("btn-primary");
+  button.classList.add("btn-success");
+  button.textContent = "Dipakai";
+  dropdown.style.display = "none";
 
-      // AFTER manual apply: try to fetch unit price and set Harga Sat for this row
-      const tr = analysisCell.closest("tr");
-      if (tr) {
-        await setPriceForRow(row.job_match_selected || { code: value }, tr);
-      }
-    };
+  // AFTER manual apply: try to fetch unit price and set Harga Sat for this row
+  const tr = analysisCell.closest("tr");
+  if (tr) {
+    await setPriceForRow(row.job_match_selected || { code: value }, tr);
+  }
+};
+
+  schedulePersistPreviewState();
+
 
     button.addEventListener("click", applyManual);
     input.addEventListener("keydown", event => {
@@ -2085,14 +2594,15 @@
       if (!match || !match.code) {
         return;
       }
-      if (match.unit_mismatch) {
-        item.style.color = "#dc3545"; // red text
-        item.style.fontStyle = "italic";
-      }
       const item = document.createElement("button");
       item.type = "button";
-      item.className = "dropdown-item text-wrap";
-      item.textContent = `${match.code} – ${match.name || ""}`;
+      item.className = "dropdown-item text-wrap manual-select";
+      let label = `${match.code} – ${match.name || ""}`;
+      if (typeof match.confidence === "number") {
+          const pct = Math.round(match.confidence * 100);
+          label += ` – ${pct}%`;
+      }
+      item.textContent = label;
       item.addEventListener("click", () => {
         input.value = match.code;
         dropdown.style.display = "none";
@@ -2159,24 +2669,13 @@
           return [];
         }
 
-        // === Unit mismatch alternatives ===
-        if (data.alternatives && Array.isArray(data.alternatives)) {
-          row.unit_mismatch = true;
-          return data.alternatives.map(a => ({ ...a, unit_mismatch: true }));
-        }
-
         // === Normal matches (same-unit) ===
         if (data.match) {
-          const matchList = Array.isArray(data.match) ? data.match : [data.match];
-          const validMatches = matchList.filter(m => m && !m.unit_mismatch);
-          if (validMatches.length) {
-            row.unit_mismatch = false;
-            return validMatches;
-          }
+            const matchList = Array.isArray(data.match) ? data.match : [data.match];
+            return matchList.filter(m => m && m.code);
         }
 
         // === No results ===
-        row.unit_mismatch = false;
         return [];
       })
       .catch(err => {
@@ -2195,7 +2694,7 @@
       updateRowLookup(row, results);
 
       if (!results || !results.length) {
-        row.job_match = []; 
+        row.job_match = [];
       } else {
         row.job_match = results;
       }
@@ -2276,16 +2775,21 @@
     const totalCell = tr.querySelector(".total-cell");
     if (!priceInput) return;
 
-    if (match && match.unit_mismatch === true) {
-      const priceWrapper = priceInput.closest(".price-origin-wrapper");
-      if (priceWrapper) {
-        priceInput.value = "";
-        priceInput.dataset.referencePrice = "";
-        priceInput.dataset.baseAutoPrice = "";
-        updatePriceOriginUI(priceInput, "manual");
-      }
+    const overridePrice = match && match.code ? getBreakdownOverrideForCode(match.code) : null;
+    if (overridePrice && Number.isFinite(overridePrice.unit_price) && overridePrice.unit_price >= 0) {
+      const normalized = overridePrice.unit_price;
+      priceInput.value = normalized;
+      priceInput.dataset.baseAutoPrice = String(normalized);
+      priceInput.dataset.referencePrice = String(normalized);
+      priceInput.dataset.previousValue = priceInput.value;
+      priceInput.dataset.manualConfirmed = "false";
+      updatePriceOriginUI(priceInput, "auto");
+      updatePriceWarningForRow(tr);
+      priceInput.dispatchEvent(new Event("input", { bubbles: true }));
       return;
     }
+
+
 
     // prefer any price present on match object (various keys)
     const possiblePrice = match && (match.unit_price ?? match.price ?? match.unitPrice ?? match.unitPriceRp ?? null);
@@ -2293,12 +2797,12 @@
       const num = parseFloat(String(possiblePrice).replace(/[^0-9.-]/g, ""));
       if (!Number.isNaN(num)) {
         priceInput.value = num;
-  priceInput.dataset.baseAutoPrice = String(num);
-  priceInput.dataset.referencePrice = String(num);
-  updatePriceWarningForRow(tr);
+        priceInput.dataset.baseAutoPrice = String(num);
+        priceInput.dataset.referencePrice = String(num);
         priceInput.dataset.previousValue = priceInput.value;
         priceInput.dataset.manualConfirmed = "false";
         updatePriceOriginUI(priceInput, "auto");
+        updatePriceWarningForRow(tr);
         priceInput.dispatchEvent(new Event("input", { bubbles: true }));
         return;
       }
@@ -2395,11 +2899,11 @@
     }
   }
   function computeDeviationInfo(actual, reference) {
-  const ref = parseFloat(reference);
-  const act = parseFloat(actual);
-  if (!isFinite(ref) || ref <= 0 || !isFinite(act)) return null;
+  const ref = Number.parseFloat(reference);
+  const act = Number.parseFloat(actual);
+  if (!Number.isFinite(ref) || ref <= 0 || !Number.isFinite(act)) return null;
 
-  const pct = ((act - ref) / ref) * 100; 
+  const pct = ((act - ref) / ref) * 100;
   const absPct = Math.abs(pct);
 
   let level = null;
@@ -2430,18 +2934,56 @@ function renderWarningChip(host, info) {
 }
 
 function updatePriceWarningForRow(tr) {
-  if (!tr) return;
-  const priceInput = tr.querySelector(".price-input");
-  const host = tr.querySelector(".price-warning-host");
-  if (!priceInput || !host) return;
+    if (!tr) return;
+    const priceInput = tr.querySelector(".price-input");
+    const host = tr.querySelector(".price-warning-host");
+    if (!priceInput || !host) return;
 
-  const reference = priceInput.dataset.referencePrice;
-  if (!reference) { host.innerHTML = ""; return; }
+    const reference = priceInput.dataset.referencePrice;
+    if (!reference) {
+        host.innerHTML = "";
+        return;
+    }
 
-  const info = computeDeviationInfo(priceInput.value, reference);
-  renderWarningChip(host, info);
+    const info = computeDeviationInfo(priceInput.value, reference);
+    renderWarningChip(host, info);
+
 }
 </script>
+
+<script>
+  function extractAhsCode(text) {
+      if (!text) return null;
+      // Grab only the first numeric pattern like 3.16.2 or 2.1.1.3
+      const match = text.trim().match(/^\d+(?:\.\d+)*?/);
+      return match ? match[0] : null;
+  }
+</script>
+  
+
+<script>
+  document.getElementById("view-breakdown-btn").addEventListener("click", () => {
+      const codes = new Set();
+
+      // Collect AHS codes directly from the analysis column
+      document.querySelectorAll(".analysis-code-cell").forEach(cell => {
+          const code = cell.textContent.trim();
+          if (code.match(/^\d+(?:\.\d+)+$/)) {
+              codes.add(code);
+          }
+      });
+
+      if (codes.size === 0) {
+          alert("Belum ada kode AHSP yang dipilih untuk ditampilkan pada halaman rincian.");
+          return;
+      }
+
+      localStorage.setItem("matched_ahs_codes", JSON.stringify([...codes]));
+      window.location.href = "/api/rab-breakdown-page/";
+  });
+</script>
+  
+  
 
 <!-- Include Efficiency Recommendations JavaScript -->
 <script src="{% static 'efficiency_recommendations/recommendations.js' %}"></script>
@@ -2455,7 +2997,7 @@ function updatePriceWarningForRow(tr) {
   renderTables = function(rows, options = {}) {
     // Call original function
     originalRenderTables(rows, options);
-    
+
     // Extract job_id from response if available
     if (options.jobId) {
       currentTestJobId = options.jobId;
@@ -2465,6 +3007,8 @@ function updatePriceWarningForRow(tr) {
       }
     }
   };
+
+  restoreRabPreviewState();
 
   // Also trigger refresh when price inputs change
   document.addEventListener('input', function(event) {
