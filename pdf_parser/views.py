@@ -1,18 +1,16 @@
 from django.shortcuts import render
 from django.http import JsonResponse, HttpResponseNotAllowed
 from django.views.decorators.csrf import csrf_exempt
-import tempfile
-import os
-from decimal import Decimal
-from .services.pipeline import parse_pdf_to_dtos
-from cost_weight.models import TestJob, TestItem
-import cProfile, pstats, io
-
 from rest_framework.decorators import api_view, parser_classes
 from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
-from celery.result import AsyncResult
-from .tasks import process_pdf_file_task
+import tempfile
+import os
+from decimal import Decimal
+import sentry_sdk
+from .services.pipeline import parse_pdf_to_dtos
+from cost_weight.models import TestJob, TestItem
+import cProfile, pstats, io
 
 # Template constants
 RAB_CONVERTED_TEMPLATE = "rab_converted.html"
@@ -21,14 +19,21 @@ PDF_UPLOAD_TEMPLATE = "pdf_upload.html"
 # Error message constants
 NO_FILE_UPLOADED_MSG = "No file uploaded"
 
-
 class PdfUploadHandler:
     """Template Method for handling PDF upload, temp save, parse, and response."""
 
     def handle_upload(self, request, parser_fn, enable_profiling=False):
-        file = request.FILES.get("pdf_file")
-        if not file:
-            return JsonResponse({"error": "No file uploaded"}, status=400)
+        with sentry_sdk.start_transaction(op="file_upload", name="pdf_upload"):
+            file = request.FILES.get("pdf_file")
+            if not file:
+                sentry_sdk.capture_message("PDF upload failed: No file", level="warning")
+                return JsonResponse({"error": "No file uploaded"}, status=400)
+            
+            sentry_sdk.set_context("file_info", {
+                "filename": file.name,
+                "size": file.size,
+                "content_type": getattr(file, 'content_type', 'unknown')
+            })
 
         tmp_path = None
         try:
@@ -47,7 +52,7 @@ class PdfUploadHandler:
 
                 s = io.StringIO()
                 pstats.Stats(profiler, stream=s).sort_stats(pstats.SortKey.TIME).print_stats(15)
-                print(s.getvalue())
+                print(s.getvalue())  
             else:
                 rows = parser_fn(tmp_path)
 
@@ -72,27 +77,10 @@ def _convert_decimals(obj):
     """Recursively convert Decimal objects to float for JSON serialization."""
     if isinstance(obj, Decimal):
         return float(obj)
-
-    if isinstance(obj, dict):
-        new = {}
-        for k, v in obj.items():
-            if isinstance(v, (int, float, str, bool, type(None))):
-                new[k] = v
-            elif isinstance(v, Decimal):
-                new[k] = float(v)
-            elif isinstance(v, list):
-                new[k] = [_convert_decimals(i) for i in v]
-            elif isinstance(v, dict):
-                new[k] = _convert_decimals(v)
-            else:
-                # fallback for match objects or unusual data types
-                new[k] = str(v)
-        return new
-
     if isinstance(obj, list):
         return [_convert_decimals(i) for i in obj]
-
-    # primitive types
+    if isinstance(obj, dict):
+        return {k: _convert_decimals(v) for k, v in obj.items()}
     return obj
 
 
@@ -103,17 +91,17 @@ def _create_test_job_from_rows(rows, filename="Uploaded PDF"):
     """
     # Create job
     job = TestJob.objects.create(name=f"RAB - {filename}")
-
+    
     # Create items from rows (skip section headers)
     for row in rows:
         # Skip section/category rows
         if row.get("is_section") or row.get("job_match_status") == "skipped":
             continue
-
+            
         description = row.get("description", "Unknown Item")
         if not description or description.strip() == "":
             continue
-
+            
         # Parse quantity and price
         try:
             quantity = Decimal(str(row.get("volume", 0)))
@@ -121,29 +109,25 @@ def _create_test_job_from_rows(rows, filename="Uploaded PDF"):
                 quantity = Decimal("1")
         except (ValueError, TypeError, KeyError):
             quantity = Decimal("1")
-
+            
         try:
             unit_price = Decimal(str(row.get("price", 0)))
             if unit_price < 0:
                 unit_price = Decimal("0")
         except (ValueError, TypeError, KeyError):
             unit_price = Decimal("0")
-
-        # Get AHSP code from analysis_code column
-        ahsp_code = row.get("analysis_code", "").strip() if row.get("analysis_code") else None
-
-        # Create item with ahsp_code
+        
+        # Create item
         TestItem.objects.create(
             job=job,
             name=description,
             quantity=quantity,
-            unit_price=unit_price,
-            ahsp_code=ahsp_code if ahsp_code else None
+            unit_price=unit_price
         )
-
+    
     # Calculate totals and weights
     job.calculate_totals()
-
+    
     return job
 
 
@@ -155,7 +139,7 @@ def rab_converted_pdf(request):
     if request.method == "POST":
         handler = PdfUploadHandler()
         return handler.handle_upload(request, parse_pdf_to_dtos, enable_profiling=True)
-
+    
     return HttpResponseNotAllowed(["GET", "POST"])
 
 
@@ -164,8 +148,37 @@ def parse_pdf_view(request):
     if request.method != "POST":
         return JsonResponse({"error": "Only POST allowed"}, status=405)
 
-    handler = PdfUploadHandler()
-    return handler.handle_upload(request, parse_pdf_to_dtos)
+    with sentry_sdk.start_transaction(op="file_upload", name="parse_pdf_view"):
+        try:
+            file = request.FILES.get("pdf_file")
+            if file:
+                sentry_sdk.set_context("file_info", {
+                    "filename": file.name,
+                    "size": file.size,
+                    "content_type": file.content_type
+                })
+            
+            handler = PdfUploadHandler()
+            response = handler.handle_upload(request, parse_pdf_to_dtos)
+            
+            # Log successful parse if status is 200
+            if response.status_code == 200:
+                sentry_sdk.capture_message(
+                    f"PDF parse success: {file.name if file else 'unknown'}",
+                    level="info",
+                    extras={
+                        "filename": file.name if file else None,
+                        "file_size": file.size if file else None
+                    }
+                )
+            
+            return response
+        except Exception as e:
+            sentry_sdk.capture_exception(e, extras={
+                "error_type": "pdf_parse_failure",
+                "filename": request.FILES.get("pdf_file").name if request.FILES.get("pdf_file") else None
+            })
+            return JsonResponse({"error": str(e)}, status=500)
 
 
 def upload_pdf(request):
@@ -197,33 +210,59 @@ def parse_pdf_async(request):
     Accepts PDF file upload and processes it asynchronously.
     Returns task_id for status checking.
     """
-    try:
+    with sentry_sdk.start_transaction(op="file_upload.async", name="parse_pdf_async"):
         pdf_file = request.FILES.get("pdf_file")
 
         if not pdf_file:
+            sentry_sdk.capture_message(
+                "PDF upload failed: No file provided",
+                level="warning"
+            )
             return Response({"detail": "No PDF file uploaded"}, status=400)
 
         # Validate file type
         if pdf_file.content_type != "application/pdf":
+            sentry_sdk.capture_message(
+                f"PDF upload failed: Invalid file type {pdf_file.content_type}",
+                level="warning",
+                extras={"filename": pdf_file.name, "content_type": pdf_file.content_type}
+            )
             return Response({"detail": "Only .pdf files are allowed."}, status=400)
 
-        # Save file to temp location
-        with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp:
-            for chunk in pdf_file.chunks():
-                tmp.write(chunk)
-            tmp_path = tmp.name
+        sentry_sdk.set_context("file_info", {
+            "filename": pdf_file.name,
+            "size": pdf_file.size,
+            "content_type": pdf_file.content_type
+        })
 
-        # Submit task to Celery
-        task = process_pdf_file_task.delay(tmp_path, pdf_file.name)
+        try:
+            # Save file to temp location
+            with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp:
+                for chunk in pdf_file.chunks():
+                    tmp.write(chunk)
+                tmp_path = tmp.name
 
-        return Response({
-            "task_id": task.id,
-            "status": "processing",
-            "message": "PDF is being processed. Use task_id to check status."
-        }, status=202)
+            # Submit task to Celery
+            task = process_pdf_file_task.delay(tmp_path, pdf_file.name)
 
-    except Exception as e:
-        return Response({"detail": str(e)}, status=500)
+            sentry_sdk.capture_message(
+                f"PDF parse task queued: {pdf_file.name}",
+                level="info",
+                extras={
+                    "task_id": task.id,
+                    "filename": pdf_file.name,
+                    "file_size": pdf_file.size
+                }
+            )
+
+            return Response({
+                "task_id": task.id,
+                "status": "processing",
+                "message": "PDF is being processed. Use task_id to check status."
+            }, status=202)
+
+        except Exception as e:
+            return Response({"detail": str(e)}, status=500)
 
 
 @api_view(['GET'])

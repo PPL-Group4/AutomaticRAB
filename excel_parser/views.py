@@ -5,6 +5,7 @@ from django.core.exceptions import ValidationError
 from decimal import Decimal
 import tempfile
 import os
+import sentry_sdk
 
 from rest_framework.decorators import api_view, parser_classes
 from rest_framework.parsers import MultiPartParser
@@ -37,38 +38,50 @@ def detect_headers(request):
     POST /excel_parser/detect_headers
     body: multipart form-data with 'file'
     """
-    try:
-        f = request.FILES.get('file')
-        if not f:
-            return Response({"detail": "file is required"}, status=400)
-
+    with sentry_sdk.start_transaction(op="file_upload", name="detect_headers"):
         try:
-            validate_excel_file(f)
-        except ValidationError as ve:
-            return Response({"detail": str(ve)}, status=400)
+            f = request.FILES.get('file')
+            if not f:
+                sentry_sdk.capture_message("Excel upload failed: No file", level="warning")
+                return Response({"detail": "file is required"}, status=400)
 
-        wb = load_workbook(f, data_only=True, read_only=True)
-        ws = wb[wb.sheetnames[0]]
-        rows = [list(r) for r in ws.iter_rows(values_only=True, min_row=1, max_row=200)]
+            sentry_sdk.set_context("file_info", {
+                "filename": f.name,
+                "size": f.size,
+                "content_type": f.content_type
+            })
 
-        hdr_idx = find_header_row(rows)
-        if hdr_idx < 0:
-            return Response({"detail": "header not found"}, status=422)
+            try:
+                validate_excel_file(f)
+            except ValidationError as ve:
+                sentry_sdk.capture_message(
+                    f"Excel validation failed: {str(ve)}",
+                    level="warning",
+                    extras={"filename": f.name}
+                )
+                return Response({"detail": str(ve)}, status=400)
 
-        header_row = [str(c or '') for c in rows[hdr_idx]]
-        mapping, missing, originals = map_headers(header_row)
+            wb = load_workbook(f, data_only=True, read_only=True)
+            ws = wb[wb.sheetnames[0]]
+            rows = [list(r) for r in ws.iter_rows(values_only=True, min_row=1, max_row=200)]
 
-        return Response({
-            "sheet": ws.title,
-            "header_row_index": hdr_idx + 1,  # 1-based index
-            "mapping": mapping,
-            "originals": originals,
-            "missing": missing
-        })
-        
-    except Exception as e:
-        # Catch-all error handler - returns JSON instead of crashing
-        return Response({"detail": str(e)}, status=500)
+            hdr_idx = find_header_row(rows)
+            if hdr_idx < 0:
+                return Response({"detail": "header not found"}, status=422)
+
+            header_row = [str(c or '') for c in rows[hdr_idx]]
+            mapping, missing, originals = map_headers(header_row)
+
+            return Response({
+                "sheet": ws.title,
+                "header_row_index": hdr_idx + 1,  # 1-based index
+                "mapping": mapping,
+                "originals": originals,
+                "missing": missing
+            })
+        except Exception as e:
+            # Catch-all error handler - returns JSON instead of crashing
+            return Response({"detail": str(e)}, status=500)
 
 
 @csrf_exempt  # CSRF exempt: This is an API endpoint called by authenticated frontend
