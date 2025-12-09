@@ -36,11 +36,11 @@ class SynonymExpander:
     def is_available(self) -> bool:
         return False   # Always false in safe mode
 
-    def expand(self, word: str, candidate_words: List[str], limit: int = 3) -> Set[str]:
+    def expand(self, _word: str = None, _candidate_words: List[str] = None, _limit: int = 3) -> Set[str]:
         """Embedding-based synonyms disabled."""
         return set()
 
-    def expand_with_manual(self, word: str, candidate_words: List[str] = None, limit: int = 3) -> Set[str]:
+    def expand_with_manual(self, word: str, _candidate_words: List[str] = None, _limit: int = 3) -> Set[str]:
         """Return ONLY manual synonyms."""
         synonyms = set()
 
@@ -67,8 +67,8 @@ class SemanticMatcher:
         self.repo = repo
         logger.warning("SemanticMatcher disabled (sentence-transformers not available).")
 
-    def find_best_match(self, query: str, min_similarity: float = 0.5) -> Optional[dict]:
+    def find_best_match(self, _query: str = None, _min_similarity: float = 0.5) -> Optional[dict]:
         return None
 
-    def find_multiple_matches(self, query: str, limit: int = 5, min_similarity: float = 0.5) -> List[dict]:
+    def find_multiple_matches(self, _query: str = None, _limit: int = 5, _min_similarity: float = 0.5) -> List[dict]:
         return []
