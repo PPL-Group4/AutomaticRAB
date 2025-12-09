@@ -233,4 +233,3 @@ def get_ahs_breakdown(ahs_code: str) -> Optional[Dict[str, object]]:
     }
 
     return breakdown
-
