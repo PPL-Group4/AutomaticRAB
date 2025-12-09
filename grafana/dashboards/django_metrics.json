@@ -1,0 +1,31 @@
+{
+  "annotations": {"list": []},
+  "panels": [
+    {
+      "type": "graph",
+      "title": "Django HTTP Requests",
+      "targets": [
+        {
+          "expr": "sum(rate(django_http_requests_total[5m])) by (view)",
+          "legendFormat": "{{view}}"
+        }
+      ]
+    },
+    {
+      "type": "graph",
+      "title": "Python process CPU seconds",
+      "targets": [
+        {"expr": "process_cpu_seconds_total"}
+      ]
+    },
+    {
+      "type": "graph",
+      "title": "Python GC objects collected",
+      "targets": [
+        {"expr": "python_gc_objects_collected_total"}
+      ]
+    }
+  ],
+  "schemaVersion": 18,
+  "title": "Django Metrics"
+}

@@ -3,7 +3,6 @@ from decimal import Decimal
 from datetime import date
 from excel_parser.services.data_converter import DataConverter
 
-
 class DataConverterTests(TestCase):
     def setUp(self):
         self.conv = DataConverter()

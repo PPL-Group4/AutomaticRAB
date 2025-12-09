@@ -37,6 +37,7 @@ def _format_decimal(value: Optional[Decimal], quantum: Decimal) -> Optional[floa
         logger.debug("Unable to quantize decimal value=%r", value)
         return float(value)
 
+
 def _load_catalog(path: Path, *, extra_fields: Optional[List[str]] = None) -> Dict[str, Dict[str, object]]:
     extra_fields = extra_fields or []
     catalog: Dict[str, Dict[str, object]] = {}
@@ -45,13 +46,21 @@ def _load_catalog(path: Path, *, extra_fields: Optional[List[str]] = None) -> Di
         with path.open(encoding="utf-8-sig", newline="") as handle:
             reader = csv.DictReader(handle)
             for row in reader:
-                identifier = _extract_identifier(row)
+                identifier = (row.get("id") or "").strip()
                 if not identifier:
                     continue
 
-                entry = _build_entry(row, extra_fields)
-                catalog[identifier] = entry
+                entry: Dict[str, object] = {
+                    "code": (row.get("code") or "").strip() or None,
+                    "name": (row.get("name") or "").strip() or None,
+                    "unit": (row.get("unit") or "").strip() or None,
+                    "unit_price": _parse_decimal(row.get("unit_price")),
+                }
 
+                for field in extra_fields:
+                    entry[field] = (row.get(field) or "").strip() or None
+
+                catalog[identifier] = entry
     except FileNotFoundError:
         logger.warning("Catalog file missing: %s", path)
     except Exception:  # pragma: no cover - defensive logging
@@ -59,30 +68,6 @@ def _load_catalog(path: Path, *, extra_fields: Optional[List[str]] = None) -> Di
 
     return catalog
 
-def _extract_identifier(row: Dict[str, str]) -> str:
-    """Extract and normalize the row identifier."""
-    return (row.get("id") or "").strip()
-
-
-def _build_entry(row: Dict[str, str], extra_fields: List[str]) -> Dict[str, object]:
-    """Build the catalog entry dictionary."""
-    entry = {
-        "code": _clean(row.get("code")),
-        "name": _clean(row.get("name")),
-        "unit": _clean(row.get("unit")),
-        "unit_price": _parse_decimal(row.get("unit_price")),
-    }
-
-    for field in extra_fields:
-        entry[field] = _clean(row.get(field))
-
-    return entry
-
-
-def _clean(value: Optional[str]) -> Optional[str]:
-    """Strip whitespace and normalize empty values to None."""
-    cleaned = (value or "").strip()
-    return cleaned or None
 
 @lru_cache(maxsize=1)
 def _labor_catalog() -> Dict[str, Dict[str, object]]:
@@ -152,6 +137,8 @@ def _components_by_code() -> Dict[str, List[Dict[str, str]]]:
         logger.exception("Failed to load AHS components dataset from %s", path)
 
     return components
+
+
 def get_ahs_breakdown(ahs_code: str) -> Optional[Dict[str, object]]:
     canonical = canonicalize_job_code(ahs_code)
     if not canonical:
@@ -161,109 +148,79 @@ def get_ahs_breakdown(ahs_code: str) -> Optional[Dict[str, object]]:
     if not component_rows:
         return None
 
-    catalogs = _load_catalogs()
-    totals, details = _compute_component_totals(component_rows, catalogs)
+    labor_catalog = _labor_catalog()
+    equipment_catalog = _equipment_catalog()
+    material_catalog = _material_catalog()
 
+    totals = {
+        "labor": Decimal("0"),
+        "equipment": Decimal("0"),
+        "materials": Decimal("0"),
+    }
+
+    details = {
+        "labor": [],
+        "equipment": [],
+        "materials": [],
+    }
+
+    for row in component_rows:
+        comp_type = row["component_type"]
+        out_key = _COMPONENT_MAP[comp_type]
+
+        catalog = {
+            "labor": labor_catalog,
+            "equipment": equipment_catalog,
+            "material": material_catalog,
+        }[comp_type]
+
+        catalog_entry = catalog.get(row["component_id"], None)
+
+        # Quantity (coefficient)
+        quantity = _parse_decimal(row.get("quantity"))
+        if quantity is None:
+            quantity = _parse_decimal(row.get("coefficient"))
+        if quantity is None:
+            quantity = Decimal("0")
+
+        unit_price = catalog_entry.get("unit_price") if catalog_entry else None
+        total_cost = quantity * unit_price if unit_price is not None else None
+
+        # Add to totals
+        if total_cost is not None:
+            totals[out_key] += total_cost
+
+        # Build detail row
+        detail = {
+            "id": row["component_id"],
+            "code": catalog_entry.get("code") if catalog_entry else None,
+            "name": catalog_entry.get("name") if catalog_entry else None,
+            "unit": catalog_entry.get("unit") if catalog_entry else None,
+            "quantity": _format_decimal(quantity, _QUANTITY_QUANTUM),
+            "unit_price": _format_decimal(unit_price, _MONEY_QUANTUM),
+            "total_cost": _format_decimal(total_cost, _MONEY_QUANTUM),
+        }
+
+        # Add material-specific fields
+        if comp_type == "material":
+            detail["brand"] = catalog_entry.get("brand") if catalog_entry else None
+
+        details[out_key].append(detail)
+
+    # Compute totals
     labor_total = totals["labor"]
     equipment_total = totals["equipment"]
     materials_total = totals["materials"]
     labor_equipment_total = labor_total + equipment_total
     overall_total = labor_equipment_total + materials_total
 
+    # Main AHS info
     main_entry = _ahs_main_catalog().get(canonical, {})
 
-    return _format_breakdown(
-        main_entry,
-        labor_total,
-        equipment_total,
-        labor_equipment_total,
-        materials_total,
-        overall_total,
-        details,
-    )
-
-
-# -----------------------------
-# Helper functions
-# -----------------------------
-
-def _load_catalogs():
-    return {
-        "labor": _labor_catalog(),
-        "equipment": _equipment_catalog(),
-        "material": _material_catalog(),
-    }
-
-
-def _compute_component_totals(component_rows, catalogs):
-    totals = {"labor": Decimal("0"), "equipment": Decimal("0"), "materials": Decimal("0")}
-    details = {"materials": []}
-
-    for row in component_rows:
-        comp_type = row["component_type"]
-        out_key = _COMPONENT_MAP[comp_type]
-        catalog = catalogs[comp_type]
-
-        quantity = _extract_quantity(row)
-        unit_price = _get_unit_price(catalog, row["component_id"])
-        total_cost = _compute_total_cost(quantity, unit_price)
-
-        if total_cost is not None:
-            totals[out_key] += total_cost
-
-        if out_key == "materials":
-            details["materials"].append(
-                _build_material_detail(row, catalog.get(row["component_id"], {}), quantity, unit_price, total_cost)
-            )
-
-    return totals, details
-
-
-def _extract_quantity(row):
-    """Return quantity, falling back through multiple fields."""
-    for key in ("quantity", "coefficient"):
-        value = _parse_decimal(row.get(key))
-        if value is not None:
-            return value
-    return Decimal("0")
-
-
-def _get_unit_price(catalog, comp_id):
-    entry = catalog.get(comp_id)
-    return entry.get("unit_price") if entry else None
-
-
-def _compute_total_cost(quantity, unit_price):
-    if unit_price is None:
-        return None
-    return quantity * unit_price
-
-
-def _build_material_detail(row, catalog_entry, quantity, unit_price, total_cost):
-    return {
-        "id": row["component_id"],
-        "code": catalog_entry.get("code"),
-        "name": catalog_entry.get("name"),
-        "unit": catalog_entry.get("unit"),
-        "quantity": _format_decimal(quantity, _QUANTITY_QUANTUM),
-        "unit_price": _format_decimal(unit_price, _MONEY_QUANTUM),
-        "total_cost": _format_decimal(total_cost, _MONEY_QUANTUM),
-        "brand": catalog_entry.get("brand"),
-    }
-
-
-def _format_breakdown(
-    main_entry,
-    labor_total,
-    equipment_total,
-    labor_equipment_total,
-    materials_total,
-    overall_total,
-    details,
-):
-    return {
+    breakdown = {
         "name": main_entry.get("name"),
         "unit_price": _format_decimal(main_entry.get("unit_price"), _MONEY_QUANTUM),
+
         "totals": {
             "labor": _format_decimal(labor_total, _MONEY_QUANTUM),
             "equipment": _format_decimal(equipment_total, _MONEY_QUANTUM),
@@ -271,5 +228,8 @@ def _format_breakdown(
             "materials": _format_decimal(materials_total, _MONEY_QUANTUM),
             "overall": _format_decimal(overall_total, _MONEY_QUANTUM),
         },
+
         "components": details,
     }
+
+    return breakdown

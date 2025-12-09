@@ -278,3 +278,12 @@ class MatchingServiceEdgeCaseTests(MatchingServiceTestCase):
         self.assertEqual(result["code"], "U.01")
         fake_matcher.match_with_confidence.assert_called_once_with("pasang beton", unit="m3")
 
+
+class MatchingServiceDetermineStatusTests(MatchingServiceTestCase):
+    def test_single_word_fallback_returns_none(self):
+        with patch.object(MatchingService, "perform_exact_match", return_value=None), \
+             patch.object(MatchingService, "perform_multiple_match", side_effect=[[], []]):
+            result = MatchingService.perform_best_match("batu", unit="pcs")
+
+        self.assertIsNone(result)
+

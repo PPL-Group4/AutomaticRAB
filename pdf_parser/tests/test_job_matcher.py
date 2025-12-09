@@ -1,6 +1,7 @@
 from django.test import TestCase
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 from pdf_parser.services import job_matcher
+from automatic_job_matching.models import UnmatchedAhsEntry
 
 
 class JobMatcherTests(TestCase):
@@ -24,7 +25,7 @@ class JobMatcherTests(TestCase):
         result = job_matcher.match_description("pasangan batu")
         self.assertEqual(result["status"], "found")
         self.assertEqual(result["match"]["code"], "A.01")
-        mock_match.assert_called_once_with("pasangan batu")
+        mock_match.assert_called_once_with("pasangan batu", unit=None)
 
 
     @patch("pdf_parser.services.job_matcher.MatchingService.perform_best_match")
@@ -97,3 +98,146 @@ class JobMatcherTests(TestCase):
         self.assertEqual(job_matcher._derive_status(None), "not found")
         self.assertEqual(job_matcher._derive_status([]), "not found")
         self.assertEqual(job_matcher._derive_status({}), "not found")
+
+
+class UnmatchedAhsStorageTests(TestCase):
+    """Tests for storing unmatched AHS entries in database."""
+
+    def setUp(self):
+        """Clear the unmatched entries table before each test."""
+        UnmatchedAhsEntry.objects.all().delete()
+
+    @patch("pdf_parser.services.job_matcher.MatchingService.perform_best_match")
+    def test_stores_unmatched_entry_when_not_found(self, mock_match):
+        """Should store entry in database when status is 'not found'."""
+        mock_match.return_value = None
+        
+        result = job_matcher.match_description("Unknown job description")
+        
+        self.assertEqual(result["status"], "not found")
+        self.assertEqual(UnmatchedAhsEntry.objects.count(), 1)
+        
+        entry = UnmatchedAhsEntry.objects.first()
+        self.assertEqual(entry.name, "Unknown job description")
+        self.assertEqual(entry.ahs_code, "")
+
+    @patch("pdf_parser.services.job_matcher.MatchingService.perform_best_match")
+    def test_stores_unmatched_entry_when_empty_list_returned(self, mock_match):
+        """Should store entry when empty list is returned."""
+        mock_match.return_value = []
+        
+        result = job_matcher.match_description("Another unknown job")
+        
+        self.assertEqual(result["status"], "not found")
+        self.assertEqual(UnmatchedAhsEntry.objects.count(), 1)
+
+    @patch("pdf_parser.services.job_matcher.MatchingService.perform_best_match")
+    def test_does_not_store_when_match_found(self, mock_match):
+        """Should NOT store entry when a match is found."""
+        mock_match.return_value = {"code": "A.01", "name": "Matched Job", "confidence": 1.0}
+        
+        result = job_matcher.match_description("Matched job")
+        
+        self.assertEqual(result["status"], "found")
+        self.assertEqual(UnmatchedAhsEntry.objects.count(), 0)
+
+    @patch("pdf_parser.services.job_matcher.MatchingService.perform_best_match")
+    def test_does_not_store_when_similar_match_found(self, mock_match):
+        """Should NOT store entry when similar matches are found."""
+        mock_match.return_value = [{"code": "B.01", "name": "Similar Job"}]
+        
+        result = job_matcher.match_description("Similar job")
+        
+        self.assertEqual(result["status"], "similar")
+        self.assertEqual(UnmatchedAhsEntry.objects.count(), 0)
+
+    @patch("pdf_parser.services.job_matcher.MatchingService.perform_best_match")
+    def test_does_not_create_duplicate_entries(self, mock_match):
+        """Should not create duplicate entries for the same description."""
+        mock_match.return_value = None
+        
+        # First call
+        job_matcher.match_description("Duplicate test")
+        self.assertEqual(UnmatchedAhsEntry.objects.count(), 1)
+        
+        # Second call with same description
+        job_matcher.match_description("Duplicate test")
+        self.assertEqual(UnmatchedAhsEntry.objects.count(), 1)
+        
+        # Entry should still exist and be the same
+        entry = UnmatchedAhsEntry.objects.first()
+        self.assertEqual(entry.name, "Duplicate test")
+
+    @patch("pdf_parser.services.job_matcher.MatchingService.perform_best_match")
+    def test_stores_multiple_different_unmatched_entries(self, mock_match):
+        """Should store multiple different unmatched entries."""
+        mock_match.return_value = None
+        
+        job_matcher.match_description("First unknown")
+        job_matcher.match_description("Second unknown")
+        job_matcher.match_description("Third unknown")
+        
+        self.assertEqual(UnmatchedAhsEntry.objects.count(), 3)
+        
+        names = set(UnmatchedAhsEntry.objects.values_list('name', flat=True))
+        self.assertEqual(names, {"First unknown", "Second unknown", "Third unknown"})
+
+    @patch("pdf_parser.services.job_matcher.logger")
+    @patch("pdf_parser.services.job_matcher.UnmatchedAhsEntry.objects.get_or_create")
+    @patch("pdf_parser.services.job_matcher.MatchingService.perform_best_match")
+    def test_handles_database_error_gracefully(self, mock_match, mock_get_or_create, mock_logger):
+        """Should handle database errors gracefully and log them."""
+        mock_match.return_value = None
+        mock_get_or_create.side_effect = Exception("Database connection failed")
+        
+        result = job_matcher.match_description("Test description")
+        
+        # Should still return not found status
+        self.assertEqual(result["status"], "not found")
+        
+        # Should log the error
+        mock_logger.error.assert_called_once()
+        self.assertIn("Failed to store unmatched entry", mock_logger.error.call_args[0][0])
+
+    @patch("pdf_parser.services.job_matcher.MatchingService.perform_best_match")
+    def test_does_not_store_when_error_occurs_in_matching(self, mock_match):
+        """Should NOT store entry when matching service raises an error."""
+        mock_match.side_effect = Exception("Matching service error")
+        
+        result = job_matcher.match_description("Error test")
+        
+        self.assertEqual(result["status"], "error")
+        self.assertEqual(UnmatchedAhsEntry.objects.count(), 0)
+
+    @patch("pdf_parser.services.job_matcher.MatchingService.perform_best_match")
+    def test_does_not_store_when_description_is_skipped(self, mock_match):
+        """Should NOT store entry when description is empty or whitespace."""
+        result = job_matcher.match_description("   ")
+        
+        self.assertEqual(result["status"], "skipped")
+        self.assertEqual(UnmatchedAhsEntry.objects.count(), 0)
+        mock_match.assert_not_called()
+
+    @patch("pdf_parser.services.job_matcher.logger")
+    @patch("pdf_parser.services.job_matcher.MatchingService.perform_best_match")
+    def test_logs_successful_storage(self, mock_match, mock_logger):
+        """Should log info message when entry is successfully stored."""
+        mock_match.return_value = None
+        
+        job_matcher.match_description("Test for logging")
+        
+        # Check that info log was called
+        mock_logger.info.assert_called_once()
+        self.assertIn("Stored unmatched entry", mock_logger.info.call_args[0][0])
+
+    @patch("pdf_parser.services.job_matcher.MatchingService.perform_best_match")
+    def test_stores_entry_with_special_characters(self, mock_match):
+        """Should correctly store descriptions with special characters."""
+        mock_match.return_value = None
+        special_desc = "Pekerjaan @ #$% & *() test's \"quote\""
+        
+        job_matcher.match_description(special_desc)
+        
+        entry = UnmatchedAhsEntry.objects.first()
+        self.assertEqual(entry.name, special_desc)
+
