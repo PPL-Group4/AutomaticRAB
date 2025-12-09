@@ -36,12 +36,16 @@ class SynonymExpander:
     def is_available(self) -> bool:
         return False   # Always false in safe mode
 
-    def expand(self, _word: str = None, _candidate_words: List[str] = None, _limit: int = 3) -> Set[str]:
+    def expand(self, word: str = None, candidate_words: List[str] = None, limit: int = 3) -> Set[str]:  # noqa: ARG002
         """Embedding-based synonyms disabled."""
+        # Parameters intentionally unused - method disabled in safe mode
+        _ = (word, candidate_words, limit)  # Suppress unused warnings
         return set()
 
-    def expand_with_manual(self, word: str, _candidate_words: List[str] = None, _limit: int = 3) -> Set[str]:
+    def expand_with_manual(self, word: str, candidate_words: List[str] = None, limit: int = 3) -> Set[str]:  # noqa: ARG002
         """Return ONLY manual synonyms."""
+        # candidate_words and limit intentionally unused - only manual synonyms supported
+        _ = (candidate_words, limit)  # Suppress unused warnings
         synonyms = set()
 
         if has_synonyms(word):
@@ -67,8 +71,14 @@ class SemanticMatcher:
         self.repo = repo
         logger.warning("SemanticMatcher disabled (sentence-transformers not available).")
 
-    def find_best_match(self, _query: str = None, _min_similarity: float = 0.5) -> Optional[dict]:
+    def find_best_match(self, query: str = None, min_similarity: float = 0.5) -> Optional[dict]:  # noqa: ARG002
+        """Disabled in safe mode."""
+        # Parameters intentionally unused - method disabled
+        _ = (query, min_similarity)  # Suppress unused warnings
         return None
 
-    def find_multiple_matches(self, _query: str = None, _limit: int = 5, _min_similarity: float = 0.5) -> List[dict]:
+    def find_multiple_matches(self, query: str = None, limit: int = 5, min_similarity: float = 0.5) -> List[dict]:  # noqa: ARG002
+        """Disabled in safe mode."""
+        # Parameters intentionally unused - method disabled
+        _ = (query, limit, min_similarity)  # Suppress unused warnings
         return []
