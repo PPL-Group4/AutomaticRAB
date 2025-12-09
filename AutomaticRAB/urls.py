@@ -16,8 +16,14 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import include, path
+from django.http import HttpResponse
+
+def trigger_error(request):
+    division_by_zero = 1 / 0  
+    return HttpResponse("This will never be returned")
 
 urlpatterns = [
+    path("sentry-debug/", trigger_error),
     path('admin/', admin.site.urls),
     path("api/", include("automatic_job_matching.urls")),
     path("excel_parser/", include("excel_parser.urls")),

@@ -1,5 +1,7 @@
 from django.urls import path
 from .views import match_best_view, job_matching_page
+from django.urls import path
+
 
 urlpatterns = [
     path("match-best/", match_best_view, name="match-best"),

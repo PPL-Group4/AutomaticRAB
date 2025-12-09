@@ -13,6 +13,8 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 from pathlib import Path
 import os
 import sys
+import sentry_sdk
+from sentry_sdk.integrations.django import DjangoIntegration
 from dotenv import load_dotenv
 # Load environment variables from .env file
 load_dotenv()
@@ -83,16 +85,28 @@ WSGI_APPLICATION = 'AutomaticRAB.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': os.getenv('MYSQL_NAME'),
-        'USER': os.getenv('MYSQL_USER'),
-        'PASSWORD': os.getenv('MYSQL_PASSWORD'),
-        'HOST': os.getenv('MYSQL_HOST'),
-        'PORT': os.getenv('MYSQL_PORT'),
+
+
+if DEBUG:
+    # DB lokal (SQLite)
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": BASE_DIR / "db.sqlite3",
+        }
     }
-}
+
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.mysql',
+            'NAME': os.getenv('MYSQL_NAME'),
+            'USER': os.getenv('MYSQL_USER'),
+            'PASSWORD': os.getenv('MYSQL_PASSWORD'),
+            'HOST': os.getenv('MYSQL_HOST'),
+            'PORT': os.getenv('MYSQL_PORT'),
+        }
+    }
 
 
 # Password validation
@@ -113,6 +127,13 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+sentry_sdk.init(
+    dsn="https://edc147e578eede89fa6e1f5683533a09@o4510460796731392.ingest.us.sentry.io/4510460801712128",
+    integrations=[DjangoIntegration()],
+    traces_sample_rate=1.0,          # 0–1, 1.0 = semua request di-trace
+    send_default_pii=True,           # optional, biar user info ikut
+    environment=os.getenv("SENTRY_ENV", "local"),  
+)
 
 # Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
