@@ -18,6 +18,7 @@ from .services.validators import validate_excel_file
 # SENTRY +: import sentry_sdk untuk performance monitoring
 import sentry_sdk
 
+TEMPLATE_UPLOAD = "excel_upload.html"  
 
 def validate_pdf_file(file):
     """Special validator for PDF files."""
@@ -150,7 +151,9 @@ def preview_rows(request):
                 description="Upload PDF file (no parser yet)"
             ):
                 validate_pdf_file(pdf_file)
-                results["pdf_file"] = {"message": "PDF uploaded successfully (no parser yet)"}
+                results["pdf_file"] = {
+                    "message": "PDF uploaded successfully (no parser yet)"
+                }
 
         if not results:
             return JsonResponse({"detail": "No file uploaded"}, status=400)
@@ -158,8 +161,24 @@ def preview_rows(request):
         return JsonResponse(results, safe=False)
 
     except ValidationError as ve:
+        # 🔴 Known validation error -> kirim event custom
+        with sentry_sdk.push_scope() as scope:
+            scope.set_tag("feature", "excel_preview")
+            scope.set_tag("excel.error_type", "validation")
+            scope.set_extra("path", "/excel_parser/preview_rows")
+            scope.set_extra("error_message", str(ve))
+            sentry_sdk.capture_message("Excel preview validation error")
+
         return JsonResponse({"error": str(ve)}, status=400)
+
     except Exception as e:
+        # 🔥 Unexpected error -> capture full exception
+        with sentry_sdk.push_scope() as scope:
+            scope.set_tag("feature", "excel_preview")
+            scope.set_tag("excel.error_type", "unexpected")
+            scope.set_extra("path", "/excel_parser/preview_rows")
+            sentry_sdk.capture_exception(e)
+
         return JsonResponse({"error": str(e)}, status=500)
 
 
@@ -175,13 +194,12 @@ def upload_view(request):
         try:
             if excel_standard:
                 validate_excel_file(excel_standard)
-                return render(request, 'excel_upload.html', {
+                return render(request, TEMPLATE_UPLOAD, {
                     'success': 'Standard Excel uploaded successfully'
                 })
 
             if excel_apendo:
                 validate_excel_file(excel_apendo)
-                TEMPLATE_UPLOAD = 'excel_upload.html'
                 return render(request, TEMPLATE_UPLOAD, {
                     'success': 'APENDO Excel uploaded successfully'
                 })

@@ -128,7 +128,7 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 sentry_sdk.init(
-    dsn=os.getenv("SENTRY_DSN"),
+    dsn="https://edc147e578eede89fa6e1f5683533a09@o4510460796731392.ingest.us.sentry.io/4510460801712128",
     integrations=[DjangoIntegration()],
     traces_sample_rate=1.0,          # 0–1, 1.0 = semua request di-trace
     send_default_pii=True,           # optional, biar user info ikut
