@@ -4,6 +4,7 @@ from django.core.exceptions import ValidationError
 from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
+from target_bid.services.cache import cached_cheaper_suggestions
 
 from target_bid.repository.rab_item_repo import DjangoRabItemRepository
 from target_bid.services.ahs_optimizer import optimize_ahs_price
@@ -43,7 +44,7 @@ def cheaper_suggestions_view(request):
     name = request.GET.get("name", "")
     unit = request.GET.get("unit", "")
     price = Decimal(request.GET.get("price", "0"))
-    results = get_cheaper_alternatives(name, unit, price)
+    results = cached_cheaper_suggestions(name, unit, float(price))
     return Response(results)
 
 
@@ -86,3 +87,5 @@ def optimize_ahs_materials_view(request, ahs_code: str):
         )
 
     return Response(result, status=status.HTTP_200_OK)
+
+
