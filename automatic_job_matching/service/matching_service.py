@@ -126,7 +126,6 @@ class MatchingService:
                 return []
 
             if isinstance(result, dict):
-                result_unit = result.get("unit")
                 if result.get("confidence", 1.0) == 1.0:
                     result["status"] = "found"
                 else:

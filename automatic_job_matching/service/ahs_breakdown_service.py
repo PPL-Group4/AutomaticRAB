@@ -15,6 +15,14 @@ _QUANTITY_QUANTUM = Decimal("0.0001")
 _COMPONENT_MAP = {"labor": "labor", "equipment": "equipment", "material": "materials"}
 
 
+def _safe_strip(value: Optional[str]) -> Optional[str]:
+    """Strip and return None if empty."""
+    if not value:
+        return None
+    stripped = value.strip()
+    return stripped if stripped else None
+
+
 def _parse_decimal(raw: Optional[str]) -> Optional[Decimal]:
     if raw is None:
         return None
@@ -38,6 +46,21 @@ def _format_decimal(value: Optional[Decimal], quantum: Decimal) -> Optional[floa
         return float(value)
 
 
+def _create_catalog_entry(row: Dict[str, str], extra_fields: List[str]) -> Dict[str, object]:
+    """Create a catalog entry from a CSV row."""
+    entry: Dict[str, object] = {
+        "code": _safe_strip(row.get("code")),
+        "name": _safe_strip(row.get("name")),
+        "unit": _safe_strip(row.get("unit")),
+        "unit_price": _parse_decimal(row.get("unit_price")),
+    }
+    
+    for field in extra_fields:
+        entry[field] = _safe_strip(row.get(field))
+    
+    return entry
+
+
 def _load_catalog(path: Path, *, extra_fields: Optional[List[str]] = None) -> Dict[str, Dict[str, object]]:
     extra_fields = extra_fields or []
     catalog: Dict[str, Dict[str, object]] = {}
@@ -46,21 +69,11 @@ def _load_catalog(path: Path, *, extra_fields: Optional[List[str]] = None) -> Di
         with path.open(encoding="utf-8-sig", newline="") as handle:
             reader = csv.DictReader(handle)
             for row in reader:
-                identifier = (row.get("id") or "").strip()
+                identifier = _safe_strip(row.get("id"))
                 if not identifier:
                     continue
-
-                entry: Dict[str, object] = {
-                    "code": (row.get("code") or "").strip() or None,
-                    "name": (row.get("name") or "").strip() or None,
-                    "unit": (row.get("unit") or "").strip() or None,
-                    "unit_price": _parse_decimal(row.get("unit_price")),
-                }
-
-                for field in extra_fields:
-                    entry[field] = (row.get(field) or "").strip() or None
-
-                catalog[identifier] = entry
+                
+                catalog[identifier] = _create_catalog_entry(row, extra_fields)
     except FileNotFoundError:
         logger.warning("Catalog file missing: %s", path)
     except Exception:  # pragma: no cover - defensive logging
@@ -97,7 +110,7 @@ def _ahs_main_catalog() -> Dict[str, Dict[str, object]]:
                 if not canonical:
                     continue
                 catalog[canonical] = {
-                    "name": (row.get("name") or "").strip() or None,
+                    "name": _safe_strip(row.get("name")),
                     "unit_price": _parse_decimal(row.get("unit_price")),
                 }
     except FileNotFoundError:
@@ -106,6 +119,11 @@ def _ahs_main_catalog() -> Dict[str, Dict[str, object]]:
         logger.exception("Failed to load AHS main dataset from %s", path)
 
     return catalog
+
+
+def _safe_catalog_get(catalog_entry: Optional[Dict], key: str) -> Optional[object]:
+    """Safely get a value from catalog entry."""
+    return catalog_entry.get(key) if catalog_entry else None
 
 
 @lru_cache(maxsize=1)
@@ -139,6 +157,44 @@ def _components_by_code() -> Dict[str, List[Dict[str, str]]]:
     return components
 
 
+def _get_component_quantity(row: Dict[str, str]) -> Decimal:
+    """Extract quantity or coefficient from component row."""
+    quantity = _parse_decimal(row.get("quantity"))
+    if quantity is None:
+        quantity = _parse_decimal(row.get("coefficient"))
+    return quantity if quantity is not None else Decimal("0")
+
+
+def _build_component_detail(row: Dict[str, str], catalog_entry: Optional[Dict], 
+                            quantity: Decimal, unit_price: Optional[object],
+                            total_cost: Optional[Decimal], comp_type: str) -> Dict[str, object]:
+    """Build detail dictionary for a component."""
+    detail = {
+        "id": row["component_id"],
+        "code": _safe_catalog_get(catalog_entry, "code"),
+        "name": _safe_catalog_get(catalog_entry, "name"),
+        "unit": _safe_catalog_get(catalog_entry, "unit"),
+        "quantity": _format_decimal(quantity, _QUANTITY_QUANTUM),
+        "unit_price": _format_decimal(unit_price, _MONEY_QUANTUM),
+        "total_cost": _format_decimal(total_cost, _MONEY_QUANTUM),
+    }
+    
+    if comp_type == "material":
+        detail["brand"] = _safe_catalog_get(catalog_entry, "brand")
+    
+    return detail
+
+
+def _get_catalog_for_type(comp_type: str, labor_catalog: Dict, 
+                         equipment_catalog: Dict, material_catalog: Dict) -> Dict:
+    """Get the appropriate catalog based on component type."""
+    return {
+        "labor": labor_catalog,
+        "equipment": equipment_catalog,
+        "material": material_catalog,
+    }[comp_type]
+
+
 def get_ahs_breakdown(ahs_code: str) -> Optional[Dict[str, object]]:
     canonical = canonicalize_job_code(ahs_code)
     if not canonical:
@@ -168,43 +224,23 @@ def get_ahs_breakdown(ahs_code: str) -> Optional[Dict[str, object]]:
         comp_type = row["component_type"]
         out_key = _COMPONENT_MAP[comp_type]
 
-        catalog = {
-            "labor": labor_catalog,
-            "equipment": equipment_catalog,
-            "material": material_catalog,
-        }[comp_type]
-
+        catalog = _get_catalog_for_type(comp_type, labor_catalog, equipment_catalog, material_catalog)
         catalog_entry = catalog.get(row["component_id"], None)
 
-        # Quantity (coefficient)
-        quantity = _parse_decimal(row.get("quantity"))
-        if quantity is None:
-            quantity = _parse_decimal(row.get("coefficient"))
-        if quantity is None:
-            quantity = Decimal("0")
+        quantity = _get_component_quantity(row)
+        unit_price_raw = _safe_catalog_get(catalog_entry, "unit_price")
+        
+        if isinstance(unit_price_raw, Decimal):
+            unit_price: Optional[Decimal] = unit_price_raw
+            total_cost: Optional[Decimal] = quantity * unit_price
+        else:
+            unit_price = None
+            total_cost = None
 
-        unit_price = catalog_entry.get("unit_price") if catalog_entry else None
-        total_cost = quantity * unit_price if unit_price is not None else None
-
-        # Add to totals
         if total_cost is not None:
             totals[out_key] += total_cost
 
-        # Build detail row
-        detail = {
-            "id": row["component_id"],
-            "code": catalog_entry.get("code") if catalog_entry else None,
-            "name": catalog_entry.get("name") if catalog_entry else None,
-            "unit": catalog_entry.get("unit") if catalog_entry else None,
-            "quantity": _format_decimal(quantity, _QUANTITY_QUANTUM),
-            "unit_price": _format_decimal(unit_price, _MONEY_QUANTUM),
-            "total_cost": _format_decimal(total_cost, _MONEY_QUANTUM),
-        }
-
-        # Add material-specific fields
-        if comp_type == "material":
-            detail["brand"] = catalog_entry.get("brand") if catalog_entry else None
-
+        detail = _build_component_detail(row, catalog_entry, quantity, unit_price, total_cost, comp_type)
         details[out_key].append(detail)
 
     # Compute totals
