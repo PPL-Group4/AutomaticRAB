@@ -1,114 +1,84 @@
 from __future__ import annotations
-from contextlib import suppress
-from decimal import Decimal, ROUND_HALF_UP
-from typing import Dict, Iterable
-
+from decimal import Decimal
+from typing import Dict, Protocol
+from django.db import transaction
 from django.apps import apps
-from django.conf import settings
 
-ITEM_MODEL = getattr(settings, "COST_WEIGHT_ITEM_MODEL", "estimator.JobItem")
-JOB_MODEL  = getattr(settings, "COST_WEIGHT_JOB_MODEL",  "estimator.Job")
-ITEM_COST_FIELD = getattr(settings, "COST_WEIGHT_ITEM_COST_FIELD", "total_cost")  # ← was "price"
-ITEM_WEIGHT_FIELD = getattr(settings, "COST_WEIGHT_ITEM_WEIGHT_FIELD", "weight_pct")
-ITEM_FK_TO_JOB = getattr(settings, "COST_WEIGHT_ITEM_FK_TO_JOB", "job")           # ← was "rab"
+from cost_weight.services.cost_weight_calc import calculate_cost_weights
 
-ITEM_COST_FALLBACKS = getattr(
-    settings,
-    "COST_WEIGHT_ITEM_COST_FALLBACKS",
-    ("total_cost", "cost", "price"),
-)
-
-class _ItemProxy:
-    @property
-    def objects(self):
-        return apps.get_model(ITEM_MODEL).objects
-
-Item = _ItemProxy()  
+ITEM_MODEL = "estimator.JobItem"
+JOB_MODEL = "estimator.Job"
+ITEM_COST_FIELD = "cost"
+ITEM_WEIGHT_FIELD = "weight_pct"
+ITEM_FK_TO_JOB = "job"
 
 
-def calculate_cost_weights(costs_by_id: Dict[str, Decimal], decimal_places: int = 1) -> Dict[str, Decimal]:
-    norm_costs: Dict[str, Decimal] = {}
-    total = Decimal("0")
-    for k, v in costs_by_id.items():
-        dv = Decimal(str(v or "0"))
-        norm_costs[k] = dv
-        total += dv
+class JobItemRepository(Protocol):
+    def get_costs_for_job_locked(self, job_id: int) -> Dict[str, Decimal]:
+        ...
 
-    if total == 0:
-        q = Decimal("1." + "0" * decimal_places) if decimal_places > 0 else Decimal("1")
-        zero = Decimal("0").quantize(q)
-        return {k: zero for k in norm_costs}
+    def apply_weights_for_job(self, job_id: int, weights: Dict[str, Decimal]) -> int:
+        ...
 
-    raw = {k: (v / total) * Decimal("100") for k, v in norm_costs.items()}
+def _get_models():
+    Item = apps.get_model(ITEM_MODEL)
+    Job = apps.get_model(JOB_MODEL)
+    return Item, Job
 
-    q = Decimal("1." + "0" * decimal_places) if decimal_places > 0 else Decimal("1")
-    rounded = {k: r.quantize(q, rounding=ROUND_HALF_UP) for k, r in raw.items()}
-    target = Decimal("100").quantize(q)
-    sum_rounded = sum(rounded.values())
 
-    if sum_rounded == target:
-        return rounded
+class DjangoJobItemRepository(JobItemRepository):
 
-    diff = target - sum_rounded
-    step = Decimal("1") / (Decimal(10) ** decimal_places)
+    def __init__(self) -> None:
+        self.Item, self.Job = _get_models()
+        self._locked_items = []  
 
-    def frac_part(d: Decimal) -> Decimal:
-        return (d - d.quantize(step, rounding=ROUND_HALF_UP)).copy_abs()
+    def get_costs_for_job_locked(self, job_id: int) -> Dict[str, Decimal]:
+        qs = (
+            self.Item.objects
+            .select_for_update()
+            .filter(**{f"{ITEM_FK_TO_JOB}_id": job_id})
+            .order_by("pk")
+        )
+        self._locked_items = list(qs)
 
-    order_plus = sorted(raw.items(), key=lambda kv: (-frac_part(kv[1]), str(kv[0])))
-    order_minus = sorted(raw.items(), key=lambda kv: (frac_part(kv[1]), str(kv[0])))
+        return {
+            str(it.pk): getattr(it, ITEM_COST_FIELD) or Decimal("0")
+            for it in self._locked_items
+        }
 
-    if diff > 0:
-        i = 0
-        while diff > 0:
-            k = order_plus[i % len(order_plus)][0]
-            rounded[k] += step
-            diff -= step
-            i += 1
-    elif diff < 0:
-        i = 0
-        while diff < 0:
-            k = order_minus[i % len(order_minus)][0]
-            rounded[k] -= step
-            diff += step
-            i += 1
+    def apply_weights_for_job(self, job_id: int, weights: Dict[str, Decimal]) -> int:
+        items = self._locked_items
+        if not items:
+            return 0
 
-    return rounded
+        for it in items:
+            setattr(it, ITEM_WEIGHT_FIELD, weights[str(it.pk)])
 
-def _items_to_mapping(items: Iterable) -> Dict[str, Decimal]:
-    out: Dict[str, Decimal] = {}
-    for it in items:
-        val = getattr(it, ITEM_COST_FIELD, None)
-        if val in (None, ""):
-            for alt in ITEM_COST_FALLBACKS:
-                if alt == ITEM_COST_FIELD:
-                    continue
-                if hasattr(it, alt):
-                    val = getattr(it, alt)
-                    if val not in (None, ""):
-                        break
-        dv = Decimal(str(val or "0"))
-        out[str(it.pk)] = dv
-    return out
+        self.Item.objects.bulk_update(items, [ITEM_WEIGHT_FIELD])
+        return len(items)
 
-def recalc_weights_for_job(job_id) -> int:
-    ItemModel = apps.get_model(ITEM_MODEL)
+def recalc_weights_for_job_core(
+    job_id: int,
+    repo: JobItemRepository,
+    *,
+    decimal_places: int = 2,
+) -> int:
 
-    items = list(
-        ItemModel.objects
-        .filter(**{f"{ITEM_FK_TO_JOB}_id": job_id})
-        .only("pk", ITEM_COST_FIELD)  
-    )
-
-    if not items:
+    mapping = repo.get_costs_for_job_locked(job_id)
+    if not mapping:
         return 0
 
-    costs_map = _items_to_mapping(items)
-    weights = calculate_cost_weights(costs_map, decimal_places=1)
+    weights = calculate_cost_weights(mapping, decimal_places=decimal_places)  # pk -> pct
+    updated_count = repo.apply_weights_for_job(job_id, weights)
+    return updated_count
 
-    for it in items:
-        setattr(it, ITEM_WEIGHT_FIELD, weights.get(str(it.pk), Decimal("0")))
 
-    ItemModel.objects.bulk_update(items, [ITEM_WEIGHT_FIELD])
+@transaction.atomic
+def recalc_weights_for_job(job_id: int, *, decimal_places: int = 2) -> int:
 
-    return len(items)
+    repo = DjangoJobItemRepository()
+    return recalc_weights_for_job_core(
+        job_id=job_id,
+        repo=repo,
+        decimal_places=decimal_places,
+    )
